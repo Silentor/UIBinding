@@ -15,16 +15,16 @@ namespace UIBindings
             _prev = (IOutput<TInput>) prevConverter;
         }
 
-        public override void InitAttachToSource(Object source, PropertyInfo sourceProp )
+        public override void InitAttachToSourceProperty(Object source, PropertyInfo sourceProp )
         {
-            base.InitAttachToSource( source, sourceProp );
+            base.InitAttachToSourceProperty( source, sourceProp );
 
             _setter = (Action<TInput>)Delegate.CreateDelegate( typeof(Action<TInput>), source, sourceProp.GetSetMethod() );
         }
 
         public void ProcessTargetToSource(TOutput value )
         {
-            var convertedValue = Convert( value );
+            var convertedValue = ConvertBack( value );
 
             if( _prev != null )
                 _prev.ProcessTargetToSource( convertedValue );
@@ -32,6 +32,6 @@ namespace UIBindings
                 _setter.Invoke( convertedValue );
         }
 
-        public abstract TInput Convert( TOutput value );
+        public abstract TInput ConvertBack( TOutput value );
     }
 }

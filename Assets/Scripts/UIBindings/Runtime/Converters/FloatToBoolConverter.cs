@@ -10,9 +10,9 @@ namespace UIBindings
 
         [Header("Bool to float settings")]
         public float FalseValue = 0f;
-        public float TrueValue = 0f;
+        public float TrueValue = 1f;
 
-        public override float Convert(bool value)
+        public override float ConvertBack(bool value)
         {
             return value ? TrueValue : FalseValue;
         }

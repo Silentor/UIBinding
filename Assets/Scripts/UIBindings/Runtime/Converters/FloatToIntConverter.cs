@@ -10,7 +10,7 @@ namespace UIBindings
             return (int)Math.Round( value );
         }
 
-        public override Single Convert(Int32 value )
+        public override Single ConvertBack(Int32 value )
         {
             return value;
         }

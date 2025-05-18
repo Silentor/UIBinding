@@ -15,7 +15,7 @@ namespace UIBindings
             return value.ToString( CultureInfo.CurrentCulture );
         }
 
-        public override Single Convert(String value )
+        public override Single ConvertBack(String value )
         {
             if ( Single.TryParse( value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result ) )
                 return result;

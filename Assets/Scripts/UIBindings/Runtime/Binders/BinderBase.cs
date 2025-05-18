@@ -75,7 +75,7 @@ namespace UIBindings
                 _firstConverter = converters[0];
                 var (inputType, outputType, _) = GetConverterTypes( _firstConverter );
                 Assert.IsTrue( inputType == property.PropertyType, $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] First converter input type expected {property.PropertyType.Name} to be equal to source property type {property} but actual {inputType.Name}" );
-                _firstConverter.InitAttachToSource( Source, property );
+                _firstConverter.InitAttachToSourceProperty( Source, property );
 
                 for ( var i = 0; i < converters.Length - 1; i++ )
                 {
@@ -91,7 +91,7 @@ namespace UIBindings
             }
             else                //No converters, just use the property getter
             {
-                Assert.IsTrue( property.PropertyType == typeof(T), $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] Binder type expected {property.PropertyType.Name} to be equal to source property type {property} but actual {typeof(T).Name}" );
+                Assert.IsTrue( property.PropertyType == typeof(T), $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] Binder {GetType().Name} expect type {typeof(T).Name}, but property {property.DeclaringType.Name}.{property.Name} has type {property.PropertyType.Name}. Consider to add converter." );
                 var getMethod = property.GetGetMethod();
                 _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), Source, getMethod );
             }
@@ -131,7 +131,7 @@ namespace UIBindings
                 }
                 else
                 {
-                    _firstConverter.OnChange();
+                    _firstConverter.OnSourceChange();
                 }
 
                 Debug.Log( $"[{nameof(BinderBase)}]-[{nameof(LateUpdate)}] updated binder {name} on frame {Time.frameCount}", this );

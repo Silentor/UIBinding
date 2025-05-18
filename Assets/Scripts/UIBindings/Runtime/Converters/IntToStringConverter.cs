@@ -15,7 +15,7 @@ namespace UIBindings
             return value.ToString( CultureInfo.InvariantCulture );
         }
 
-        public override Int32 Convert(String value )
+        public override Int32 ConvertBack(String value )
         {
             if ( Int32.TryParse( value, out var result ) )
                 return result;

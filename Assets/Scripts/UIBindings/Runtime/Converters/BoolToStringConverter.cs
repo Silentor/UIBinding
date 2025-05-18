@@ -17,7 +17,7 @@ namespace UIBindings
             return value ? TrueString : FalseString;
         }
 
-        public override Boolean Convert(String value )
+        public override Boolean ConvertBack(String value )
         {
             if ( String.Equals( value, TrueString, StringComparison.OrdinalIgnoreCase ) )
                 return true;

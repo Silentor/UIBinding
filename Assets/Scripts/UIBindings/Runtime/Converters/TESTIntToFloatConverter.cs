@@ -5,7 +5,7 @@ namespace UIBindings
 {
     public class TESTIntToFloatConverter : ConverterTwoWayBase<int, float>
     {
-        public override int Convert(float value)
+        public override int ConvertBack(float value)
         {
             return (int)Math.Round( value );
         }
