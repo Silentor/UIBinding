@@ -1,0 +1,16 @@
+{
+    "name": "UIBindings.Develop",
+    "rootNamespace": "",
+    "references": [
+        "GUID:17ef86f04155524468a785062494cdab"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

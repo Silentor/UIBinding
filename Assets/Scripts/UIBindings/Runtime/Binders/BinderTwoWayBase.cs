@@ -28,12 +28,12 @@ namespace UIBindings
             }
     
             //Init converters chain from last to first
-            var converters = GetComponents<ConverterBase>().ToArray();
-            if ( converters.Length > 0 )
+            var converters = Converters;
+            if ( converters.Count > 0 )
             {
                 _firstSetterConverter       = (IOutput<T>)converters[^1];
 
-                for ( int i = converters.Length - 1; i >= 1; i++ )
+                for ( int i = converters.Count - 1; i >= 1; i++ )
                 {
                     var currentConverter = converters[ i ];
                     var prevConverter = converters[ i - 1 ];

@@ -1,17 +1,51 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
+using UIBindings.Runtime;
 using Unity.Profiling;
 using Unity.Profiling.LowLevel;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Serialization;
 using Object = System.Object;
 
 namespace UIBindings
 {
     public abstract class BinderBase : MonoBehaviour
     {
-        public UnityEngine.Object Source;
-        public String             Path;
+        public UnityEngine.Object   Source;
+        public SourcePath           Path;
+
+        [FormerlySerializedAs( "Converters" )] [SerializeField, HideInInspector]
+        ConvertersList _converters;
+
+        public IReadOnlyList<ConverterBase> Converters => _converters.Converters;
+
+        public static readonly string ConvertersFieldName = nameof(_converters);
+
+        [Serializable]
+        public class ConvertersList
+        {
+            [SerializeReference]
+            public ConverterBase[] Converters;
+        }
+
+        public static (Type value, Type template) GetBinderTypeInfo( Type binderType )
+        {
+            Assert.IsTrue( typeof(BinderBase).IsAssignableFrom( binderType ) );
+
+            while (binderType.BaseType != null)
+            {
+                binderType = binderType.BaseType;
+                if (binderType.IsGenericType && binderType.GetGenericTypeDefinition() == typeof(BinderBase<>))
+                {
+                    var valueType  = binderType.GetGenericArguments()[0];
+                    var template   = binderType;
+                    return ( valueType, template );
+                }
+            }
+            throw new InvalidOperationException("Base type was not found");
+        }
 
     }
 
@@ -31,8 +65,7 @@ namespace UIBindings
 
         protected virtual void Awake( )
         {
-            Assert.IsTrue( Source );
-            Assert.IsTrue( !String.IsNullOrEmpty( Path ) );
+            Assert.IsTrue( !Source || Path.IsAssigned, $"[{nameof(BinderBase)}] Path is not assigned on binder {name}." );
 
             InitGetter();
         }
@@ -69,17 +102,17 @@ namespace UIBindings
             _sourceNotify = Source as INotifyPropertyChanged;
 
             //Prepare converters chain
-            var converters = GetComponents<ConverterBase>();
-            if( converters.Length > 0 )
+            var converters = Converters;
+            if( converters.Count > 0 )
             {
                 _firstConverter = converters[0];
-                var (inputType, outputType, _) = GetConverterTypes( _firstConverter );
+                var (inputType, outputType, _) = ConverterBase.GetConverterTypeInfo( _firstConverter );
                 Assert.IsTrue( inputType == property.PropertyType, $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] First converter input type expected {property.PropertyType.Name} to be equal to source property type {property} but actual {inputType.Name}" );
                 _firstConverter.InitAttachToSourceProperty( Source, property );
 
-                for ( var i = 0; i < converters.Length - 1; i++ )
+                for ( var i = 0; i < converters.Count - 1; i++ )
                 {
-                    var nextConverterTypes = GetConverterTypes( converters[i + 1] );
+                    var nextConverterTypes = ConverterBase.GetConverterTypeInfo( converters[i + 1] );
                     Assert.IsTrue( outputType == nextConverterTypes.input, $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] Converter {converters[i].GetType().Name} output type expected {nextConverterTypes.input.Name} to be equal to input type of converter {converters[i+1].GetType().Name} but actual {outputType.Name}" );
                     converters[i].InitSourceToTarget( converters[ i + 1] );
                     (inputType, outputType, _) = nextConverterTypes;
@@ -97,24 +130,6 @@ namespace UIBindings
             }
 
             _sourceProperty = property;
-        }
-
-        protected (Type input, Type output, Type template) GetConverterTypes( ConverterBase converter )
-        {
-            var converterType = converter.GetType();
-
-            while (converterType.BaseType != null)
-            {
-                converterType = converterType.BaseType;
-                if (converterType.IsGenericType 
-                    && (converterType.GetGenericTypeDefinition() == typeof(ConverterOneWayBase<,>) || converterType.GetGenericTypeDefinition() == typeof(ConverterTwoWayBase<,>)))
-                {
-                    var inputType  = converterType.GetGenericArguments()[0];
-                    var outputType = converterType.GetGenericArguments()[1];
-                    return ( inputType, outputType, converterType );
-                }
-            }
-            throw new InvalidOperationException("Base type was not found");
         }
 
         protected virtual void LateUpdate()
