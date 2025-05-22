@@ -38,24 +38,23 @@ namespace UIBindings.Editor
             var addBtnRect = rects.Item2;
             if (GUI.Button(addBtnRect, Resources.AddButtonContent))
             {
-                var newConverterInputType = GetNewConverterInputType(converters);
-                var compatibleTypes = ConverterTypes
-                                     .Where(t => t.InputType == newConverterInputType )
-                                     .ToList();
+                var currentOutputType = GetCurrentOutputType(converters);
+                var compatibleTypes = GetCompartibleConverters( currentOutputType );
 
                 if( compatibleTypes.Count == 0 )
                 {
-                    Debug.LogWarning( $"No compatible converter found for {newConverterInputType}" );
+                    Debug.LogWarning( $"No compatible converter found for {currentOutputType}" );
                     return;
                 }
 
                 var menu = new GenericMenu();
                 foreach (var typeInfo in compatibleTypes)
                 {
-                    menu.AddItem(new GUIContent(typeInfo.FullType.Name), false, () =>
+                    menu.AddItem(new GUIContent(typeInfo.TypeInfo.FullType.Name), false, () =>
                     {
                         var newIndex     = converters.arraySize;
-                        var newConverter = Activator.CreateInstance(typeInfo.FullType);
+                        var newConverter = (ConverterBase)Activator.CreateInstance(typeInfo.TypeInfo.FullType);
+                        newConverter.ReverseMode = typeInfo.IsReverseMode;
                         converters.InsertArrayElementAtIndex(newIndex);
                         converters.GetArrayElementAtIndex(newIndex).managedReferenceValue = newConverter;
                         property.serializedObject.ApplyModifiedProperties();
@@ -82,7 +81,9 @@ namespace UIBindings.Editor
                 converterRects = converterRects.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight ) );
                 var converterObject = (ConverterBase)converters.GetArrayElementAtIndex( i ).managedReferenceValue;
                 var converterTypes = ConverterBase.GetConverterTypeInfo( converterObject );
-                var converterText = $"{converterObject.GetType().Name} {converterTypes.input.Name} -> {converterTypes.output.Name}";
+                var converterText = converterObject.ReverseMode 
+                        ? $"{converterObject.GetType().Name} {converterTypes.output.Name} -> {converterTypes.input.Name}"
+                        :$"{converterObject.GetType().Name} {converterTypes.input.Name} -> {converterTypes.output.Name}";
                 GUI.Label( converterRects.Item1, converterText );
                 if( GUI.Button( converterRects.Item2, Resources.RemoveBtnContent ))
                 {
@@ -122,7 +123,7 @@ namespace UIBindings.Editor
             return targetType.IsAssignableFrom(currentType);
         }
 
-        private Type GetNewConverterInputType( SerializedProperty converters )
+        private Type GetCurrentOutputType( SerializedProperty converters )
         {
             if ( converters.arraySize > 0 )
                 return GetLastConverterOutputType( converters );
@@ -185,6 +186,24 @@ namespace UIBindings.Editor
             return result;
         }
 
+        private IReadOnlyList<ConverterType> GetCompartibleConverters ( Type sourceType )
+        {
+            var result = new List<ConverterType>();
+            foreach ( var converter in ConverterTypes )
+            {
+                if ( converter.InputType == sourceType )
+                {
+                    result.Add( new ConverterType( converter ) );
+                }
+                else if ( converter.TemplateType == typeof(ConverterTwoWayBase<,>) && converter.OutputType == sourceType )
+                {
+                    result.Add( new ConverterType( converter ) { IsReverseMode = true } );
+                }
+            }
+
+            return result;
+        }
+
         
         public override Single GetPropertyHeight(SerializedProperty property, GUIContent label )
         {
@@ -207,6 +226,17 @@ namespace UIBindings.Editor
                 OutputType = outputType;
                 TemplateType = templateType;
                 FullType = fullType;
+            }
+        }
+
+        public struct ConverterType
+        {
+            public readonly ConverterTypeInfo TypeInfo;
+            public          bool              IsReverseMode;
+
+            public ConverterType( ConverterTypeInfo typeInfo ) : this()
+            {
+                TypeInfo = typeInfo;
             }
         }
 

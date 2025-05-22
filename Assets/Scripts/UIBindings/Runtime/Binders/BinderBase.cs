@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UIBindings.Runtime;
 using Unity.Profiling;
@@ -17,7 +18,7 @@ namespace UIBindings
         public SourcePath           Path;
 
         [FormerlySerializedAs( "Converters" )] [SerializeField, HideInInspector]
-        ConvertersList _converters;
+        protected ConvertersList _converters;
 
         public IReadOnlyList<ConverterBase> Converters => _converters.Converters;
 
@@ -40,7 +41,7 @@ namespace UIBindings
                 if (binderType.IsGenericType && binderType.GetGenericTypeDefinition() == typeof(BinderBase<>))
                 {
                     var valueType  = binderType.GetGenericArguments()[0];
-                    var template   = binderType;
+                    var template   = binderType.GetGenericTypeDefinition();
                     return ( valueType, template );
                 }
             }
@@ -102,23 +103,29 @@ namespace UIBindings
             _sourceNotify = Source as INotifyPropertyChanged;
 
             //Prepare converters chain
-            var converters = Converters;
-            if( converters.Count > 0 )
+            var converters = _converters.Converters;
+            for ( int i = 0; i < converters.Length; i++ )                
+                converters[i] = converters[i].ReverseMode ? converters[i].GetReverseConverter() : converters[i];
+
+            if( converters.Length > 0 )
             {
+                //Connect first converter to source property
                 _firstConverter = converters[0];
                 var (inputType, outputType, _) = ConverterBase.GetConverterTypeInfo( _firstConverter );
                 Assert.IsTrue( inputType == property.PropertyType, $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] First converter input type expected {property.PropertyType.Name} to be equal to source property type {property} but actual {inputType.Name}" );
                 _firstConverter.InitAttachToSourceProperty( Source, property );
 
-                for ( var i = 0; i < converters.Count - 1; i++ )
+                //Make each converter know about next converter
+                for ( var i = 0; i < converters.Length - 1; i++ )
                 {
+                    
                     var nextConverterTypes = ConverterBase.GetConverterTypeInfo( converters[i + 1] );
                     Assert.IsTrue( outputType == nextConverterTypes.input, $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] Converter {converters[i].GetType().Name} output type expected {nextConverterTypes.input.Name} to be equal to input type of converter {converters[i+1].GetType().Name} but actual {outputType.Name}" );
                     converters[i].InitSourceToTarget( converters[ i + 1] );
                     (inputType, outputType, _) = nextConverterTypes;
                 }
                 
-                //Check last converter output type
+                //Connect last converter to binder
                 Assert.IsTrue( outputType == typeof(T), $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] Last converter output type expected {typeof(T).Name} to be equal to input type of binder {GetType().Name} but actual {outputType.Name}" );
                 converters[^1].InitSourceToTarget( this );
             }
@@ -146,7 +153,7 @@ namespace UIBindings
                 }
                 else
                 {
-                    _firstConverter.OnSourceChange();
+                    _firstConverter.OnSourcePropertyChanged();
                 }
 
                 Debug.Log( $"[{nameof(BinderBase)}]-[{nameof(LateUpdate)}] updated binder {name} on frame {Time.frameCount}", this );

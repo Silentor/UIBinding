@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Object = System.Object;
 
 namespace UIBindings
@@ -35,8 +36,26 @@ namespace UIBindings
             set => SetField( ref _sourceInt, value );
         }
 
+        public float    TestConvertF { get; set; } = 5.5f;
+        public int      TestConvertI { get; set; } = 3;
+
         private void Start( )
         {
+            var f2i = new FloatToIntConverter();
+            var i2f = (FloatToIntConverter.ReverseMode)f2i.GetReverseConverter();
+
+            f2i.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertF) ) );
+            f2i.InitSourceToTarget( new DebugInt() );
+            f2i.OnSourcePropertyChanged();//Check source to target
+            f2i.ProcessTargetToSource( 42 ); //Check target to source
+            Assert.IsTrue( TestConvertF == 42 );
+
+            i2f.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertI) ) );
+            i2f.InitSourceToTarget( new DebugFloat() );
+            i2f.OnSourcePropertyChanged();//Check source to target
+            i2f.ProcessTargetToSource( 42.1f ); //Check target to source
+            Assert.IsTrue( TestConvertI == 42 );
+            
             OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
         }
 
@@ -62,5 +81,21 @@ namespace UIBindings
          }
 
         public event Action<Object, String> PropertyChanged;
+
+        public class DebugFloat : IInput<float>
+        {
+            public void ProcessSourceToTarget( Single value )
+            {
+                Debug.Log( $"Debug float {value}" );
+            }
+        }
+
+        public class DebugInt : IInput<int>
+        {
+            public void ProcessSourceToTarget( int value )
+            {
+                Debug.Log( $"Debug int {value}" );
+            }
+        }
     }
 }

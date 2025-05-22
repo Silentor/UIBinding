@@ -10,7 +10,7 @@ namespace UIBindings
     public abstract class ConverterBase
     {
         //Two way converters can  be used output->input for source->target
-        //public bool ReverseMode;          //todo consider this
+        public bool ReverseMode;          //todo consider this
 
         //For first converter in chain (attached to source property)
         public abstract void InitAttachToSourceProperty( System.Object source, PropertyInfo sourceProp );
@@ -21,7 +21,12 @@ namespace UIBindings
         //For all other converters in chain to reverse the conversion (If it supports reverse conversion)
         public abstract void InitTargetToSource( Object prevConverter );
 
-        public abstract void OnSourceChange( );
+        /// <summary>
+        /// If converter connected to source property, it should read and process property value
+        /// </summary>
+        public abstract void OnSourcePropertyChanged( );
+
+        public abstract ConverterBase GetReverseConverter( );
 
         public static (Type input, Type output, Type template) GetConverterTypeInfo( ConverterBase converter )
         {
@@ -40,7 +45,8 @@ namespace UIBindings
                 {
                     var inputType  = converterType.GetGenericArguments()[0];
                     var outputType = converterType.GetGenericArguments()[1];
-                    return ( inputType, outputType, converterType );
+                    var template   = converterType.GetGenericTypeDefinition();
+                    return ( inputType, outputType, template );
                 }
             }
             throw new InvalidOperationException("Base type was not found");

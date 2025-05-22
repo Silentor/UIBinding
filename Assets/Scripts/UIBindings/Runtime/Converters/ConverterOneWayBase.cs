@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using UnityEngine.Assertions;
 using Object = System.Object;
 
 namespace UIBindings
@@ -7,7 +8,7 @@ namespace UIBindings
     public abstract class ConverterOneWayBase<TInput, TOutput> : ConverterBase, IInput<TInput>
     {
         protected IInput<TOutput> _next;
-        private Func<TInput> _getter;
+        protected Func<TInput> _getter;
 
         public abstract TOutput Convert( TInput value );
 
@@ -26,14 +27,20 @@ namespace UIBindings
             throw new NotImplementedException( "Not supported for one way converters" );
         }
 
-        public void ProcessSourceToTarget(TInput value )
+        public override ConverterBase GetReverseConverter( )
+        {
+            throw new NotImplementedException( "Not supported for one way converters" );
+        }
+
+        public virtual void ProcessSourceToTarget(TInput value )
         {
             var convertedValue = Convert( value );
             _next.ProcessSourceToTarget( convertedValue );
         }
 
-        public override void OnSourceChange( )
+        public override void OnSourcePropertyChanged( )
         {
+            Assert.IsTrue( _getter != null, $"Converter is not connected to source property" );
             var value = _getter();
             ProcessSourceToTarget( value );
         }
