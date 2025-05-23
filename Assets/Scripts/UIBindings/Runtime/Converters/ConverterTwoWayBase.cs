@@ -35,7 +35,7 @@ namespace UIBindings
 
         public override ConverterBase GetReverseConverter( )
         {
-            return new ReverseMode( this );
+            return new ReverseModeWrapper( this );
         }
 
         public abstract TInput ConvertBack( TOutput value );
@@ -44,11 +44,11 @@ namespace UIBindings
         /// <summary>
         /// Wrapper to make this two way converter to be used in reverse mode (swap input and output types)
         /// </summary>
-        public class ReverseMode : ConverterTwoWayBase<TOutput, TInput>
+        public class ReverseModeWrapper : ConverterTwoWayBase<TOutput, TInput>
         {
             private readonly ConverterTwoWayBase<TInput, TOutput> _myConverter;
 
-            public ReverseMode( ConverterTwoWayBase<TInput, TOutput> myConverter )
+            public ReverseModeWrapper( ConverterTwoWayBase<TInput, TOutput> myConverter )
             {
                 _myConverter = myConverter;
             }

@@ -30,7 +30,10 @@ namespace UIBindings
 
         public static (Type input, Type output, Type template) GetConverterTypeInfo( ConverterBase converter )
         {
-            return GetConverterTypeInfo( converter.GetType() );
+            var rawInfo = GetConverterTypeInfo( converter.GetType() );
+            if ( converter.ReverseMode )
+                return new ValueTuple<Type, Type, Type>( rawInfo.output, rawInfo.input, rawInfo.template );
+            return rawInfo;
         }
 
         public static (Type input, Type output, Type template) GetConverterTypeInfo( Type converterType )

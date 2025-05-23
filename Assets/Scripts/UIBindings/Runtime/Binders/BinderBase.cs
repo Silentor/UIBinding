@@ -38,7 +38,8 @@ namespace UIBindings
             while (binderType.BaseType != null)
             {
                 binderType = binderType.BaseType;
-                if (binderType.IsGenericType && binderType.GetGenericTypeDefinition() == typeof(BinderBase<>))
+                if (binderType.IsGenericType 
+                    && (binderType.GetGenericTypeDefinition() == typeof(BinderBase<>)|| binderType.GetGenericTypeDefinition() == typeof(BinderTwoWayBase<>)) )
                 {
                     var valueType  = binderType.GetGenericArguments()[0];
                     var template   = binderType.GetGenericTypeDefinition();
@@ -118,7 +119,6 @@ namespace UIBindings
                 //Make each converter know about next converter
                 for ( var i = 0; i < converters.Length - 1; i++ )
                 {
-                    
                     var nextConverterTypes = ConverterBase.GetConverterTypeInfo( converters[i + 1] );
                     Assert.IsTrue( outputType == nextConverterTypes.input, $"[{nameof(BinderBase)}]-[{nameof(InitGetter)}] Converter {converters[i].GetType().Name} output type expected {nextConverterTypes.input.Name} to be equal to input type of converter {converters[i+1].GetType().Name} but actual {outputType.Name}" );
                     converters[i].InitSourceToTarget( converters[ i + 1] );

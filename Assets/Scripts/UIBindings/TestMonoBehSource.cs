@@ -42,7 +42,7 @@ namespace UIBindings
         private void Start( )
         {
             var f2i = new FloatToIntConverter();
-            var i2f = (FloatToIntConverter.ReverseMode)f2i.GetReverseConverter();
+            var i2f = (FloatToIntConverter.ReverseModeWrapper)f2i.GetReverseConverter();
 
             f2i.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertF) ) );
             f2i.InitSourceToTarget( new DebugInt() );
