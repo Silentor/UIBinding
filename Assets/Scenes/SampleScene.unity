@@ -2285,6 +2285,7 @@ GameObject:
   - component: {fileID: 2114483296}
   - component: {fileID: 2114483295}
   - component: {fileID: 2114483294}
+  - component: {fileID: 2114483297}
   m_Layer: 5
   m_Name: BoolLabel
   m_TagString: Untagged
@@ -2445,6 +2446,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2114483292}
   m_CullTransparentMesh: 1
+--- !u!114 &2114483297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2114483292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55a93b82b4384a799df000d7d8c421f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Test2:
+    Source: {fileID: 1625701089}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &3384473827124313058
 PrefabInstance:
   m_ObjectHideFlags: 0

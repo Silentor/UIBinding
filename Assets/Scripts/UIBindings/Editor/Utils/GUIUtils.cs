@@ -101,6 +101,11 @@ namespace UIBindings.Editor.Utils
             {
                 Width = width;
             }
+
+            public static implicit operator ControlRectSettings(Single width )
+            {
+                return new ControlRectSettings( width );
+            }
         }
     }
 }
