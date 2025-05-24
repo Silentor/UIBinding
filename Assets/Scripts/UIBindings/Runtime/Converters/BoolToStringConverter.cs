@@ -5,11 +5,11 @@ namespace UIBindings
 {
     public class BoolToStringConverter : ConverterTwoWayBase<bool, String>
     {
-        [Header("Two way settings")]        
+        [Header("Bool to string settings")]        
         public string TrueString = "True";
         public string FalseString = "False";
 
-        [Header("Bool to string settings")]
+        [Header("String to bool settings")]
         public bool ValueOnParseError = false;
 
         public override String Convert(bool value)

@@ -6,7 +6,7 @@ namespace UIBindings
 {
     public class IntToStringConverter : ConverterTwoWayBase<int, string>
     {
-        [Header("Int to string settings")]
+        [Header("String to int settings")]
         public int ValueOnParseError = 0;
         //TODO add culture settings
 

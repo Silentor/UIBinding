@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using JetBrains.Annotations;
-using NUnit.Framework;
 using UIBindings.Editor.Utils;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
-using Object = System.Object;
 
 namespace UIBindings.Editor
 {
@@ -16,88 +12,134 @@ namespace UIBindings.Editor
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label )
         {
-            EditorGUI.BeginProperty( position, label, property );
-
-            position = EditorGUI.PrefixLabel( position, label );
+            using ( new EditorGUI.PropertyScope( position, label, property ) ) ;
+            //EditorGUI.BeginProperty( position, label, property );
+            
             position.height = EditorGUIUtility.singleLineHeight;
+            _propertyHeight = 0;
+
+            var mainLinePosition = EditorGUI.PrefixLabel( position, label );
             var converters = property.FindPropertyRelative( nameof(BinderBase.ConvertersList.Converters) );
 
             var sourceType = GetSourcePropertyType( converters );
 
+            //Draw main line
             if( converters.arraySize == 0 )
             {
-                var rects = GUIUtils.GetHorizontalRects( position, 5, new (), new (30) );
+                var rects = GUIUtils.GetHorizontalRects( mainLinePosition, 5, new (), new (30) );
                 GUI.Label( rects.Item1, "none" );
                 if ( GUI.Button( rects.Item2, Resources.AddButtonContent ) )
                 {
                     AddConverter( converters );
                 }
+                return;
             }
-            else
+
+            //There are some converters, draw it
+            
+            GUI.Label( mainLinePosition, $"Converters {converters.arraySize}" );
+            position = position.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight ) );
+            _propertyHeight += EditorGUIUtility.singleLineHeight;
+            
+            var prevType = sourceType;
+            for ( int i = 0; i < converters.arraySize; i++ )
             {
-                var prevType = sourceType;
-                for ( int i = 0; i < converters.arraySize; i++ )
+                var converterProp = converters.GetArrayElementAtIndex( i );
+                var converter     = (ConverterBase)converterProp.managedReferenceValue;
+
+                //Prepare converter info
+                var  converterName   = String.Empty;
+                var  isValid         = true;
+                Type converterOutput = null;
+                Type converterInput  = null;
+                if ( converter == null )
                 {
-                    var converterName = String.Empty;
-                    var isValid = true;
-                    var converter = (ConverterBase)converters.GetArrayElementAtIndex( i ).managedReferenceValue;
-                    Type converterOutput = null;
-                    Type converterInput = null;
-                    if ( converter == null )
+                    isValid       = false;
+                    converterName = "null";
+                    prevType      = null;
+                }
+                else
+                {
+                    var converterTypeInfo = ConverterBase.GetConverterTypeInfo( converter );
+                    converterOutput = converterTypeInfo.output;
+                    converterInput = converterTypeInfo.input;
+                    converterName = $"{converter.GetType().Name.Replace( "Converter", "" )} {(converter.ReverseMode ? "(R)" : "")}: {converterInput.Name} -> {converterOutput.Name}";
+                    if ( converterInput != prevType )
                     {
                         isValid = false;
-                        converterName = "null";
-                        prevType = null;
                     }
-                    else
+
+                    prevType = converterOutput;
+                }
+
+                //Prepare position rects
+                var  labelStyle = isValid ? Resources.DefaultLabelStyle : Resources.ErrorLabelStyle;
+                Rect labelRect, addBtnRect, removeBtnRect;
+                var converterIndentPosition = position;
+                converterIndentPosition.xMin += 15;
+                if ( i == converters.arraySize - 1 )
+                {
+                    var rects = GUIUtils.GetHorizontalRects( converterIndentPosition, 5, new (), new (30), new (30) );
+                    labelRect     = rects.Item1;
+                    addBtnRect    = rects.Item2;
+                    removeBtnRect = rects.Item3;
+                }
+                else
+                {
+                    var rects = GUIUtils.GetHorizontalRects( converterIndentPosition, 5, new (), new (30) );
+                    labelRect     = rects.Item1;
+                    addBtnRect    = default;
+                    removeBtnRect = rects.Item2;
+                }
+
+                //Draw converter name and edit buttons
+                _propertyHeight += EditorGUIUtility.singleLineHeight;
+                GUI.Label( labelRect, converterName, labelStyle );
+                if ( addBtnRect != default && GUI.Button( addBtnRect, Resources.AddButtonContent ) )
+                {
+                    AddConverter( converters );
+                    break;
+                }
+                if( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )
+                {
+                    RemoveConverter( converters, i );
+                    break;
+                }
+
+                position = position.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight ) );
+                // Draw serializable fields of the converter
+                if ( converter != null )
+                {
+                    var isChanged = false;
+                    var iterator  = converterProp.Copy();
+                    var depth     = iterator.depth;
+                    if ( iterator.Next( true ) && iterator.depth > depth )            //Enter to converter insides
                     {
-                        var converterTypeInfo = ConverterBase.GetConverterTypeInfo( converter );
-                        converterOutput = converterTypeInfo.output;
-                        converterInput = converterTypeInfo.input;
-                        converterName = $"{converter.GetType().Name.Replace( "Converter", "" )} {(converter.ReverseMode ? "(R)" : "")} -> {converterOutput.Name}";
-                        if ( converterInput != prevType )
+                        using ( new EditorGUI.IndentLevelScope( 2 ) )
                         {
-                            isValid = false;
+                            do
+                            {
+                                if( iterator.name == nameof(ConverterBase.ReverseMode) ) continue;
+
+                                EditorGUI.BeginChangeCheck();
+                                EditorGUI.PropertyField(position, iterator, true);
+                                isChanged |= EditorGUI.EndChangeCheck();
+
+                                var propHeight = EditorGUI.GetPropertyHeight( iterator, true );
+                                _propertyHeight += propHeight;
+                                position        =  position.Translate( new Vector2( 0, propHeight ) );
+                                    
+                            }
+                            while( iterator.NextVisible( false ) && iterator.depth > depth );
                         }
-
-                        prevType = converterOutput;
                     }
 
-                    //Draw each converter line
-                    var labelStyle = isValid ? Resources.DefaultLabelStyle : Resources.ErrorLabelStyle;
-                    Rect labelRect, addBtnRect, removeBtnRect;
-                    if ( i == converters.arraySize - 1 )
-                    {
-                        var rects = GUIUtils.GetHorizontalRects( position, 5, new (), new (30), new (30) );
-                        labelRect = rects.Item1;
-                        addBtnRect = rects.Item2;
-                        removeBtnRect = rects.Item3;
-                    }
-                    else
-                    {
-                        var rects = GUIUtils.GetHorizontalRects( position, 5, new (), new (30) );
-                        labelRect     = rects.Item1;
-                        addBtnRect = default;
-                        removeBtnRect = rects.Item2;
-                    }
-
-                    GUI.Label( labelRect, converterName, labelStyle );
-                    if ( addBtnRect != default && GUI.Button( addBtnRect, Resources.AddButtonContent ) )
-                    {
-                        AddConverter( converters );
-                        break;
-                    }
-                    if( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )
-                    {
-                        RemoveConverter( converters, i );
-                        break;
-                    }
-
-                    position = position.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight ) );
+                    if ( isChanged )
+                        property.serializedObject.ApplyModifiedProperties();
                 }
             }
 
-            EditorGUI.EndProperty();
+            //EditorGUI.EndProperty();
         }
 
         private static void RemoveConverter(SerializedProperty converters, Int32 i )
@@ -208,12 +250,12 @@ namespace UIBindings.Editor
         
         public override Single GetPropertyHeight(SerializedProperty property, GUIContent label )
         {
-            return EditorGUIUtility.singleLineHeight 
-                   * Math.Max( property.FindPropertyRelative( nameof(BinderBase.ConvertersList.Converters) ).arraySize, 1 );
+            return Math.Max( EditorGUIUtility.singleLineHeight, _propertyHeight ); 
         }
         
 
         private static readonly IReadOnlyList<ConverterTypeInfo> ConverterTypes = PrepareTypeCache();
+        private float _propertyHeight = 0;
 
         public readonly struct ConverterTypeInfo
         {
