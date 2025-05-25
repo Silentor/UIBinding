@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using JetBrains.Annotations;
 using UIBindings.Editor.Utils;
 using UIBindings.Runtime;
 using UnityEditor;
@@ -28,32 +30,36 @@ namespace UIBindings.Editor
             mainLineContentPosition.xMin += EditorGUIUtility.labelWidth;
 
             var binding = (Binding)property.boxedValue;
-            var bindingType    = GetBindingTypeInfo( binding );
+            var bindingTypeInfo    = GetBindingTypeInfo( binding );
             var sourceType     = GetSourcePropertyType( binding );
             var sourceTypeName = sourceType            != null ? sourceType.Name : "null";
-            var targetTypeName = bindingType.valueType != null ? bindingType.valueType.Name : "null";
-            var isValid = sourceType != null; 
+            var targetType = bindingTypeInfo.valueType;
+            var targetTypeName = targetType != null ? targetType.Name : "null";
+            var isValid = IsSourceTargetTypesCompatible( sourceType, targetType, binding.Converters );
+            var isTwoWay = bindingTypeInfo.templateType == typeof(BindingTwoWay<>);
 
-            GUI.Label( mainLineContentPosition, $"{sourceTypeName} -> {targetTypeName}", isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
+            var mainText = isTwoWay ? $"{sourceTypeName} <-> {targetTypeName}" : $"{sourceTypeName} -> {targetTypeName}";
+            GUI.Label( mainLineContentPosition, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
             
             //Draw expanded content
             if ( property.isExpanded )
             {
                 using ( new EditorGUI.IndentLevelScope( 1 ) )
                 {
-                    position = position.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight + 2) );
+                    position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin) );
                     var sourceProperty = property.FindPropertyRelative( nameof(Binding.Source) );
                     //EditorGUI.PropertyField( position, sourceProperty );
                     DrawSourceField( position, sourceProperty );
 
-                    position = position.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight + 2) );
+                    position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin) );
                     var pathProperty   = property.FindPropertyRelative( nameof(Binding.Path) );
                     //EditorGUI.PropertyField( position, pathProperty );
                     DrawPathField( position, pathProperty, binding );
 
-                    position = position.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight + 2) );
+                    position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin) );
                     var convertersProperty = property.FindPropertyRelative( Binding.ConvertersPropertyName);
-                    EditorGUI.PropertyField( position, convertersProperty );
+                    //EditorGUI.PropertyField( position, convertersProperty );
+                    DrawConvertersField( position, convertersProperty, binding, sourceType, targetType );
                 }
 
             }
@@ -151,34 +157,57 @@ namespace UIBindings.Editor
             }
         }
 
-        private void DrawConvertersField( Rect position, SerializedProperty convertersProp )
+        private void DrawConvertersField( Rect position, SerializedProperty convertersProp, Binding binding, Type sourceType, Type targetType )
         {
+            _convertersFieldHeight = 0;
+            var labelRect = position;
+            labelRect.width = EditorGUIUtility.labelWidth;
+            var mainContentPosition = position;
+            mainContentPosition.xMin += EditorGUIUtility.labelWidth;
+
+            convertersProp = convertersProp.FindPropertyRelative( nameof(Binding.ConvertersList.Converters) );
             if ( convertersProp.isArray && convertersProp.arraySize > 0 )
             {
-                for ( int i = 0; i < convertersProp.arraySize; i++ )
+                convertersProp.isExpanded = EditorGUI.Foldout( labelRect, convertersProp.isExpanded, convertersProp.displayName );
+                var isValid = IsSourceTargetTypesCompatible( sourceType, targetType, binding.Converters );
+                GUI.Label( mainContentPosition, $"Count {convertersProp.arraySize}", isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
+                position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                _convertersFieldHeight += Resources.LineHeightWithMargin;
+
+                if ( convertersProp.isExpanded )
                 {
-                    var converter = convertersProp.GetArrayElementAtIndex( i );
-                    EditorGUI.PropertyField( position, converter );
-                    position = position.Translate( new Vector2( 0, EditorGUIUtility.singleLineHeight + 2 ) );
+                    //Draw every converter
+                    Type prevType = GetSourcePropertyType( binding );
+                    using ( new EditorGUI.IndentLevelScope(1) )
+                    {
+                        for ( int i = 0; i < convertersProp.arraySize; i++ )
+                        {
+                            var converterHeight = DrawConverterField( ref position, i, convertersProp, prevType, binding );
+                            _convertersFieldHeight += converterHeight;
+                            prevType = ConverterBase.GetConverterTypeInfo( binding.Converters[ i ] ).output;
+                            //position = position.Translate( new Vector2( 0, converterHeight ) );
+                        }
+                    }
                 }
             }
             else
             {
-                using ( new EditorGUI.DisabledScope() )
-                {
-                    GUI.TextField( position, "(No converters)", Resources.DisabledTextField );
-                }
+                //No converters present, show message and button to add converter
+                GUI.Label( labelRect, convertersProp.displayName);
+                var rects = GUIUtils.GetHorizontalRects( mainContentPosition, 2, 0, 20 );
+                GUI.Label( rects.Item1, "No converters" );
+                if ( GUI.Button( rects.Item2, Resources.AddButtonContent ) )
+                    AppendConverter( binding, convertersProp );
             }
         }
 
         public override Single GetPropertyHeight(SerializedProperty property, GUIContent label )
         {
-            if( property.isExpanded )
-                return EditorGUIUtility.singleLineHeight + EditorGUI.GetPropertyHeight( property.FindPropertyRelative( nameof(Binding.Source) )  ) 
-                                                     + EditorGUI.GetPropertyHeight( property.FindPropertyRelative( nameof(Binding.Path) ) ) 
-                                                     + EditorGUI.GetPropertyHeight( property.FindPropertyRelative( Binding.ConvertersPropertyName ) );
+            if ( property.isExpanded )
+                return Resources.LineHeightWithMargin * 3 //Main line + Source + Path
+                       + Math.Max( _convertersFieldHeight, Resources.LineHeightWithMargin);        
             else
-                return EditorGUIUtility.singleLineHeight;
+                return Resources.LineHeightWithMargin;
         }
 
         private static (Type valueType, Type templateType) GetBindingTypeInfo ( Binding binding )
@@ -204,6 +233,235 @@ namespace UIBindings.Editor
             return sourceProperty.PropertyType;
         }
 
+        private static Boolean IsSourceTargetTypesCompatible(Type sourceType, Type targetType, IReadOnlyList<ConverterBase> converters )
+        {
+            if (sourceType == null || targetType == null)
+                return false;
+
+            // If no converters, check direct assignability
+            if (converters.Count == 0)
+                return targetType == sourceType;
+
+            // Check the chain: sourceType -> [converter1] -> ... -> [converterN] -> targetType
+            Type currentType = sourceType;
+            for (int i = 0; i < converters.Count; i++)
+            {
+                var converter     = converters[i];
+                if (converter == null)              //Something wrong with converter
+                    return false;
+                var typeInfo = ConverterBase.GetConverterTypeInfo(converter);
+                // The converter's input type must be assignable from the current type
+                if (!typeInfo.input.IsAssignableFrom(currentType))
+                    return false;
+                currentType = typeInfo.output;
+            }
+            // After all converters, the result type must be assignable to the target type
+            return targetType.IsAssignableFrom(currentType);
+        }
+
+#region Converters stuff
+
+        private static readonly IReadOnlyList<ConverterTypeInfo> ConverterTypes = PrepareTypeCache();
+        private float _convertersFieldHeight;
+
+        private static IReadOnlyList<ConverterTypeInfo> PrepareTypeCache( )
+        {
+            var allConverters = TypeCache.GetTypesDerivedFrom<ConverterBase>();
+            var result        = new List<ConverterTypeInfo>( allConverters.Count );
+            foreach ( var converter in allConverters )
+            {
+                if ( !converter.IsAbstract )
+                {
+                    var typeInfo = ConverterBase.GetConverterTypeInfo( converter );
+                    result.Add( new ConverterTypeInfo(
+                            typeInfo.input,
+                            typeInfo.output,
+                            typeInfo.template,
+                            converter
+                    ));
+                }
+            }
+
+            return result;
+        }
+
+        private static Type GetConverterTypeToAppend( Binding binding, IReadOnlyList<ConverterBase> converters )
+        {
+            if ( converters.Count > 0 )
+                return GetLastConverterOutputType( converters );
+            return GetSourcePropertyType( binding );
+        }
+
+        private static Type GetLastConverterOutputType( IReadOnlyList<ConverterBase> converters )
+        {
+            if ( converters.Count > 0 )
+            {
+                var lastConverter = converters[^1];
+                return ConverterBase.GetConverterTypeInfo( lastConverter ).output;
+            }
+
+            return null;
+        }
+
+        private static void AppendConverter( Binding binding, SerializedProperty convertersProp )
+        {
+            var converters = binding.Converters;
+            var currentOutputType = GetConverterTypeToAppend( binding, converters );
+            var compatibleTypes   = GetCompatibleConverters( currentOutputType );
+
+            if( compatibleTypes.Count == 0 )
+            {
+                Debug.LogWarning( $"No compatible converter found for {currentOutputType}" );
+                return;
+            }
+
+            var menu = new GenericMenu();
+            foreach (var typeInfo in compatibleTypes)
+            {
+                menu.AddItem(new GUIContent(typeInfo.TypeInfo.FullType.Name), false, () =>
+                {
+                    var newIndex     = convertersProp.arraySize;
+                    var newConverter = (ConverterBase)Activator.CreateInstance(typeInfo.TypeInfo.FullType);
+                    newConverter.ReverseMode = typeInfo.IsReverseMode;
+                    convertersProp.InsertArrayElementAtIndex(newIndex);
+                    convertersProp.GetArrayElementAtIndex(newIndex).managedReferenceValue = newConverter;
+                    convertersProp.serializedObject.ApplyModifiedProperties();
+                });
+            }
+            menu.ShowAsContext();
+        }
+
+        private static void RemoveConverter(SerializedProperty convertersProp, Int32 index )
+        {
+            if ( index < 0 || index >= convertersProp.arraySize )
+            {
+                Debug.LogError( $"[{nameof(BindingEditor)}] Invalid converter index {index} for removal." );
+                return;
+            }
+
+            convertersProp.DeleteArrayElementAtIndex( index );
+            convertersProp.serializedObject.ApplyModifiedProperties();
+        }
+
+        private static IReadOnlyList<ConverterType> GetCompatibleConverters ( Type sourceType )
+        {
+            var result = new List<ConverterType>();
+            foreach ( var converter in ConverterTypes )
+            {
+                if ( converter.InputType == sourceType )
+                {
+                    result.Add( new ConverterType( converter ) );
+                }
+                else if ( converter.TemplateType == typeof(ConverterTwoWayBase<,>) && converter.OutputType == sourceType )
+                {
+                    result.Add( new ConverterType( converter ) { IsReverseMode = true } );
+                }
+            }
+
+            return result;
+        }
+
+        private static Single DrawConverterField( ref Rect position, int index, SerializedProperty convertersProp, Type prevType, Binding binding) 
+        {
+            var isLastConverter = index == convertersProp.arraySize - 1;
+            var converterProp = convertersProp.GetArrayElementAtIndex( index );
+
+            //Draw converter title 
+            Rect titleRect, appendBtnRect = default, removeBtnRect;
+            if ( isLastConverter )
+                (titleRect, appendBtnRect, removeBtnRect) = GUIUtils.GetHorizontalRects( position, 3, 0, 20, 20 );
+            else
+                (titleRect, removeBtnRect) = GUIUtils.GetHorizontalRects( position, 3, 0, 20 );
+            var converter = (ConverterBase)converterProp.boxedValue;
+            if ( converter == null )
+            {
+                GUI.Label( titleRect, "(null)", Resources.ErrorLabel );
+                position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                return position.height;
+            }
+
+            var title =  converter.GetType().Name.Replace( "Converter", "" ) ;
+            if( converter.ReverseMode )
+                title += " (R)";
+
+            var typeInfo  = ConverterBase.GetConverterTypeInfo( converter );
+            var direction = $"{typeInfo.input.Name} -> {typeInfo.output.Name}";
+        
+            var isValid = !(prevType != null && typeInfo.input != prevType);
+        
+            EditorGUI.LabelField( position, title, direction, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
+            if( isLastConverter && GUI.Button( appendBtnRect, Resources.AddButtonContent ) )
+            {
+                AppendConverter( binding, convertersProp );
+            }
+
+            if ( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )
+            {
+                RemoveConverter( convertersProp, index );
+            }
+
+            position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+            var converterHeight = Resources.LineHeightWithMargin;
+
+            //Draw converter properties (if any)
+            var isChanged = false;
+            var insideIterator = converterProp.Copy();
+            var rootDepth = insideIterator.depth;
+            if ( insideIterator.Next( true ) && insideIterator.depth > rootDepth )
+            {
+                using (new EditorGUI.IndentLevelScope(1 ))
+                {
+                    do
+                    {
+                        //Skip reserved properties
+                        if( insideIterator.name == nameof(ConverterBase.ReverseMode) ) continue;
+
+                        EditorGUI.BeginChangeCheck();
+                        EditorGUI.PropertyField(position, insideIterator, true);
+                        isChanged |= EditorGUI.EndChangeCheck();
+
+                        var propHeight = EditorGUI.GetPropertyHeight( insideIterator, true );
+                        converterHeight += propHeight;
+                        position        =  position.Translate( new Vector2( 0, propHeight ) );
+                                    
+                    }
+                    while( insideIterator.NextVisible( false ) && insideIterator.depth > rootDepth );
+                }
+            }
+
+            return converterHeight;
+        }
+
+       
+        public readonly struct ConverterTypeInfo
+        {
+            public readonly Type InputType;
+            public readonly Type OutputType;
+            public readonly Type TemplateType;
+            public readonly Type FullType;
+
+            public ConverterTypeInfo(Type inputType, Type outputType, Type templateType, Type fullType)
+            {
+                InputType    = inputType;
+                OutputType   = outputType;
+                TemplateType = templateType;
+                FullType     = fullType;
+            }
+        }
+
+        public struct ConverterType
+        {
+            public readonly ConverterTypeInfo TypeInfo;
+            public          bool              IsReverseMode;
+
+            public ConverterType( ConverterTypeInfo typeInfo ) : this()
+            {
+                TypeInfo = typeInfo;
+            }
+        }
+
+#endregion
+
         private static class Resources
         {
             public static readonly GUIStyle DefaultLabel = new GUIStyle( GUI.skin.label );
@@ -225,6 +483,11 @@ namespace UIBindings.Editor
                 hover = { textColor = Color.red },
                 focused = { textColor = Color.red }
             };
+
+            public static readonly float LineHeightWithMargin = EditorGUIUtility.singleLineHeight + 2;
+
+            public static readonly GUIContent AddButtonContent = new GUIContent( "+", "Add compatible converter" );
+            public static readonly GUIContent RemoveBtnContent = new GUIContent( "-", "Remove converter" );
         }
     }
 }

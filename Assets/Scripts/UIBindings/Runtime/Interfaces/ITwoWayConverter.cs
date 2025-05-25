@@ -1,6 +1,6 @@
 ﻿namespace UIBindings
 {
-    public interface IOutput<in TOutput>
+    public  interface ITwoWayConverter<TOutput> : IOneWayConverter<TOutput>
     {
         void ProcessTargetToSource( TOutput value );
     }

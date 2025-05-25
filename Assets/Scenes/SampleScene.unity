@@ -137,7 +137,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &73728716
 RectTransform:
   m_ObjectHideFlags: 0
@@ -154,7 +154,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -48, y: 269}
+  m_AnchoredPosition: {x: -48, y: 123}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &73728717
@@ -265,18 +265,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 73728715}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b190df81d92136548b61c35e94841df7, type: 3}
+  m_Script: {fileID: 11500000, guid: 55a93b82b4384a799df000d7d8c421f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Source: {fileID: 1625701090}
-  Path:
-    Path: 
-  _converters:
-    Converters: []
   Label: {fileID: 0}
+  TextBinding:
+    Source: {fileID: 1625701090}
+    Path:
+      Path: SourceInt
+    _converters:
+      Converters:
+      - rid: 7690191598759182409
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7690191598759182409
+      type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        ValueOnParseError: 0
 --- !u!1 &94969475
 GameObject:
   m_ObjectHideFlags: 0
@@ -852,12 +859,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11644acff5334fec83bd0eaa6ce4ba81, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Source: {fileID: 1625701090}
-  Path:
-    Path: 
-  _converters:
-    Converters: []
   Toggle: {fileID: 0}
+  ValueBinding:
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
   references:
     version: 2
     RefIds: []
@@ -1224,6 +1232,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &840117997 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4646666566668089471, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
+  m_PrefabInstance: {fileID: 3384473827124313058}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &957776147
 GameObject:
   m_ObjectHideFlags: 0
@@ -1261,7 +1274,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -56, y: 177}
+  m_AnchoredPosition: {x: -56, y: 164}
   m_SizeDelta: {x: 160, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &957776149
@@ -1327,20 +1340,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42ddd99c9f854089a2ce6ba13286f9c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Source: {fileID: 1625701090}
-  Path:
-    Path: SourceInt
-  _converters:
-    Converters:
-    - rid: 7690191569493164098
   Slider: {fileID: 0}
+  ValueBinding:
+    Source: {fileID: 1625701090}
+    Path:
+      Path: SourceInt
+    _converters:
+      Converters:
+      - rid: 7690191598759182408
+  MinValueBinding:
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  MaxValueBinding:
+    Source: {fileID: 1625701090}
+    Path:
+      Path: TargetBool
+    _converters:
+      Converters:
+      - rid: 7690191598759182412
   references:
     version: 2
     RefIds:
-    - rid: 7690191569493164098
+    - rid: 7690191598759182408
       type: {class: FloatToIntConverter, ns: UIBindings, asm: UIBindings}
       data:
         ReverseMode: 1
+    - rid: 7690191598759182412
+      type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 1
+        StepValue: 0.5
+        FalseValue: 5
+        TrueValue: 10
 --- !u!1 &976848425
 GameObject:
   m_ObjectHideFlags: 0
@@ -1496,6 +1530,28 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 7021411471282237871, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
   m_PrefabInstance: {fileID: 3384473827124313058}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1392998231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 840117997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55a93b82b4384a799df000d7d8c421f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Label: {fileID: 0}
+  TextBinding:
+    Source: {fileID: 1625701090}
+    Path:
+      Path: tag
+    _converters:
+      Converters: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1553697767
 GameObject:
   m_ObjectHideFlags: 0
@@ -1670,12 +1726,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11644acff5334fec83bd0eaa6ce4ba81, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Source: {fileID: 1625701090}
-  Path:
-    Path: TargetBool
-  _converters:
-    Converters: []
   Toggle: {fileID: 0}
+  ValueBinding:
+    Source: {fileID: 1625701090}
+    Path:
+      Path: TargetBool
+    _converters:
+      Converters: []
   references:
     version: 2
     RefIds: []
@@ -1936,23 +1993,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d8eea86333147728b655e33f62df03d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Source: {fileID: 1625701090}
-  Path:
-    Path: SourceInt
-  _converters:
-    Converters:
-    - rid: 7690191455410192478
   InteractionControl: {fileID: 0}
+  InteractableBinding:
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
   references:
     version: 2
-    RefIds:
-    - rid: 7690191455410192478
-      type: {class: IntToBoolConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        StepValue: 1
-        FalseValue: 0
-        TrueValue: 1
+    RefIds: []
 --- !u!1 &1896152128
 GameObject:
   m_ObjectHideFlags: 0
@@ -1970,7 +2020,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1896152129
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2284,7 +2334,6 @@ GameObject:
   - component: {fileID: 2114483293}
   - component: {fileID: 2114483296}
   - component: {fileID: 2114483295}
-  - component: {fileID: 2114483294}
   - component: {fileID: 2114483297}
   m_Layer: 5
   m_Name: BoolLabel
@@ -2312,41 +2361,6 @@ RectTransform:
   m_AnchoredPosition: {x: -48, y: 209.6}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &2114483294
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2114483292}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b190df81d92136548b61c35e94841df7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Source: {fileID: 1625701090}
-  Path:
-    Path: TargetBool
-  _converters:
-    Converters:
-    - rid: 7690191575849369685
-    - rid: 7690191575849369686
-  Label: {fileID: 0}
-  references:
-    version: 2
-    RefIds:
-    - rid: 7690191575849369685
-      type: {class: IntToBoolConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 1
-        StepValue: 1
-        FalseValue: 0
-        TrueValue: 1
-    - rid: 7690191575849369686
-      type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        ValueOnParseError: 0
 --- !u!114 &2114483295
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2458,15 +2472,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55a93b82b4384a799df000d7d8c421f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Test2:
-    Source: {fileID: 1625701089}
+  Label: {fileID: 0}
+  TextBinding:
+    Source: {fileID: 1625701090}
     Path:
-      Path: 
+      Path: TargetBool
     _converters:
-      Converters: []
+      Converters:
+      - rid: 7690191598759182411
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7690191598759182411
+      type: {class: BoolToStringConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        TrueString: True
+        FalseString: False
+        ValueOnParseError: 0
 --- !u!1001 &3384473827124313058
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2481,7 +2504,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4646666566668089471, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7021411471282237871, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
       propertyPath: m_Pivot.x
@@ -2621,9 +2644,13 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8163214510305093802, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
+    - {fileID: 9049462046558818184, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4646666566668089471, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1392998231}
   m_SourcePrefab: {fileID: 100100000, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

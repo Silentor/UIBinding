@@ -45,14 +45,12 @@ namespace UIBindings
             var i2f = (FloatToIntConverter.ReverseModeWrapper)f2i.GetReverseConverter();
 
             f2i.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertF) ) );
-            f2i.InitSourceToTarget( new DebugInt() );
-            f2i.OnSourcePropertyChanged();//Check source to target
+            Debug.Log( f2i.GetValueFromSource() );//Check source to target
             f2i.ProcessTargetToSource( 42 ); //Check target to source
             Assert.IsTrue( TestConvertF == 42 );
 
             i2f.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertI) ) );
-            i2f.InitSourceToTarget( new DebugFloat() );
-            i2f.OnSourcePropertyChanged();//Check source to target
+            Debug.Log( i2f.GetValueFromSource() ); //Check source to target
             i2f.ProcessTargetToSource( 42.1f ); //Check target to source
             Assert.IsTrue( TestConvertI == 42 );
             

@@ -9,22 +9,14 @@ namespace UIBindings
     [Serializable]
     public abstract class ConverterBase
     {
-        //Two way converters can  be used output->input for source->target
+        //Two way converters can  be used output->input if needed
         public bool ReverseMode;          //todo consider this
 
         //For first converter in chain (attached to source property)
-        public abstract void InitAttachToSourceProperty( System.Object source, PropertyInfo sourceProp );
+        public abstract void InitAttachToSourceProperty( Object source, PropertyInfo sourceProp );
         
         //For all other converters in chain
-        public abstract void InitSourceToTarget( Object nextConverter );
-
-        //For all other converters in chain to reverse the conversion (If it supports reverse conversion)
-        public abstract void InitTargetToSource( Object prevConverter );
-
-        /// <summary>
-        /// If converter connected to source property, it should read and process property value
-        /// </summary>
-        public abstract void OnSourcePropertyChanged( );
+        public abstract void InitAttachToSourceConverter( Object prevConverter );
 
         public abstract ConverterBase GetReverseConverter( );
 

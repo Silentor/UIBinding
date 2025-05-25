@@ -5,9 +5,9 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public abstract class ConverterOneWayBase<TInput, TOutput> : ConverterBase, IInput<TInput>
+    public abstract class ConverterOneWayBase<TInput, TOutput> : ConverterBase, IOneWayConverter<TOutput>
     {
-        protected IInput<TOutput> _next;
+        private IOneWayConverter<TInput> _prev;
         protected Func<TInput> _getter;
 
         public abstract TOutput Convert( TInput value );
@@ -17,14 +17,9 @@ namespace UIBindings
             _getter = (Func<TInput>)Delegate.CreateDelegate( typeof(Func<TInput>), source, sourceProp.GetGetMethod() );
         }
 
-        public override void InitSourceToTarget(Object nextConverter )
+        public override void InitAttachToSourceConverter(Object prevConverter )
         {
-            _next = (IInput<TOutput>) nextConverter;
-        }
-
-        public override void InitTargetToSource(Object prevConverter )
-        {
-            throw new NotImplementedException( "Not supported for one way converters" );
+            _prev = (IOneWayConverter<TInput>) prevConverter;
         }
 
         public override ConverterBase GetReverseConverter( )
@@ -32,17 +27,18 @@ namespace UIBindings
             throw new NotImplementedException( "Not supported for one way converters" );
         }
 
-        public virtual void ProcessSourceToTarget(TInput value )
+        public virtual TOutput GetValueFromSource( )
         {
-            var convertedValue = Convert( value );
-            _next.ProcessSourceToTarget( convertedValue );
-        }
-
-        public override void OnSourcePropertyChanged( )
-        {
-            Assert.IsTrue( _getter != null, $"Converter is not connected to source property" );
-            var value = _getter();
-            ProcessSourceToTarget( value );
+            if ( _prev != null )
+            {
+                var value = _prev.GetValueFromSource();
+                return Convert( value );
+            }
+            else
+            {
+                var value = _getter.Invoke();
+                return Convert( value );
+            }
         }
     }
 }

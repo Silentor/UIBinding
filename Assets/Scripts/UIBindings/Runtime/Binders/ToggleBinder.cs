@@ -1,29 +1,50 @@
 using System;
+using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.UI;
+using Object = System.Object;
 
 namespace UIBindings
 {
-    public class ToggleBinder : BinderTwoWayBase<bool>
+    public class ToggleBinder : MonoBehaviour
     {
         public Toggle Toggle;
+        public BindingTwoWay<bool> ValueBinding; 
 
-        protected override void Awake( )
+        protected void Awake( )
         {
-            base.Awake();
-
             if ( !Toggle )
                 Toggle = GetComponent<Toggle>();
+            Assert.IsTrue( Toggle );
 
+            ValueBinding.Awake( this );
+            ValueBinding.SourceChanged += ProcessSourceToTarget;
+            
+        }
+
+        private void OnEnable( )
+        {
+            ValueBinding.Subscribe();
             Toggle.onValueChanged.AddListener( OnToggleValueChanged );
-            InitSetter();
+        }
+
+        private void OnDisable( )
+        {
+            ValueBinding.Unsubscribe();
+            Toggle.onValueChanged.RemoveListener( OnToggleValueChanged );
+        }
+
+        private void LateUpdate( )
+        {
+            ValueBinding.CheckChanges();
         }
 
         private void OnToggleValueChanged(Boolean newValue )
         {
-            ProcessTargetToSource( newValue );
+            ValueBinding.SetValue( newValue );
         }
 
-        public override void ProcessSourceToTarget(bool value )
+        private void ProcessSourceToTarget(Object sender, Boolean value )
         {
             Toggle.SetIsOnWithoutNotify( value );
         }

@@ -4,23 +4,22 @@ using UnityEngine.Assertions;
 
 namespace UIBindings
 {
-    public abstract class ConverterTwoWayBase<TInput, TOutput> : ConverterOneWayBase<TInput, TOutput>, IOutput<TOutput>
+    public abstract class ConverterTwoWayBase<TInput, TOutput> : ConverterOneWayBase<TInput, TOutput>, ITwoWayConverter<TOutput>
     {
+        private ITwoWayConverter<TInput> _prev;
         private Action<TInput>  _setter;
-        private IOutput<TInput> _prev;
-
-        public override void InitTargetToSource(Object prevConverter )
-        {
-            //base.InitTargetToSource( prevConverter );
-
-            _prev = (IOutput<TInput>) prevConverter;
-        }
 
         public override void InitAttachToSourceProperty(Object source, PropertyInfo sourceProp )
         {
             base.InitAttachToSourceProperty( source, sourceProp );
 
             _setter = (Action<TInput>)Delegate.CreateDelegate( typeof(Action<TInput>), source, sourceProp.GetSetMethod() );
+        }
+
+        public override void InitAttachToSourceConverter(Object prevConverter )
+        {
+            base.InitAttachToSourceConverter( prevConverter );
+            _prev = (ITwoWayConverter<TInput>)prevConverter;
         }
 
         public virtual void ProcessTargetToSource(TOutput value )
@@ -53,21 +52,16 @@ namespace UIBindings
                 _myConverter = myConverter;
             }
 
-            public override void InitAttachToSourceProperty( Object source, PropertyInfo sourceProp )
-            {
-                _getter = (Func<TOutput>)Delegate.CreateDelegate( typeof(Func<TOutput>),     source, sourceProp.GetGetMethod() );
-                _setter = (Action<TOutput>)Delegate.CreateDelegate( typeof(Action<TOutput>), source, sourceProp.GetSetMethod() );
-            }
+            // public override void InitAttachToSourceProperty( Object source, PropertyInfo sourceProp )
+            // {
+            //     _getter = (Func<TOutput>)Delegate.CreateDelegate( typeof(Func<TOutput>),     source, sourceProp.GetGetMethod() );
+            //     _setter = (Action<TOutput>)Delegate.CreateDelegate( typeof(Action<TOutput>), source, sourceProp.GetSetMethod() );
+            // }
 
-            public override void InitSourceToTarget( Object nextConverter )
-            {
-                _next = (IInput<TInput>)nextConverter;
-            }
-
-            public override void InitTargetToSource( Object prevConverter )
-            {
-                _prev = (IOutput<TOutput>)prevConverter;
-            }
+            // public override void InitAttachToSourceConverter( Object prevConverter )
+            // {
+            //     _prev = (ITwoWayConverter<TOutput>)prevConverter;
+            // }
 
             public override TInput Convert( TOutput value )
             {
@@ -79,28 +73,16 @@ namespace UIBindings
                 return _myConverter.Convert( value );
             }
 
-            public override void ProcessSourceToTarget( TOutput value )
-            {
-                var convertedValue = Convert( value );
-                _next.ProcessSourceToTarget( convertedValue );
-            }
 
-            public override void ProcessTargetToSource(TInput value )
-            {
-                var convertedValue = ConvertBack( value );
-
-                if( _prev != null )
-                    _prev.ProcessTargetToSource( convertedValue );
-                else
-                    _setter.Invoke( convertedValue );
-            }
-
-            public override void OnSourcePropertyChanged( )
-            {
-                Assert.IsTrue( _getter != null, $"Converter is not connected to source property" );
-                var value = _getter();
-                ProcessSourceToTarget( value );
-            }
+            // public override void ProcessTargetToSource(TInput value )
+            // {
+            //     var convertedValue = ConvertBack( value );
+            //
+            //     if( _prev != null )
+            //         _prev.ProcessTargetToSource( convertedValue );
+            //     else
+            //         _setter.Invoke( convertedValue );
+            // }
         }
     }
 }

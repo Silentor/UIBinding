@@ -1,24 +1,42 @@
 ﻿using System;
+using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UI;
+using Object = System.Object;
 
 namespace UIBindings
 {
-    public class InteractableBinder : BinderBase<bool>
+    public class InteractableBinder : MonoBehaviour
     {
         public Selectable InteractionControl;
+        public Binding<Boolean> InteractableBinding;
 
-        protected override void Awake( )
+        protected void Awake( )
         {
-            base.Awake();
-
             if( !InteractionControl )
                 InteractionControl = GetComponent<Selectable>();
             Assert.IsTrue( InteractionControl );
+
+            InteractableBinding.Awake( this );
+            InteractableBinding.SourceChanged += ProcessSourceToTarget;
         }
 
+        private void OnEnable( )
+        {
+            InteractableBinding.Subscribe();
+        }
 
-        public override void ProcessSourceToTarget(Boolean value )
+        private void OnDisable( )
+        {
+            InteractableBinding.Unsubscribe();
+        }
+
+        private void LateUpdate( )
+        {
+            InteractableBinding.CheckChanges();
+        }
+
+        private void ProcessSourceToTarget(Object sender, Boolean value )
         {
             InteractionControl.interactable = value;
         }
