@@ -270,6 +270,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Label: {fileID: 0}
   TextBinding:
+    Enabled: 1
     Source: {fileID: 1625701090}
     Path:
       Path: SourceInt
@@ -861,6 +862,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Toggle: {fileID: 0}
   ValueBinding:
+    Enabled: 1
     Source: {fileID: 0}
     Path:
       Path: 
@@ -1248,6 +1250,7 @@ GameObject:
   - component: {fileID: 957776148}
   - component: {fileID: 957776149}
   - component: {fileID: 957776150}
+  - component: {fileID: 957776151}
   m_Layer: 5
   m_Name: FloatSlider
   m_TagString: Untagged
@@ -1342,6 +1345,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Slider: {fileID: 0}
   ValueBinding:
+    Enabled: 1
     Source: {fileID: 1625701090}
     Path:
       Path: SourceInt
@@ -1349,12 +1353,14 @@ MonoBehaviour:
       Converters:
       - rid: 7690191598759182408
   MinValueBinding:
-    Source: {fileID: 0}
+    Enabled: 0
+    Source: {fileID: 1625701090}
     Path:
       Path: 
     _converters:
       Converters: []
   MaxValueBinding:
+    Enabled: 1
     Source: {fileID: 1625701090}
     Path:
       Path: TargetBool
@@ -1375,6 +1381,43 @@ MonoBehaviour:
         StepValue: 0.5
         FalseValue: 5
         TrueValue: 10
+--- !u!114 &957776151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 957776147}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42ddd99c9f854089a2ce6ba13286f9c8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Slider: {fileID: 0}
+  ValueBinding:
+    Enabled: 1
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  MinValueBinding:
+    Enabled: 0
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  MaxValueBinding:
+    Enabled: 0
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &976848425
 GameObject:
   m_ObjectHideFlags: 0
@@ -1544,6 +1587,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Label: {fileID: 0}
   TextBinding:
+    Enabled: 1
     Source: {fileID: 1625701090}
     Path:
       Path: tag
@@ -1728,6 +1772,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Toggle: {fileID: 0}
   ValueBinding:
+    Enabled: 1
     Source: {fileID: 1625701090}
     Path:
       Path: TargetBool
@@ -1995,6 +2040,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   InteractionControl: {fileID: 0}
   InteractableBinding:
+    Enabled: 1
     Source: {fileID: 0}
     Path:
       Path: 
@@ -2014,6 +2060,7 @@ GameObject:
   - component: {fileID: 1896152129}
   - component: {fileID: 1896152131}
   - component: {fileID: 1896152130}
+  - component: {fileID: 1896152132}
   m_Layer: 5
   m_Name: Image
   m_TagString: Untagged
@@ -2078,6 +2125,43 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1896152128}
   m_CullTransparentMesh: 1
+--- !u!114 &1896152132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1896152128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42ddd99c9f854089a2ce6ba13286f9c8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Slider: {fileID: 0}
+  ValueBinding:
+    Enabled: 1
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  MinValueBinding:
+    Enabled: 0
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  MaxValueBinding:
+    Enabled: 0
+    Source: {fileID: 0}
+    Path:
+      Path: 
+    _converters:
+      Converters: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1975891308
 GameObject:
   m_ObjectHideFlags: 0
@@ -2474,6 +2558,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Label: {fileID: 0}
   TextBinding:
+    Enabled: 1
     Source: {fileID: 1625701090}
     Path:
       Path: TargetBool

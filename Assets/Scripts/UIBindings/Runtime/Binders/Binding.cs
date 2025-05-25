@@ -14,6 +14,7 @@ namespace UIBindings
     [Serializable]
     public abstract class Binding
     {
+        public        Boolean                   Enabled             = true;                        //Checked once on start!
         public        UnityEngine.Object        Source;
         public        SourcePath                Path;
 
@@ -61,6 +62,9 @@ namespace UIBindings
     {
         public void Awake( MonoBehaviour host )
         {
+            if ( !Enabled )   
+                return;
+
             if ( !Source )
             {
                 Debug.LogError( $"[{nameof(Binding)}] Source is not assigned at {host.name}", host );
@@ -129,7 +133,7 @@ namespace UIBindings
 
         public void Subscribe()
         {
-            if( _isSubscribed ) return;
+            if( !Enabled || _isSubscribed ) return;
 
             if ( _sourceNotify != null )                
                 _sourceNotify.PropertyChanged += OnSourcePropertyChanged;
@@ -152,7 +156,7 @@ namespace UIBindings
         /// </summary>
         public void CheckChanges( )
         {
-            if ( !_isValid || !_isSubscribed ) return;
+            if ( !Enabled || !_isValid || !_isSubscribed ) return;
 
             if( _sourceNotify == null || _sourceChanged )
             {

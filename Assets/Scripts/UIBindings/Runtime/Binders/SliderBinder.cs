@@ -10,8 +10,8 @@ namespace UIBindings
     {
         public Slider Slider;
         public BindingTwoWay<float> ValueBinding;
-        public Binding<float>       MinValueBinding;
-        public Binding<float>       MaxValueBinding;
+        public Binding<float>       MinValueBinding     = new (){Enabled = false};
+        public Binding<float>       MaxValueBinding     = new (){Enabled = false};
 
         protected void Awake( )
         {
@@ -48,6 +48,11 @@ namespace UIBindings
             ValueBinding.CheckChanges();
             MinValueBinding.CheckChanges();
             MaxValueBinding.CheckChanges();
+        }
+
+        private void Reset( )
+        {
+            ValueBinding = new BindingTwoWay<Single>() { Enabled = true };
         }
 
         private void OnValueChange(Single value )

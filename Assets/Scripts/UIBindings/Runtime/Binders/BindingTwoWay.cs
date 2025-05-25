@@ -10,16 +10,10 @@ namespace UIBindings
     {
         public void SetValue( T value )
         {
-            if( !_isValid || !_isSubscribed )
+            if( !Enabled || !_isValid || !_isSubscribed )
             {
                 return;
             }
-
-            // if ( !_isLastValueInitialized )
-            // {
-            //     _isLastValueInitialized = true;
-            //     _lastSourceValue = value;
-            // }
 
             if( _lastConverterTargetToSource != null )
             {

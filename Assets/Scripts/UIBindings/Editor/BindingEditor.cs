@@ -23,47 +23,58 @@ namespace UIBindings.Editor
 
             //Draw label
             labelRect.width = EditorGUIUtility.labelWidth;
-            property.isExpanded = EditorGUI.Foldout( labelRect, property.isExpanded, label );
+            property.isExpanded = EditorGUI.Foldout( labelRect, property.isExpanded, label, true );
 
             //Draw main content
             var mainLineContentPosition = position;
             mainLineContentPosition.xMin += EditorGUIUtility.labelWidth;
+            var rects = GUIUtils.GetHorizontalRects( mainLineContentPosition, 2, 0, 20 );
+            var enabledProp = property.FindPropertyRelative( nameof(Binding.Enabled) );
 
+            var isEnabled = enabledProp.boolValue;
             var binding = (Binding)property.boxedValue;
             var bindingTypeInfo    = GetBindingTypeInfo( binding );
             var sourceType     = GetSourcePropertyType( binding );
             var sourceTypeName = sourceType            != null ? sourceType.Name : "null";
+            var sourceName = binding.Source != null ? binding.Source.name : "";
+            var sourcePropName = binding.Path.IsAssigned ? $".{binding.Path.Path}" : "";
+            var sourceDisplayName = $"{sourceName}{sourcePropName} {sourceTypeName}";
             var targetType = bindingTypeInfo.valueType;
             var targetTypeName = targetType != null ? targetType.Name : "null";
-            var isValid = IsSourceTargetTypesCompatible( sourceType, targetType, binding.Converters );
-            var isTwoWay = bindingTypeInfo.templateType == typeof(BindingTwoWay<>);
+            var isValid = !isEnabled || IsSourceTargetTypesCompatible( sourceType, targetType, binding.Converters );
+            var arrowStr = bindingTypeInfo.templateType == typeof(BindingTwoWay<>) ? " <-> " : " -> ";
+            var convertersCount = binding.Converters.Count > 0 ? $" ({binding.Converters.Count} cnvs)" : String.Empty;
 
-            var mainText = isTwoWay ? $"{sourceTypeName} <-> {targetTypeName}" : $"{sourceTypeName} -> {targetTypeName}";
-            GUI.Label( mainLineContentPosition, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
-            
-            //Draw expanded content
-            if ( property.isExpanded )
+            //Draw Enabled toggle
+            EditorGUI.PropertyField( rects.Item2, enabledProp, GUIContent.none );
+
+            using ( new EditorGUI.DisabledGroupScope( !isEnabled ) )
             {
-                using ( new EditorGUI.IndentLevelScope( 1 ) )
+                var mainText = $"{sourceDisplayName} {arrowStr} {targetTypeName} {convertersCount}";
+                GUI.Label( rects.Item1, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
+
+                //Draw expanded content
+                if ( property.isExpanded )
                 {
-                    position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin) );
-                    var sourceProperty = property.FindPropertyRelative( nameof(Binding.Source) );
-                    //EditorGUI.PropertyField( position, sourceProperty );
-                    DrawSourceField( position, sourceProperty );
+                    using ( new EditorGUI.IndentLevelScope( 1 ) )
+                    {
+                        position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                        var sourceProperty = property.FindPropertyRelative( nameof(Binding.Source) );
+                        //EditorGUI.PropertyField( position, sourceProperty );
+                        DrawSourceField( position, sourceProperty );
 
-                    position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin) );
-                    var pathProperty   = property.FindPropertyRelative( nameof(Binding.Path) );
-                    //EditorGUI.PropertyField( position, pathProperty );
-                    DrawPathField( position, pathProperty, binding );
+                        position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                        var pathProperty   = property.FindPropertyRelative( nameof(Binding.Path) );
+                        //EditorGUI.PropertyField( position, pathProperty );
+                        DrawPathField( position, pathProperty, binding );
 
-                    position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin) );
-                    var convertersProperty = property.FindPropertyRelative( Binding.ConvertersPropertyName);
-                    //EditorGUI.PropertyField( position, convertersProperty );
-                    DrawConvertersField( position, convertersProperty, binding, sourceType, targetType );
+                        position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                        var convertersProperty = property.FindPropertyRelative( Binding.ConvertersPropertyName );
+                        //EditorGUI.PropertyField( position, convertersProperty );
+                        DrawConvertersField( position, convertersProperty, binding, sourceType, targetType );
+                    }
                 }
-
             }
-
         }
 
         private void DrawSourceField(  Rect position, SerializedProperty sourceProp )
