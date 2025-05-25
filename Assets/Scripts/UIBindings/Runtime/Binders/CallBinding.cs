@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
+
 using UnityEngine;
 using UnityEngine.Assertions;
 using Object = System.Object;
+
+#if UIBINDINGS_UNITASK_SUPPORT
+using Cysharp.Threading.Tasks;
+#endif
 
 namespace UIBindings
 {
@@ -22,6 +27,10 @@ namespace UIBindings
         private Func<Awaitable>                 _callAwaitable;
         private Func<Task>                      _callTask;
         private Func<ValueTask>                 _callValueTask;
+#if UIBINDINGS_UNITASK_SUPPORT
+        private Func<UniTask>                   _callUniTask;
+        private Func<UniTaskVoid>               _callUniTaskVoid;
+#endif
         //private AwaitableAction                 _callAwaitable;
 
         private ECallType _callType;
@@ -64,6 +73,7 @@ namespace UIBindings
                 if ( methodParams.Length == 0 )
                 {
                     _callVoid = (Action)Delegate.CreateDelegate( typeof(Action), Source, method );
+                    _callType = ECallType.Void;
                 }
                 else if ( methodParams.Length == 1 )
                 {
@@ -107,7 +117,18 @@ namespace UIBindings
                     _callValueTask = (Func<ValueTask>)Delegate.CreateDelegate( typeof(Func<ValueTask>), Source, method );
                     _callType = ECallType.ValueTask;
                 }
-                //todo UniTaskVoid
+#if UIBINDINGS_UNITASK_SUPPORT
+                else if( method.ReturnType == typeof(UniTask) )
+                {
+                    _callUniTask = (Func<UniTask>)Delegate.CreateDelegate( typeof(Func<UniTask>), Source, method );
+                    _callType    = ECallType.UniTask;
+                }
+                else if( method.ReturnType == typeof(UniTaskVoid) )
+                {
+                    _callUniTaskVoid = (Func<UniTaskVoid>)Delegate.CreateDelegate( typeof(Func<UniTaskVoid>), Source, method );
+                    _callType = ECallType.UniTaskVoid;
+                }
+#endif
             }
 
             Assert.IsTrue( _callType != ECallType.Unknown, $"[{nameof(CallBinding)}] Method {Path} has unsupported signature at {_hostName}" );
@@ -128,7 +149,16 @@ namespace UIBindings
                 ProcessAwaitableCall( );
                 //_callAwaitable();
             }
-
+#if UIBINDINGS_UNITASK_SUPPORT
+            else if ( _callType == ECallType.UniTask )
+            {
+                ProcessAwaitableCall( );
+            }            
+            else if( _callType == ECallType.UniTaskVoid )
+            {
+                _callUniTaskVoid().Forget();
+            }
+#endif
         }
 
         private AwaitableAction GetAwaitableWrapper( MethodInfo method )
@@ -170,6 +200,12 @@ namespace UIBindings
                 case ECallType.ValueTask:
                     await _callValueTask();
                     break;
+
+#if UIBINDINGS_UNITASK_SUPPORT
+                case ECallType.UniTask:
+                    await _callUniTask();
+                    break;
+#endif
             }
 
             // var awaitable = awaitableMethod.GetAwaitableMethod();
@@ -197,6 +233,7 @@ namespace UIBindings
             Task,
             ValueTask,
             UniTask,
+            UniTaskVoid,
         }
 
         public struct AwaitableAction

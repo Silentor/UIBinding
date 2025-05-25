@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Object = System.Object;
@@ -68,6 +69,26 @@ namespace UIBindings
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncVTask)}] " );
         }
 
+        public async UniTask CallMeAsyncUniTask( )
+        { 
+            await Task.Delay( 1000 );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncUniTask)}] " );
+        }
+
+        public async UniTaskVoid CallMeAsyncUniTaskVoid( )
+        {
+            await Task.Delay( 1000 );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncUniTaskVoid)}] " );
+        }
+
+        public async void CallMeAsyncVoid( )
+        {
+            await Task.Delay( 1000 );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncVoid)}] " );
+        }
 
         private void Start( )
         {

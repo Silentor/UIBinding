@@ -1998,33 +1998,22 @@ MonoBehaviour:
   CallBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path: CallMe
+    Path: CallMeAsyncUniTaskVoid
     _converters:
       Converters: []
-    OnCall:
-      m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 1625701090}
-          m_TargetAssemblyTypeName: UIBindings.TestMonoBehSource, UIBindings.Develop
-          m_MethodName: 
-          m_Mode: 1
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0.222
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
+    Param:
+      rid: -2
   CanExecuteBinding:
-    Enabled: 1
+    Enabled: 0
     Source: {fileID: 1625701090}
     Path: TargetBool
     _converters:
       Converters: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
 --- !u!1 &1896152128
 GameObject:
   m_ObjectHideFlags: 0
