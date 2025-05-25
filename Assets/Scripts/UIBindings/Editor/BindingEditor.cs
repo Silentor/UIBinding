@@ -37,7 +37,7 @@ namespace UIBindings.Editor
             var sourceType     = GetSourcePropertyType( binding );
             var sourceTypeName = sourceType            != null ? sourceType.Name : "null";
             var sourceName = binding.Source != null ? binding.Source.name : "";
-            var sourcePropName = binding.Path.IsAssigned ? $".{binding.Path.Path}" : "";
+            var sourcePropName = $".{binding.Path}";
             var sourceDisplayName = $"{sourceName}{sourcePropName} {sourceTypeName}";
             var targetType = bindingTypeInfo.valueType;
             var targetTypeName = targetType != null ? targetType.Name : "null";
@@ -114,8 +114,7 @@ namespace UIBindings.Editor
             if ( sourceObject )
             {
                 var sourceType = sourceObject.GetType();
-                pathProp = pathProp.FindPropertyRelative( nameof(SourcePath.Path) );
-                var propInfo = sourceObject.GetType().GetProperty( pathProp.stringValue );
+                var propInfo = sourceType.GetProperty( pathProp.stringValue );
 
                 //Draw select bindable property button
                 var isSelectPropertyPressed = false;

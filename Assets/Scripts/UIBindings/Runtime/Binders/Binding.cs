@@ -16,7 +16,7 @@ namespace UIBindings
     {
         public        Boolean                   Enabled             = true;                        //Checked once on start!
         public        UnityEngine.Object        Source;
-        public        SourcePath                Path;
+        public        String                    Path;
         //public        Single                    UpdateInterval      = 0.1f;                        //How often to check for changes in source property
 
         [SerializeField]
@@ -72,7 +72,7 @@ namespace UIBindings
                 return;
             }
 
-            if ( !Path.IsAssigned )
+            if ( String.IsNullOrEmpty( Path ) )
             {
                 Debug.LogError( $"[{nameof(Binding)}] Path is not assigned at {host.name}", host );
                 return;

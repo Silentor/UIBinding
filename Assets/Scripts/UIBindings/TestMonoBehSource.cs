@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Object = System.Object;
@@ -39,6 +40,34 @@ namespace UIBindings
         }
 
         public Sprite SourceSprite => TestSprite;
+
+        public void CallMe( )
+        {
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] " );
+        }
+
+        public async Awaitable CallMeAsync( )
+        {
+            await Awaitable.WaitForSecondsAsync( 1f );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsync)}] " );
+        }
+
+        public async Task CallMeAsyncTask( )
+        { 
+            await Task.Delay( 1000 );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncTask)}] " );
+        }
+
+        public async ValueTask CallMeAsyncVTask( )
+        {
+            await Task.Delay( 1000 );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncVTask)}] " );
+        }
+
 
         private void Start( )
         {

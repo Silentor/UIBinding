@@ -272,8 +272,7 @@ MonoBehaviour:
   TextBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path:
-      Path: SourceInt
+    Path: SourceInt
     _converters:
       Converters:
       - rid: 7690191598759182409
@@ -864,8 +863,7 @@ MonoBehaviour:
   ValueBinding:
     Enabled: 1
     Source: {fileID: 0}
-    Path:
-      Path: 
+    Path: 
     _converters:
       Converters: []
   references:
@@ -1250,7 +1248,6 @@ GameObject:
   - component: {fileID: 957776148}
   - component: {fileID: 957776149}
   - component: {fileID: 957776150}
-  - component: {fileID: 957776151}
   m_Layer: 5
   m_Name: FloatSlider
   m_TagString: Untagged
@@ -1347,23 +1344,20 @@ MonoBehaviour:
   ValueBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path:
-      Path: SourceInt
+    Path: SourceInt
     _converters:
       Converters:
       - rid: 7690191598759182408
   MinValueBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
-    Path:
-      Path: 
+    Path: 
     _converters:
       Converters: []
   MaxValueBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path:
-      Path: TargetBool
+    Path: TargetBool
     _converters:
       Converters:
       - rid: 7690191598759182412
@@ -1381,43 +1375,6 @@ MonoBehaviour:
         StepValue: 0.5
         FalseValue: 5
         TrueValue: 10
---- !u!114 &957776151
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 957776147}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 42ddd99c9f854089a2ce6ba13286f9c8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Slider: {fileID: 0}
-  ValueBinding:
-    Enabled: 1
-    Source: {fileID: 0}
-    Path:
-      Path: 
-    _converters:
-      Converters: []
-  MinValueBinding:
-    Enabled: 0
-    Source: {fileID: 0}
-    Path:
-      Path: 
-    _converters:
-      Converters: []
-  MaxValueBinding:
-    Enabled: 0
-    Source: {fileID: 0}
-    Path:
-      Path: 
-    _converters:
-      Converters: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!1 &976848425
 GameObject:
   m_ObjectHideFlags: 0
@@ -1589,8 +1546,7 @@ MonoBehaviour:
   TextBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path:
-      Path: tag
+    Path: 
     _converters:
       Converters: []
   references:
@@ -1774,8 +1730,7 @@ MonoBehaviour:
   ValueBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path:
-      Path: TargetBool
+    Path: TargetBool
     _converters:
       Converters: []
   references:
@@ -1924,7 +1879,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1813831431
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2036,15 +1991,35 @@ MonoBehaviour:
   m_GameObject: {fileID: 1813831430}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d8eea86333147728b655e33f62df03d, type: 3}
+  m_Script: {fileID: 11500000, guid: f3e6d543dbaa4a73893cf105af3c1f63, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  InteractionControl: {fileID: 0}
-  InteractableBinding:
+  Button: {fileID: 1813831432}
+  CallBinding:
     Enabled: 1
-    Source: {fileID: 0}
-    Path:
-      Path: 
+    Source: {fileID: 1625701090}
+    Path: CallMe
+    _converters:
+      Converters: []
+    OnCall:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 1625701090}
+          m_TargetAssemblyTypeName: UIBindings.TestMonoBehSource, UIBindings.Develop
+          m_MethodName: 
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0.222
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+  CanExecuteBinding:
+    Enabled: 1
+    Source: {fileID: 1625701090}
+    Path: TargetBool
     _converters:
       Converters: []
   references:
@@ -2142,15 +2117,13 @@ MonoBehaviour:
   SourceImageBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path:
-      Path: SourceSprite
+    Path: SourceSprite
     _converters:
       Converters: []
   ColorBinding:
     Enabled: 0
     Source: {fileID: 0}
-    Path:
-      Path: 
+    Path: 
     _converters:
       Converters: []
   references:
@@ -2554,8 +2527,7 @@ MonoBehaviour:
   TextBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path:
-      Path: TargetBool
+    Path: TargetBool
     _converters:
       Converters:
       - rid: 7690191598759182411
