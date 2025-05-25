@@ -50,11 +50,6 @@ namespace UIBindings
             MaxValueBinding.CheckChanges();
         }
 
-        private void Reset( )
-        {
-            ValueBinding = new BindingTwoWay<Single>() { Enabled = true };
-        }
-
         private void OnValueChange(Single value )
         {
             ValueBinding.SetValue( value );

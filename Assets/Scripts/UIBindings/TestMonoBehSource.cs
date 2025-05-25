@@ -9,6 +9,8 @@ namespace UIBindings
 {
     public class TestMonoBehSource : MonoBehaviour//, INotifyPropertyChanged 
     {
+        public Sprite TestSprite; 
+
         private Single  _sourceFloat;
         private bool    _targetBool = false;
         private int _sourceInt = 5;
@@ -36,24 +38,10 @@ namespace UIBindings
             set => SetField( ref _sourceInt, value );
         }
 
-        public float    TestConvertF { get; set; } = 5.5f;
-        public int      TestConvertI { get; set; } = 3;
+        public Sprite SourceSprite => TestSprite;
 
         private void Start( )
         {
-            // var f2i = new FloatToIntConverter();
-            // var i2f = (FloatToIntConverter.ReverseModeWrapper)f2i.GetReverseConverter();
-            //
-            // f2i.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertF) ) );
-            // Debug.Log( f2i.GetValueFromSource() );//Check source to target
-            // f2i.ProcessTargetToSource( 42 ); //Check target to source
-            // Assert.IsTrue( TestConvertF == 42 );
-            //
-            // i2f.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertI) ) );
-            // Debug.Log( i2f.GetValueFromSource() ); //Check source to target
-            // i2f.ProcessTargetToSource( 42.1f ); //Check target to source
-            // Assert.IsTrue( TestConvertI == 42 );
-            
             OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
         }
 

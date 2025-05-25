@@ -17,6 +17,7 @@ namespace UIBindings
         public        Boolean                   Enabled             = true;                        //Checked once on start!
         public        UnityEngine.Object        Source;
         public        SourcePath                Path;
+        //public        Single                    UpdateInterval      = 0.1f;                        //How often to check for changes in source property
 
         [SerializeField]
         protected ConvertersList _converters;

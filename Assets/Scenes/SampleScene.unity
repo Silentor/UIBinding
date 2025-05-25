@@ -1810,6 +1810,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34a9491de0b4cdc4f8dfdfd37ca35fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  TestSprite: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
 --- !u!4 &1625701091
 Transform:
   m_ObjectHideFlags: 0
@@ -2067,7 +2068,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1896152129
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2084,7 +2085,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -120.951355, y: 125.52211}
+  m_AnchoredPosition: {x: -298.4, y: 168.1}
   m_SizeDelta: {x: 96.958, y: 73.9159}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &1896152130
@@ -2107,7 +2108,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2134,25 +2135,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 1896152128}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 42ddd99c9f854089a2ce6ba13286f9c8, type: 3}
+  m_Script: {fileID: 11500000, guid: 38f692674e9042e38e8cf9d88148890e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Slider: {fileID: 0}
-  ValueBinding:
+  Image: {fileID: 0}
+  SourceImageBinding:
     Enabled: 1
-    Source: {fileID: 0}
+    Source: {fileID: 1625701090}
     Path:
-      Path: 
+      Path: SourceSprite
     _converters:
       Converters: []
-  MinValueBinding:
-    Enabled: 0
-    Source: {fileID: 0}
-    Path:
-      Path: 
-    _converters:
-      Converters: []
-  MaxValueBinding:
+  ColorBinding:
     Enabled: 0
     Source: {fileID: 0}
     Path:
