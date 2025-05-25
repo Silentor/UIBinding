@@ -97,7 +97,7 @@ namespace UIBindings.Editor
                 return false;
 
             //Check if method has no parameters and returns void
-            if (method.GetParameters().Length != 0 || method.ReturnType != typeof(void))
+            if (method.GetParameters().Length != 0 )
                 return false;
 
             //Check if method is not a property getter or setter
