@@ -7,7 +7,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TestMonoBehSource : MonoBehaviour, INotifyPropertyChanged 
+    public class TestMonoBehSource : MonoBehaviour//, INotifyPropertyChanged 
     {
         private Single  _sourceFloat;
         private bool    _targetBool = false;
@@ -24,9 +24,9 @@ namespace UIBindings
             get => _targetBool;
             set
             {
-                var oldValue = _targetBool;
+                //var oldValue = _targetBool;
                 SetField( ref _targetBool, value );
-                Debug.Log( $"Changed bool from {oldValue} to {value}" );
+                //Debug.Log( $"Changed bool from {oldValue} to {value}" );
             }
         }
 
@@ -41,18 +41,18 @@ namespace UIBindings
 
         private void Start( )
         {
-            var f2i = new FloatToIntConverter();
-            var i2f = (FloatToIntConverter.ReverseModeWrapper)f2i.GetReverseConverter();
-
-            f2i.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertF) ) );
-            Debug.Log( f2i.GetValueFromSource() );//Check source to target
-            f2i.ProcessTargetToSource( 42 ); //Check target to source
-            Assert.IsTrue( TestConvertF == 42 );
-
-            i2f.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertI) ) );
-            Debug.Log( i2f.GetValueFromSource() ); //Check source to target
-            i2f.ProcessTargetToSource( 42.1f ); //Check target to source
-            Assert.IsTrue( TestConvertI == 42 );
+            // var f2i = new FloatToIntConverter();
+            // var i2f = (FloatToIntConverter.ReverseModeWrapper)f2i.GetReverseConverter();
+            //
+            // f2i.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertF) ) );
+            // Debug.Log( f2i.GetValueFromSource() );//Check source to target
+            // f2i.ProcessTargetToSource( 42 ); //Check target to source
+            // Assert.IsTrue( TestConvertF == 42 );
+            //
+            // i2f.InitAttachToSourceProperty( this, GetType().GetProperty( nameof(TestConvertI) ) );
+            // Debug.Log( i2f.GetValueFromSource() ); //Check source to target
+            // i2f.ProcessTargetToSource( 42.1f ); //Check target to source
+            // Assert.IsTrue( TestConvertI == 42 );
             
             OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
         }
@@ -67,7 +67,7 @@ namespace UIBindings
 
         protected virtual void OnPropertyChanged([CallerMemberName] String propertyName = null)
         {
-            PropertyChanged?.Invoke( this, propertyName );
+            //PropertyChanged?.Invoke( this, propertyName );
         }
 
          protected Boolean SetField<T>(ref T field, T value, [CallerMemberName] String propertyName = null)
@@ -80,20 +80,5 @@ namespace UIBindings
 
         public event Action<Object, String> PropertyChanged;
 
-        public class DebugFloat : IInput<float>
-        {
-            public void ProcessSourceToTarget( Single value )
-            {
-                Debug.Log( $"Debug float {value}" );
-            }
-        }
-
-        public class DebugInt : IInput<int>
-        {
-            public void ProcessSourceToTarget( int value )
-            {
-                Debug.Log( $"Debug int {value}" );
-            }
-        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine.Assertions;
 using Object = System.Object;
@@ -9,6 +10,8 @@ namespace UIBindings
     {
         private IOneWayConverter<TInput> _prev;
         protected Func<TInput> _getter;
+        private TInput _lastValue;
+        private Boolean _isLastValueInited;
 
         public abstract TOutput Convert( TInput value );
 
@@ -27,18 +30,30 @@ namespace UIBindings
             throw new NotImplementedException( "Not supported for one way converters" );
         }
 
-        public virtual TOutput GetValueFromSource( )
+        public virtual Boolean TryGetValueFromSource( out TOutput value )
         {
             if ( _prev != null )
             {
-                var value = _prev.GetValueFromSource();
-                return Convert( value );
+                if( _prev.TryGetValueFromSource( out var prevValue ))
+                {
+                    value = Convert( prevValue );
+                    return true;
+                }
             }
             else
             {
-                var value = _getter.Invoke();
-                return Convert( value );
+                var sourceValue = _getter.Invoke();
+                if( !_isLastValueInited || !EqualityComparer<TInput>.Default.Equals( sourceValue, _lastValue ) )
+                {
+                    _lastValue         = sourceValue;
+                    _isLastValueInited = true;
+                    value              = Convert( sourceValue );
+                    return true;
+                }
             }
+
+            value = default;
+            return false;
         }
     }
 }

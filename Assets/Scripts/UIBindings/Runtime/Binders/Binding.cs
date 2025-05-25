@@ -14,7 +14,6 @@ namespace UIBindings
     [Serializable]
     public abstract class Binding
     {
-        
         public        UnityEngine.Object        Source;
         public        SourcePath                Path;
 
@@ -31,7 +30,11 @@ namespace UIBindings
         }
 
         protected static readonly ProfilerMarker ReadDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadDirectValue", MarkerFlags.Script );
+        protected static readonly ProfilerMarker WriteDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteDirectValue", MarkerFlags.Script );
         protected static readonly ProfilerMarker ReadConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadConvertedValue", MarkerFlags.Script );
+        protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteConvertedValue", MarkerFlags.Script );
+        protected static readonly ProfilerMarker UpdateTargetMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.UpdateTarget", MarkerFlags.Script );
+        
 
         public static (Type valueType, Type templateType) GetBinderTypeInfo( Type bindingType )
         {
@@ -54,7 +57,7 @@ namespace UIBindings
     }
 
     [Serializable]
-    public class Binding<T> : Binding, IInput<T>
+    public class Binding<T> : Binding
     {
         public void Awake( MonoBehaviour host )
         {
@@ -79,6 +82,7 @@ namespace UIBindings
                 return;
             }
 
+            _hostName = host.name;
             _sourceNotify = Source as INotifyPropertyChanged;
 
             var converters = _converters.Converters;
@@ -125,20 +129,22 @@ namespace UIBindings
 
         public void Subscribe()
         {
-            if ( _sourceNotify != null )
-            {
+            if( _isSubscribed ) return;
+
+            if ( _sourceNotify != null )                
                 _sourceNotify.PropertyChanged += OnSourcePropertyChanged;
-                _isSubscribed = true;
-            }
+
+            _isSubscribed = true;
         }
 
         public void Unsubscribe()
         {
-            if ( _sourceNotify != null )
-            {
+            if( !_isSubscribed ) return;
+
+            if ( _sourceNotify != null )                
                 _sourceNotify.PropertyChanged -= OnSourcePropertyChanged;
-                _isSubscribed = false;
-            }
+
+            _isSubscribed = false;
         }
 
         /// <summary>
@@ -150,9 +156,8 @@ namespace UIBindings
 
             if( _sourceNotify == null || _sourceChanged )
             {
-                _sourceChanged = false;
-
                 T value;
+                var isChangedOnSource = true;
                 if ( _directGetter != null )
                 {
                     ReadDirectValueMarker.Begin();
@@ -162,16 +167,22 @@ namespace UIBindings
                 else
                 {
                     ReadConvertedValueMarker.Begin();
-                    value = _lastConverter.GetValueFromSource();
+                    isChangedOnSource = _lastConverter.TryGetValueFromSource( out value );
                     ReadConvertedValueMarker.End();
+                    //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
 
-                if( !_isLastValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastSourceValue ) )
+                if( isChangedOnSource && (!_isLastValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastSourceValue ) ))
                 {
                     _isLastValueInitialized   = true;
                     _lastSourceValue = value;
+
+                    UpdateTargetMarker.Begin();
                     SourceChanged?.Invoke( Source, value );
+                    UpdateTargetMarker.End();
                 }
+
+                _sourceChanged = false;
             }
         }
 
@@ -187,11 +198,6 @@ namespace UIBindings
             }
         }
 
-        void IInput<T>.ProcessSourceToTarget(T value )
-        {
-            SourceChanged?.Invoke( Source, value );
-        }
-
         private INotifyPropertyChanged _sourceNotify;
         private Func<T> _directGetter;
         private Boolean _sourceChanged;
@@ -200,6 +206,7 @@ namespace UIBindings
         protected bool _isLastValueInitialized;
         protected IOneWayConverter<T> _lastConverter;
         protected Boolean _isSubscribed;
+        protected String _hostName;
     }
 
 }

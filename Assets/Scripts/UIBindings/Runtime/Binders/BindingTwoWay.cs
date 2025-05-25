@@ -15,19 +15,23 @@ namespace UIBindings
                 return;
             }
 
-            if ( !_isLastValueInitialized )
-            {
-                _isLastValueInitialized = true;
-                _lastSourceValue = value;
-            }
+            // if ( !_isLastValueInitialized )
+            // {
+            //     _isLastValueInitialized = true;
+            //     _lastSourceValue = value;
+            // }
 
             if( _lastConverterTargetToSource != null )
             {
+                WriteConvertedValueMarker.Begin();
                 _lastConverterTargetToSource.ProcessTargetToSource( value );
+                WriteConvertedValueMarker.End();
             }
             else
             {
+                WriteDirectValueMarker.Begin();
                 _directSetter( value );
+                WriteDirectValueMarker.End();
             }
         }
 

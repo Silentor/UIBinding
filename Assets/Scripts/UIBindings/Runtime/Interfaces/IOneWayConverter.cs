@@ -1,7 +1,7 @@
 ﻿namespace UIBindings
 {
-    public interface IOneWayConverter<out TOutput>
+    public interface IOneWayConverter<TOutput>
     {
-        TOutput GetValueFromSource(  );
+        bool TryGetValueFromSource( out TOutput value );
     }
 }
