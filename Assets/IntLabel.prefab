@@ -61,22 +61,19 @@ MonoBehaviour:
   ValueBinding:
     Enabled: 1
     Source: {fileID: 0}
-    Path:
-      Path: 
+    Path: 
     _converters:
       Converters: []
   MinValueBinding:
     Enabled: 0
     Source: {fileID: 0}
-    Path:
-      Path: 
+    Path: 
     _converters:
       Converters: []
   MaxValueBinding:
     Enabled: 0
     Source: {fileID: 0}
-    Path:
-      Path: 
+    Path: 
     _converters:
       Converters: []
   references:

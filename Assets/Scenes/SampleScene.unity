@@ -1232,11 +1232,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &840117997 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4646666566668089471, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
-  m_PrefabInstance: {fileID: 3384473827124313058}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &957776147
 GameObject:
   m_ObjectHideFlags: 0
@@ -1525,33 +1520,56 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 984738461}
   m_CullTransparentMesh: 1
---- !u!224 &1392998230 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 7021411471282237871, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
-  m_PrefabInstance: {fileID: 3384473827124313058}
+--- !u!1 &1216452255
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1392998231
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1216452257}
+  - component: {fileID: 1216452256}
+  m_Layer: 0
+  m_Name: Source 2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1216452256
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 840117997}
+  m_GameObject: {fileID: 1216452255}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 55a93b82b4384a799df000d7d8c421f5, type: 3}
+  m_Script: {fileID: 11500000, guid: 72d622ae05b34432a3d6735a5e0f9186, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Label: {fileID: 0}
-  TextBinding:
-    Enabled: 1
-    Source: {fileID: 1625701090}
-    Path: 
-    _converters:
-      Converters: []
-  references:
-    version: 2
-    RefIds: []
+  TestSprite: {fileID: 0}
+--- !u!4 &1216452257
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1216452255}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 386.28262, y: 462.18942, z: -6.11882}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!224 &1392998230 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7021411471282237871, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
+  m_PrefabInstance: {fileID: 3384473827124313058}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1553697767
 GameObject:
   m_ObjectHideFlags: 0
@@ -1997,12 +2015,20 @@ MonoBehaviour:
   Button: {fileID: 1813831432}
   CallBinding:
     Enabled: 1
-    Source: {fileID: 1625701090}
-    Path: CallMeAsyncUniTaskVoid
+    Source: {fileID: 1216452256}
+    Path: CallParamStr
     _converters:
       Converters: []
-    Param:
-      rid: -2
+    Params:
+    - Primitive: 42
+      String: str11
+      Object: {fileID: 0}
+      ValueType: 4
+    - Primitive: 42
+      String: str22
+      Object: {fileID: 0}
+      ValueType: 4
+    DisableButtonDuringAsyncCall: 1
   CanExecuteBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
@@ -2011,9 +2037,7 @@ MonoBehaviour:
       Converters: []
   references:
     version: 2
-    RefIds:
-    - rid: -2
-      type: {class: , ns: , asm: }
+    RefIds: []
 --- !u!1 &1896152128
 GameObject:
   m_ObjectHideFlags: 0
@@ -2687,10 +2711,7 @@ PrefabInstance:
     - {fileID: 9049462046558818184, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4646666566668089471, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1392998231}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 435bc8dce3a3d1e44adb27fd32b08ff8, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
@@ -2702,3 +2723,4 @@ SceneRoots:
   - {fileID: 2095982999}
   - {fileID: 1656738691}
   - {fileID: 1625701091}
+  - {fileID: 1216452257}

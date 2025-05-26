@@ -9,7 +9,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TestMonoBehSource : MonoBehaviour//, INotifyPropertyChanged 
+    public class TestMonoBehSource2 : MonoBehaviour//, INotifyPropertyChanged 
     {
         public Sprite TestSprite; 
 
@@ -45,64 +45,64 @@ namespace UIBindings
         public void CallMe( )
         {
             TargetBool = !TargetBool;
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] " );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallMe)}] " );
         }
 
         public async Awaitable CallMeAsync( )
         {
             await Awaitable.WaitForSecondsAsync( 1f );
             TargetBool = !TargetBool;
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsync)}] " );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallMeAsync)}] " );
         }
 
         public async Task CallMeAsyncTask( )
         { 
             await Task.Delay( 1000 );
             TargetBool = !TargetBool;
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncTask)}] " );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallMeAsyncTask)}] " );
         }
 
         public async ValueTask CallMeAsyncVTask( )
         {
             await Task.Delay( 1000 );
             TargetBool = !TargetBool;
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncVTask)}] " );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallMeAsyncVTask)}] " );
         }
 
         public async UniTask CallMeAsyncUniTask( )
         { 
             await Task.Delay( 1000 );
             TargetBool = !TargetBool;
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncUniTask)}] " );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallMeAsyncUniTask)}] " );
         }
 
         public async UniTaskVoid CallMeAsyncUniTaskVoid( )
         {
             await Task.Delay( 1000 );
             TargetBool = !TargetBool;
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncUniTaskVoid)}] " );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallMeAsyncUniTaskVoid)}] " );
         }
 
         public async void CallMeAsyncVoid( )
         {
             await Task.Delay( 1000 );
             TargetBool = !TargetBool;
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncVoid)}] " );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallMeAsyncVoid)}] " );
         }
 
         public void CallParamInt( int value )
         {
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamInt)}] value={value}" );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallParamInt)}] value={value}" );
         }
 
         public void CallParamStr( string value1, string value2 )
         {
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamInt)}] value={value1}, value2={value2}" );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallParamStr)}] value={value1}, value2={value2}" );
         }
 
         public void CallParamtexture( Texture2D value1, bool value2 )
         {
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamInt)}] value={value1.format}, value2={value2}" );
+            Debug.Log( $"[{nameof(TestMonoBehSource2)}]-[{nameof(CallParamtexture)}] value={value1.format}, value2={value2}" );
         }
 
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
-
+using UIBindings.Runtime;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Object = System.Object;
@@ -15,8 +15,10 @@ namespace UIBindings
     [Serializable]
     public class CallBinding : Binding
     {
-        [SerializeReference]
-        public System.Object Param; 
+        public SerializableParam[] Params; 
+
+        //Async call settings
+        public Boolean DisableButtonDuringAsyncCall = true;
 
         //Optimized delegates for simple cases
         private Action                          _callVoid;
@@ -31,6 +33,12 @@ namespace UIBindings
         private Func<UniTask>                   _callUniTask;
         private Func<UniTaskVoid>               _callUniTaskVoid;
 #endif
+
+        //2 params delegate with boxing
+        private Action<TestMonoBehSource2, Object, Object>          _call2Params;
+
+        private MethodInfo                      _callReflection;
+
         //private AwaitableAction                 _callAwaitable;
 
         private ECallType _callType;
@@ -98,6 +106,12 @@ namespace UIBindings
                         _callType      = ECallType.UObject;
                     }
                 }
+                else if( methodParams.Length == 2 )                    
+                {
+                    //Construct 2 params delegate with boxing, see https://codeblog.jonskeet.uk/2008/08/09/making-reflection-fly-and-exploring-delegates/
+                    _call2Params = Construct2ParamsDelegate<TestMonoBehSource2>( method );
+                    _callType = ECallType.Boxed2Params;
+                }
             }
             else    //Methods with result
             {
@@ -144,10 +158,16 @@ namespace UIBindings
 
             if ( _callType == ECallType.Void )
                 _callVoid();
+            else if( _callType == ECallType.Int )
+                _callInt( Params[ 0 ].GetInt() );
             else if ( _callType == ECallType.Awaitable || _callType == ECallType.Task || _callType == ECallType.ValueTask )
             {
                 ProcessAwaitableCall( );
                 //_callAwaitable();
+            }
+            else if ( _callType == ECallType.Boxed2Params )
+            {
+                _call2Params((TestMonoBehSource2)Source, Params[0].GetBoxedValue(), Params[1].GetBoxedValue());
             }
 #if UIBINDINGS_UNITASK_SUPPORT
             else if ( _callType == ECallType.UniTask )
@@ -221,6 +241,25 @@ namespace UIBindings
             // awaitableMethod.GetResultMethod( awaiter );
         }
 
+        private static Action<TTarget, Object, Object> Construct2ParamsDelegate<TTarget>( MethodInfo method )
+        {
+            var paramz = method.GetParameters();
+            var type1 = paramz[ 0 ].ParameterType;
+            var type2 = paramz[ 1 ].ParameterType;
+            var convertMethod = typeof(CallBinding).GetMethod( nameof( Convert2ParamsDelegate ), BindingFlags.NonPublic | BindingFlags.Static );
+            var closedConvertMethod = convertMethod.MakeGenericMethod( typeof(TTarget), type1, type2 );
+            var result = (Action<TTarget, Object, Object>)closedConvertMethod.Invoke( null, new object[] { method } );
+            return result;
+        }
+
+        private static Action<TTarget, Object, Object> Convert2ParamsDelegate<TTarget, TParam1, TParam2>( MethodInfo method )
+        {
+            var strong = (Action<TTarget, TParam1, TParam2>) Delegate.CreateDelegate( typeof(Action<TTarget, TParam1, TParam2>), method );
+            Action<TTarget, Object, Object> weak = (target, p1, p2) => strong( target, (TParam1)p1, (TParam2)p2 );
+            return weak;
+        }
+
+
         public enum ECallType
         {
             Unknown,
@@ -234,6 +273,8 @@ namespace UIBindings
             ValueTask,
             UniTask,
             UniTaskVoid,
+            Boxed2Params, 
+            Reflection,
         }
 
         public struct AwaitableAction

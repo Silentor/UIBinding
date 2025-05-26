@@ -3,18 +3,23 @@ using System.Linq;
 using System.Reflection;
 using UIBindings.Editor.Utils;
 using UIBindings.Runtime;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEditor;
 using UnityEngine;
+using Object = System.Object;
 
 namespace UIBindings.Editor
 {
     [CustomPropertyDrawer(typeof(CallBinding))]
     public class CallBindingEditor : PropertyDrawer
     {
+        private Int32 _additionalLinesCount;
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             using (  new EditorGUI.PropertyScope( position, label, property ) ) ;
 
+            _additionalLinesCount = 0;
             position.height = EditorGUIUtility.singleLineHeight;
             var labelRect = position;
 
@@ -33,14 +38,17 @@ namespace UIBindings.Editor
             var sourceName        = binding.Source ? binding.Source.name : "null";
             var sourceMethod      = GetSourceMethod( binding );
             var sourceMethodName  = sourceMethod != null ? sourceMethod.Name : "null";
-            var isValid           = !isEnabled || sourceMethod != null;
+            var isValid           = !isEnabled || (sourceMethod != null && IsProperMethod( sourceMethod ));
+            var paramsString = sourceMethod != null && sourceMethod.GetParameters().Length > 0
+                ? String.Concat("(", String.Join( ", ", sourceMethod.GetParameters().Select( p => p.ParameterType.Name ) ), ")")
+                : "()";
 
             //Draw Enabled toggle
             EditorGUI.PropertyField( rects.Item2, enabledProp, GUIContent.none );
 
             using ( new EditorGUI.DisabledGroupScope( !isEnabled ) )
             {
-                var mainText = $"{sourceName}.{sourceMethodName} ()";
+                var mainText = $"{sourceName}.{sourceMethodName} {paramsString}";
                 GUI.Label( rects.Item1, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
 
                 //Draw expanded content
@@ -56,23 +64,28 @@ namespace UIBindings.Editor
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                         var pathProperty   = property.FindPropertyRelative( nameof(Binding.Path) );
                         //EditorGUI.PropertyField( position, pathProperty );
-                        DrawPathField( position, pathProperty, binding );
+                        var methodInfo = DrawPathField( position, pathProperty, binding );
 
                         // position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                         // var convertersProperty = property.FindPropertyRelative( Binding.ConvertersPropertyName );
                         // //EditorGUI.PropertyField( position, convertersProperty );
                         // DrawConvertersField( position, convertersProperty, binding, sourceType, targetType );
+
+                        if ( methodInfo != null )
+                        {
+                            position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                            var paramProperty = property.FindPropertyRelative(nameof(CallBinding.Params));
+                            DrawMethodParameter( position, paramProperty, methodInfo, binding );
+                        }
                     }
                 }
             }
-
-           
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             if (property.isExpanded)
-                return Resources.LineHeightWithMargin * 3;
+                return Resources.LineHeightWithMargin * 3 + _additionalLinesCount * Resources.LineHeightWithMargin;
             else
                 return EditorGUIUtility.singleLineHeight;
         }
@@ -96,10 +109,6 @@ namespace UIBindings.Editor
             if (method == null)
                 return false;
 
-            //Check if method has no parameters and returns void
-            if (method.GetParameters().Length != 0 )
-                return false;
-
             //Check if method is not a property getter or setter
             if ( method.IsSpecialName )
                 return false;
@@ -107,6 +116,24 @@ namespace UIBindings.Editor
             //Check if method is not obsolete
             if (method.GetCustomAttribute<ObsoleteAttribute>() != null)
                 return false;
+
+            //Check params
+            var paramz = method.GetParameters();
+            if (paramz.Length > 3 )
+                return false;
+
+            foreach ( var parameterInfo in paramz )
+            {
+                var paramType = parameterInfo.ParameterType;
+                if( paramType != typeof(int) && 
+                    paramType != typeof(float) && 
+                    paramType != typeof(bool) && 
+                    paramType != typeof(string) && 
+                    !typeof(UnityEngine.Object).IsAssignableFrom(paramType) )
+                {
+                    return false;
+                }
+            }
 
             return true;
         }
@@ -140,7 +167,7 @@ namespace UIBindings.Editor
             }
         }
 
-        private void DrawPathField(  Rect position, SerializedProperty pathProp, Binding binding )
+        private MethodInfo DrawPathField(  Rect position, SerializedProperty pathProp, Binding binding )
         {
             position = EditorGUI.PrefixLabel( position, new GUIContent( pathProp.displayName ) );
 
@@ -148,22 +175,30 @@ namespace UIBindings.Editor
             if ( sourceObject )
             {
                 var sourceType = sourceObject.GetType();
-                var methodInfo = sourceType.GetMethod( pathProp.stringValue, Array.Empty<Type>() );
+                var compatibleMethods = sourceType.GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
+                                                        .Where( IsProperMethod )
+                                                        .ToArray();
+                MethodInfo methodInfo = null;
+                var methodName = pathProp.stringValue;
+                if ( !String.IsNullOrEmpty( methodName ) )
+                {
+                    methodInfo = compatibleMethods.FirstOrDefault( mi => mi.Name == methodName );
+                }
 
-                //Draw select bindable property button
+                //Draw select method button
                 var isSelectPropertyPressed = false;
                 String selectedProperty;
                 if ( methodInfo != null )
                 {
-                    var displayName = $"{methodInfo.Name}";
+                    var displayName = $"{methodName}()";
                     isSelectPropertyPressed = GUI.Button( position, displayName, Resources.TextField );
-                    selectedProperty = pathProp.stringValue;
+                    selectedProperty = methodName;
                 }
                 else
                 {
-                    var displayName = pathProp.stringValue == String.Empty 
+                    var displayName = methodName == String.Empty 
                             ? $"(method not set)"
-                            : $"(missed method {pathProp.stringValue} on Source)";
+                            : $"(missed method {methodName} on Source)";
                     //using ( GUIUtils.ChangeContentColor( Color.red ) )
                     {
                         isSelectPropertyPressed = GUI.Button( position, displayName, Resources.ErrorTextField );
@@ -171,26 +206,25 @@ namespace UIBindings.Editor
                     selectedProperty = null;
                 }
 
-                //Select compatible call method from list
+                //Show select method menu
                 if ( isSelectPropertyPressed )
                 {
-                    var methods = sourceType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                                          .Where( IsProperMethod )
-                                          .ToArray();
                     var menu             = new GenericMenu();
-                    foreach (var method in methods)
+                    foreach (var method in compatibleMethods)
                     {
                         var isBaseMethod = method.DeclaringType != sourceType;
                         string propDisplayName = isBaseMethod ? $"Base/{method.Name}" : method.Name;
-                        string methodName = method.Name;
-                        menu.AddItem(new GUIContent(propDisplayName), methodName == selectedProperty, () =>
+                        var capturedName = method.Name;
+                        menu.AddItem(new GUIContent(propDisplayName), capturedName == selectedProperty, () =>
                         {
-                            pathProp.stringValue = methodName;
+                            pathProp.stringValue = capturedName;
                             pathProp.serializedObject.ApplyModifiedProperties();
                         });
                     }
                     menu.DropDown(position);
                 }
+
+                return methodInfo;
             }
             else
             {
@@ -198,7 +232,102 @@ namespace UIBindings.Editor
                 {
                     GUI.TextField( position, "(Source not set)", Resources.DisabledTextField );
                 }
+
+                return null;
             }
+        }
+
+        private void DrawMethodParameter(Rect position, SerializedProperty paramsProp, MethodInfo method, CallBinding binding )
+        {
+            var isChanged = false;
+
+            var paramz = method.GetParameters();
+            if( paramsProp.arraySize < paramz.Length )
+            {
+                paramsProp.arraySize = paramz.Length;
+                isChanged = true;
+            }
+
+            //Draw all parameters
+            for ( int i = 0; i < paramz.Length; i++ )
+            {
+                var param = paramz[i];
+                var paramProp = paramsProp.GetArrayElementAtIndex(i);
+                position.height = EditorGUIUtility.singleLineHeight;
+                var paramName = $"{param.Name} ({param.ParameterType.Name})";
+                var paramObject = (SerializableParam)paramProp.boxedValue;
+
+                //Draw parameter value field
+                if ( param.ParameterType == typeof(int) )
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var newValue = EditorGUI.IntField( position, paramName, paramObject.GetInt() );
+                    if (EditorGUI.EndChangeCheck() )
+                    {
+                        paramProp.FindPropertyRelative( SerializableParam.PrimitiveFieldName).intValue = newValue;
+                        paramProp.FindPropertyRelative( SerializableParam.ValueTypeFieldName ).intValue = (Int32)SerializableParam.EType.Int;
+                        isChanged = true;
+                    }
+                }
+                else if ( param.ParameterType == typeof(float) )
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var newValue = EditorGUI.FloatField( position, paramName, paramObject.GetFloat() );
+                    if (EditorGUI.EndChangeCheck() )
+                    {
+                        paramProp.FindPropertyRelative(SerializableParam.PrimitiveFieldName).intValue = UnsafeUtility.As<float, int>(ref newValue);
+                        paramProp.FindPropertyRelative( SerializableParam.ValueTypeFieldName ).intValue = (Int32)SerializableParam.EType.Float;
+                        isChanged = true;
+                    }
+                }
+                else if ( param.ParameterType == typeof(bool) )
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var newValue = EditorGUI.Toggle( position, paramName, paramObject.GetBool() );
+                    if (EditorGUI.EndChangeCheck() )
+                    {
+                        paramProp.FindPropertyRelative(SerializableParam.PrimitiveFieldName).intValue = newValue ? 1 : 0;
+                        paramProp.FindPropertyRelative( SerializableParam.ValueTypeFieldName ).intValue = (Int32)SerializableParam.EType.Bool;
+                        isChanged = true;
+                    }
+                }
+                else if ( param.ParameterType == typeof(string) )
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var newValue = EditorGUI.TextField( position, paramName, paramObject.GetString(), Resources.TextField );
+                    if (EditorGUI.EndChangeCheck() )
+                    {
+                        paramProp.FindPropertyRelative(SerializableParam.StringFieldName).stringValue = newValue;
+                        paramProp.FindPropertyRelative( SerializableParam.ValueTypeFieldName ).intValue = (Int32)SerializableParam.EType.String;
+                        isChanged = true;
+                    }
+                }
+                else if ( typeof(UnityEngine.Object).IsAssignableFrom(param.ParameterType) )
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var newValue = EditorGUI.ObjectField( position, paramName, paramObject.GetObject(), param.ParameterType, true );
+                    if (EditorGUI.EndChangeCheck() )
+                    {
+                        paramProp.FindPropertyRelative(SerializableParam.ObjectFieldName).objectReferenceValue = newValue;
+                        paramProp.FindPropertyRelative( SerializableParam.ValueTypeFieldName ).intValue = (Int32)SerializableParam.EType.Object;
+                        isChanged = true;
+                    }
+                }
+                else
+                {
+                    //Unsupported parameter type
+                    using ( new EditorGUI.DisabledScope() )
+                    {
+                        EditorGUI.LabelField( position, paramName, $"(unsupported type {param.ParameterType.Name})", Resources.ErrorTextField );
+                    }
+                }
+
+                position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                _additionalLinesCount++;
+            }
+
+            if ( isChanged )
+                paramsProp.serializedObject.ApplyModifiedProperties();
         }
 
         private static class Resources
