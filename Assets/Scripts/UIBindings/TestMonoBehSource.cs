@@ -44,6 +44,10 @@ namespace UIBindings
 
         public void CallMe( )
         {
+            throw new OperationCanceledException( "Test exception" );
+            //throw new Exception( "Test exception" );
+
+
             var newObj = new Object();
             TargetBool = !TargetBool;
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] " );
@@ -72,8 +76,15 @@ namespace UIBindings
 
         public async Awaitable CallMeAsync2Params( float value, String value2 )
         {
+
+
             await Awaitable.WaitForSecondsAsync( 1f );
-            TargetBool = !TargetBool;
+            //TargetBool = !TargetBool;
+ 
+            throw new OperationCanceledException( "Test exception" );
+            throw new Exception( "Test exception" );
+
+            
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsync2Params)}] {value}, {value2}" );
         }
 

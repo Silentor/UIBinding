@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using Sisus;
 using UIBindings.Runtime;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
@@ -23,16 +24,8 @@ namespace UIBindings
     {
         public SerializableParam[] Params; 
 
-        //Async call settings
-        public Boolean DisableButtonDuringAsyncCall = true;
-
-        //Optimized delegates for simple cases lives here
+        //All call delegates lives here
         private Delegate _delegateCall;
-
-        //All unoptimized calls uses reflection
-        private MethodInfo                      _callReflection;
-
-        //private AwaitableAction                 _callAwaitable;
 
         private EParamsType _paramsType;
         private EAwaitableType _awaitType;
@@ -264,10 +257,10 @@ namespace UIBindings
             _isValid = true;
         }
 
-        public void Call( )
+        public Awaitable Call( )
         {
             if( !Enabled || !_isValid )
-                return;
+                return AwaitableUtility.CompletedAwaitable;
 
             CallMarker.Begin( _debugProfileMarkerName );
 
@@ -305,12 +298,19 @@ namespace UIBindings
                     else if( _paramsType == EParamsType.Boxed2Params )
                         task = (UniTaskVoid)((Func<Object, Object, Object>)_delegateCall)( Params[0].GetBoxedValue( _methodParams[0].ParameterType ), Params[1].GetBoxedValue( _methodParams[1].ParameterType ) );
                     task.Forget();
-                }else
+                }
+                else
 #endif
-                ProcessAwaitableCall();
+                {
+                    //Truly async call, return awaitable
+                    var task = ProcessAwaitableCall();
+                    CallMarker.End();
+                    return task;
+                }
             }
 
             CallMarker.End();
+            return AwaitableUtility.CompletedAwaitable;
         }
 
         // private AwaitableAction GetAwaitableWrapper( MethodInfo method )
@@ -337,7 +337,7 @@ namespace UIBindings
         //     return result;
         // }
 
-        private async void ProcessAwaitableCall(  )
+        private async Awaitable ProcessAwaitableCall(  )
         {
             switch ( _awaitType )
             {

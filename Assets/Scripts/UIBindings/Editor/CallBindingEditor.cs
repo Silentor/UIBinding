@@ -42,13 +42,15 @@ namespace UIBindings.Editor
             var paramsString = sourceMethod != null && sourceMethod.GetParameters().Length > 0
                 ? String.Concat("(", String.Join( ", ", sourceMethod.GetParameters().Select( p => p.ParameterType.Name ) ), ")")
                 : "()";
+            var isAwaitable = sourceMethod != null && sourceMethod.ReturnType.GetMethod( "GetAwaiter" ) != null;
+            var taskString = isAwaitable ? "task " : String.Empty;
 
             //Draw Enabled toggle
             EditorGUI.PropertyField( rects.Item2, enabledProp, GUIContent.none );
 
             using ( new EditorGUI.DisabledGroupScope( !isEnabled ) )
             {
-                var mainText = $"{sourceName}.{sourceMethodName} {paramsString}";
+                var mainText = $"{taskString}{sourceName}.{sourceMethodName} {paramsString}";
                 GUI.Label( rects.Item1, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
 
                 //Draw expanded content
@@ -77,6 +79,8 @@ namespace UIBindings.Editor
                             var paramProperty = property.FindPropertyRelative(nameof(CallBinding.Params));
                             DrawMethodParameter( position, paramProperty, methodInfo, binding );
                         }
+
+                        //if(  )
                     }
                 }
             }
@@ -115,6 +119,11 @@ namespace UIBindings.Editor
 
             //Check if method is not obsolete
             if (method.GetCustomAttribute<ObsoleteAttribute>() != null)
+                return false;
+
+            //Check result type                       
+            if ( method.ReturnType != typeof(void)
+                 && method.ReturnType.GetMethod( "GetAwaiter" ) == null )
                 return false;
 
             //Check params
