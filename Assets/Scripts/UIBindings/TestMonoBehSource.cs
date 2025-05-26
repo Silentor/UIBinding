@@ -9,7 +9,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TestMonoBehSource : MonoBehaviour//, INotifyPropertyChanged 
+    public class TestMonoBehSource : MonoBehaviour, INotifyPropertyChanged 
     {
         public Sprite TestSprite; 
 
@@ -44,6 +44,7 @@ namespace UIBindings
 
         public void CallMe( )
         {
+            var newObj = new Object();
             TargetBool = !TargetBool;
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] " );
         }
@@ -54,6 +55,28 @@ namespace UIBindings
             TargetBool = !TargetBool;
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsync)}] " );
         }
+
+        public async Awaitable CallMeAsyncInt( int value )
+        {
+            await Awaitable.WaitForSecondsAsync( 1f );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncInt)}] {value}" );
+        }
+
+        public async Awaitable CallMeAsyncFloat( float value )
+        {
+            await Awaitable.WaitForSecondsAsync( 1f );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsyncFloat)}] {value}" );
+        }
+
+        public async Awaitable CallMeAsync2Params( float value, String value2 )
+        {
+            await Awaitable.WaitForSecondsAsync( 1f );
+            TargetBool = !TargetBool;
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMeAsync2Params)}] {value}, {value2}" );
+        }
+
 
         public async Task CallMeAsyncTask( )
         { 
@@ -95,14 +118,35 @@ namespace UIBindings
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamInt)}] value={value}" );
         }
 
-        public void CallParamStr( string value1, string value2 )
+        public void CallParamBool( bool value )
         {
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamInt)}] value={value1}, value2={value2}" );
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamBool)}] value={value}" );
         }
 
-        public void CallParamtexture( Texture2D value1, bool value2 )
+        public void CallParamFloat( float value )
         {
-            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamInt)}] value={value1.format}, value2={value2}" );
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamFloat)}] value={value}" );
+        }
+
+        public void CallParamString( String value )
+        {
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamString)}] value={value}" );
+        }
+
+        public void CallParamStr2( string value1, string value2 )
+        {
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamStr2)}] value={value1}, value2={value2}" );
+        }
+
+        public void CallParamInt2( int value1, int value2 )         //Will box
+        {
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamInt2)}] value={value1}, value2={value2}" );
+        }
+
+
+        public void CallParamTextureBool( Texture2D value1, bool value2 )
+        {
+            Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamTextureBool)}] value={value1.format}, value2={value2}" );
         }
 
 
@@ -121,7 +165,7 @@ namespace UIBindings
 
         protected virtual void OnPropertyChanged([CallerMemberName] String propertyName = null)
         {
-            //PropertyChanged?.Invoke( this, propertyName );
+            PropertyChanged?.Invoke( this, propertyName );
         }
 
          protected Boolean SetField<T>(ref T field, T value, [CallerMemberName] String propertyName = null)

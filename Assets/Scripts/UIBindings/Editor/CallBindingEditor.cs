@@ -119,7 +119,7 @@ namespace UIBindings.Editor
 
             //Check params
             var paramz = method.GetParameters();
-            if (paramz.Length > 3 )
+            if (paramz.Length > 2 )
                 return false;
 
             foreach ( var parameterInfo in paramz )

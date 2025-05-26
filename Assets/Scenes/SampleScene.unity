@@ -2016,18 +2016,18 @@ MonoBehaviour:
   CallBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path: CallParamInt
+    Path: CallMeAsync2Params
     _converters:
       Converters: []
     Params:
-    - Primitive: 42
+    - Primitive: 1101487145
       String: str11
       Object: {fileID: 10300, guid: 0000000000000000f000000000000000, type: 0}
-      ValueType: 5
-    - Primitive: 0
+      ValueType: 2
+    - Primitive: 43
       String: str22
       Object: {fileID: 0}
-      ValueType: 3
+      ValueType: 1
     DisableButtonDuringAsyncCall: 1
   CanExecuteBinding:
     Enabled: 0
@@ -2056,7 +2056,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1896152129
 RectTransform:
   m_ObjectHideFlags: 0

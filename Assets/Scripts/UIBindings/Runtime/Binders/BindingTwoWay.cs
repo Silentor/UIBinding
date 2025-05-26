@@ -2,6 +2,8 @@
 using System.Reflection;
 using UnityEngine;
 using Object = System.Object;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 
 namespace UIBindings
 {
@@ -17,13 +19,13 @@ namespace UIBindings
 
             if( _lastConverterTargetToSource != null )
             {
-                WriteConvertedValueMarker.Begin();
+                WriteConvertedValueMarker.Begin( _debugBindingProfileMarkerName );
                 _lastConverterTargetToSource.ProcessTargetToSource( value );
                 WriteConvertedValueMarker.End();
             }
             else
             {
-                WriteDirectValueMarker.Begin();
+                WriteDirectValueMarker.Begin( _debugBindingProfileMarkerName );
                 _directSetter( value );
                 WriteDirectValueMarker.End();
             }
@@ -50,6 +52,8 @@ namespace UIBindings
                 var setMethod = property.GetSetMethod();
                 _directSetter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), Source, setMethod );
             }
+
+            _debugBindingProfileMarkerName = $"{Source.name}.{Path} <-> {host.name}";
         }
 
         private ITwoWayConverter<T> _lastConverterTargetToSource;

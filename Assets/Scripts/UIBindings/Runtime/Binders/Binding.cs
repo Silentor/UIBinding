@@ -61,20 +61,20 @@ namespace UIBindings
     [Serializable]
     public class Binding<T> : Binding
     {
-        public void Awake( MonoBehaviour host )
+        public void Awake( MonoBehaviour debugHost )
         {
             if ( !Enabled )   
                 return;
 
             if ( !Source )
             {
-                Debug.LogError( $"[{nameof(Binding)}] Source is not assigned at {host.name}", host );
+                Debug.LogError( $"[{nameof(Binding)}] Source is not assigned at {debugHost.name}", debugHost );
                 return;
             }
 
             if ( String.IsNullOrEmpty( Path ) )
             {
-                Debug.LogError( $"[{nameof(Binding)}] Path is not assigned at {host.name}", host );
+                Debug.LogError( $"[{nameof(Binding)}] Path is not assigned at {debugHost.name}", debugHost );
                 return;
             }
 
@@ -83,11 +83,11 @@ namespace UIBindings
 
             if ( property == null )
             {
-                Debug.LogError( $"[{nameof(Binding)}] Property {Path} not found in {sourceType.Name}", host );
+                Debug.LogError( $"[{nameof(Binding)}] Property {Path} not found in {sourceType.Name}", debugHost );
                 return;
             }
 
-            _hostName = host.name;
+            _hostName = debugHost.name;
             _sourceNotify = Source as INotifyPropertyChanged;
 
             var converters = _converters.Converters;
@@ -127,8 +127,11 @@ namespace UIBindings
                 _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), Source, getMethod );
             }
 
-            DoAwake( host, property );
+            _debugBindingProfileMarkerName = $"{Source.name}.{Path} -> {debugHost.name}";
+            DoAwake( debugHost, property );
 
+             
+            _host = debugHost;
             _isValid = true;
         }
 
@@ -165,13 +168,13 @@ namespace UIBindings
                 var isChangedOnSource = true;
                 if ( _directGetter != null )
                 {
-                    ReadDirectValueMarker.Begin();
+                    ReadDirectValueMarker.Begin( _debugBindingProfileMarkerName );
                     value = _directGetter.Invoke();
                     ReadDirectValueMarker.End();
                 }
                 else
                 {
-                    ReadConvertedValueMarker.Begin();
+                    ReadConvertedValueMarker.Begin( _debugBindingProfileMarkerName );
                     isChangedOnSource = _lastConverter.TryGetValueFromSource( out value );
                     ReadConvertedValueMarker.End();
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
@@ -182,9 +185,9 @@ namespace UIBindings
                     _isLastValueInitialized   = true;
                     _lastSourceValue = value;
 
-                    UpdateTargetMarker.Begin();
+                    UpdateTargetMarker.Begin( _debugBindingProfileMarkerName );
                     SourceChanged?.Invoke( Source, value );
-                    UpdateTargetMarker.End();
+                    UpdateTargetMarker.End( );
                 }
 
                 _sourceChanged = false;
@@ -212,6 +215,9 @@ namespace UIBindings
         protected IOneWayConverter<T> _lastConverter;
         protected Boolean _isSubscribed;
         protected String _hostName;
+        private MonoBehaviour _host;
+
+        protected string _debugBindingProfileMarkerName;
     }
 
 }
