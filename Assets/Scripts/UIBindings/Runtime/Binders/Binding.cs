@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using UIBindings.Runtime;
 using Unity.Profiling;
 using Unity.Profiling.LowLevel;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Serialization;
 using Object = System.Object;
 
 namespace UIBindings
@@ -17,13 +15,34 @@ namespace UIBindings
         public        Boolean                   Enabled             = true;                        //Checked once on start!
         public        UnityEngine.Object        Source;
         public        String                    Path;
-        //public        Single                    UpdateInterval      = 0.1f;                        //How often to check for changes in source property
+    }
 
+    [Serializable]
+    public abstract class DataBinding : Binding
+    {
         [SerializeField]
         protected ConvertersList _converters;
-        public IReadOnlyList<ConverterBase> Converters => _converters.Converters;
-        public const String ConvertersPropertyName = nameof(_converters);
+        public       IReadOnlyList<ConverterBase> Converters => _converters.Converters;
+        public const String                       ConvertersPropertyName = nameof(_converters);
         
+        public static (Type valueType, Type templateType) GetBindingTypeInfo( Type bindingType )
+        {
+            Assert.IsTrue( typeof(Binding).IsAssignableFrom( bindingType ) );
+
+            while (bindingType != null)
+            {
+                if (bindingType.IsGenericType 
+                    && ( bindingType.GetGenericTypeDefinition() == typeof(Binding<>) || bindingType.GetGenericTypeDefinition() == typeof(BindingTwoWay<>) ) )
+                {
+                    var valueType = bindingType.GetGenericArguments()[0];
+                    var template  = bindingType.GetGenericTypeDefinition();
+                    return ( valueType, template );
+                }
+                bindingType = bindingType.BaseType;
+            }
+            throw new InvalidOperationException("Base type was not found");
+        }
+
         [Serializable]
         public class ConvertersList
         {
@@ -36,30 +55,10 @@ namespace UIBindings
         protected static readonly ProfilerMarker ReadConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadConvertedValue", MarkerFlags.Script );
         protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteConvertedValue", MarkerFlags.Script );
         protected static readonly ProfilerMarker UpdateTargetMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.UpdateTarget", MarkerFlags.Script );
-        
-
-        public static (Type valueType, Type templateType) GetBinderTypeInfo( Type bindingType )
-        {
-            Assert.IsTrue( typeof(Binding).IsAssignableFrom( bindingType ) );
-
-            while (bindingType != null)
-            {
-                if (bindingType.IsGenericType 
-                    && ( bindingType.GetGenericTypeDefinition() == typeof(Binding<>) || bindingType.GetGenericTypeDefinition() == typeof(BindingTwoWay<>) ) )
-                {
-                    var valueType  = bindingType.GetGenericArguments()[0];
-                    var template   = bindingType.GetGenericTypeDefinition();
-                    return ( valueType, template );
-                }
-                bindingType = bindingType.BaseType;
-            }
-            throw new InvalidOperationException("Base type was not found");
-        }
-
     }
 
     [Serializable]
-    public class Binding<T> : Binding
+    public class Binding<T> : DataBinding
     {
         public void Awake( MonoBehaviour debugHost )
         {

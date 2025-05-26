@@ -12,7 +12,7 @@ using UnityEngine.UIElements;
 namespace UIBindings.Editor
 {
     [CustomPropertyDrawer( typeof(Binding<>), true )]
-    public class BindingEditor : PropertyDrawer
+    public class DataBindingEditor : PropertyDrawer
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label )
         {
@@ -32,7 +32,7 @@ namespace UIBindings.Editor
             var enabledProp = property.FindPropertyRelative( nameof(Binding.Enabled) );
 
             var isEnabled = enabledProp.boolValue;
-            var binding = (Binding)property.boxedValue;
+            var binding = (DataBinding)property.boxedValue;
             var bindingTypeInfo    = GetBindingTypeInfo( binding );
             var sourceType     = GetSourcePropertyType( binding );
             var sourceTypeName = sourceType            != null ? sourceType.Name : "null";
@@ -69,7 +69,7 @@ namespace UIBindings.Editor
                         DrawPathField( position, pathProperty, binding );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var convertersProperty = property.FindPropertyRelative( Binding.ConvertersPropertyName );
+                        var convertersProperty = property.FindPropertyRelative( DataBinding.ConvertersPropertyName );
                         //EditorGUI.PropertyField( position, convertersProperty );
                         DrawConvertersField( position, convertersProperty, binding, sourceType, targetType );
                     }
@@ -167,7 +167,7 @@ namespace UIBindings.Editor
             }
         }
 
-        private void DrawConvertersField( Rect position, SerializedProperty convertersProp, Binding binding, Type sourceType, Type targetType )
+        private void DrawConvertersField( Rect position, SerializedProperty convertersProp, DataBinding binding, Type sourceType, Type targetType )
         {
             _convertersFieldHeight = 0;
             var labelRect = position;
@@ -175,7 +175,7 @@ namespace UIBindings.Editor
             var mainContentPosition = position;
             mainContentPosition.xMin += EditorGUIUtility.labelWidth;
 
-            convertersProp = convertersProp.FindPropertyRelative( nameof(Binding.ConvertersList.Converters) );
+            convertersProp = convertersProp.FindPropertyRelative( nameof(DataBinding.ConvertersList.Converters) );
             if ( convertersProp.isArray && convertersProp.arraySize > 0 )
             {
                 convertersProp.isExpanded = EditorGUI.Foldout( labelRect, convertersProp.isExpanded, convertersProp.displayName );
@@ -222,7 +222,7 @@ namespace UIBindings.Editor
 
         private static (Type valueType, Type templateType) GetBindingTypeInfo ( Binding binding )
         {
-            return Binding.GetBinderTypeInfo( binding.GetType() );
+            return DataBinding.GetBindingTypeInfo( binding.GetType() );
         }
 
         private static Type GetSourcePropertyType( Binding binding )
@@ -313,7 +313,7 @@ namespace UIBindings.Editor
             return null;
         }
 
-        private static void AppendConverter( Binding binding, SerializedProperty convertersProp )
+        private static void AppendConverter( DataBinding binding, SerializedProperty convertersProp )
         {
             var converters = binding.Converters;
             var currentOutputType = GetConverterTypeToAppend( binding, converters );
@@ -345,7 +345,7 @@ namespace UIBindings.Editor
         {
             if ( index < 0 || index >= convertersProp.arraySize )
             {
-                Debug.LogError( $"[{nameof(BindingEditor)}] Invalid converter index {index} for removal." );
+                Debug.LogError( $"[{nameof(DataBindingEditor)}] Invalid converter index {index} for removal." );
                 return;
             }
 
@@ -371,7 +371,7 @@ namespace UIBindings.Editor
             return result;
         }
 
-        private static Single DrawConverterField( ref Rect position, int index, SerializedProperty convertersProp, Type prevType, Binding binding) 
+        private static Single DrawConverterField( ref Rect position, int index, SerializedProperty convertersProp, Type prevType, DataBinding binding) 
         {
             var isLastConverter = index == convertersProp.arraySize - 1;
             var converterProp = convertersProp.GetArrayElementAtIndex( index );
