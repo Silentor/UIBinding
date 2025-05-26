@@ -12,7 +12,6 @@ namespace UIBindings.Runtime
         public const string ObjectFieldName = nameof(Object);
         public const string ValueTypeFieldName = nameof(ValueType);
 
-
         [SerializeField] int Primitive;
         [SerializeField] String String;
         [SerializeField] UnityEngine.Object Object;
@@ -75,23 +74,20 @@ namespace UIBindings.Runtime
             return Object;
         }
 
-        public System.Object GetBoxedValue()
+        public System.Object GetBoxedValue( Type desiredType )
         {
-            switch (ValueType)
-            {
-                case EType.Int:
-                    return GetInt();
-                case EType.Float:
-                    return GetFloat();
-                case EType.Bool:
-                    return GetBool();
-                case EType.String:
-                    return GetString();
-                case EType.Object:
-                    return GetObject();
-                default:
-                    return null;
-            }
+            if (desiredType == typeof(int))
+                return GetInt();
+            if (desiredType == typeof(float))
+                return GetFloat();
+            if (desiredType == typeof(bool))
+                return GetBool();
+            if (desiredType == typeof(string))
+                return GetString();
+            if (typeof(UnityEngine.Object).IsAssignableFrom(desiredType))
+                return GetObject();
+
+            return null;
         }
 
        public enum EType

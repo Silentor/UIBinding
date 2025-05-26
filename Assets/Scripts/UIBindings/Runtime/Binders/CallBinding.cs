@@ -34,8 +34,8 @@ namespace UIBindings
         private Func<UniTaskVoid>               _callUniTaskVoid;
 #endif
 
-        //2 params delegate with boxing
-        private Action<TestMonoBehSource2, Object, Object>          _call2Params;
+        //2 params instance delegate with boxing
+        private Action<Object, Object>          _call2Params;
 
         private MethodInfo                      _callReflection;
 
@@ -44,6 +44,7 @@ namespace UIBindings
         private ECallType _callType;
         private Boolean _isValid;
         private String _hostName;
+        private ParameterInfo[] _methodParams;
 
         public void Awake( MonoBehaviour host )
         {
@@ -109,7 +110,7 @@ namespace UIBindings
                 else if( methodParams.Length == 2 )                    
                 {
                     //Construct 2 params delegate with boxing, see https://codeblog.jonskeet.uk/2008/08/09/making-reflection-fly-and-exploring-delegates/
-                    _call2Params = Construct2ParamsDelegate<TestMonoBehSource2>( method );
+                    _call2Params = Construct2ParamsDelegate( Source, method );
                     _callType = ECallType.Boxed2Params;
                 }
             }
@@ -147,7 +148,7 @@ namespace UIBindings
 
             Assert.IsTrue( _callType != ECallType.Unknown, $"[{nameof(CallBinding)}] Method {Path} has unsupported signature at {_hostName}" );
             
-
+            _methodParams = methodParams;
             _isValid = true;
         }
 
@@ -167,7 +168,7 @@ namespace UIBindings
             }
             else if ( _callType == ECallType.Boxed2Params )
             {
-                _call2Params((TestMonoBehSource2)Source, Params[0].GetBoxedValue(), Params[1].GetBoxedValue());
+                _call2Params( Params[0].GetBoxedValue( _methodParams[0].ParameterType ), Params[1].GetBoxedValue( _methodParams[1].ParameterType ) );
             }
 #if UIBINDINGS_UNITASK_SUPPORT
             else if ( _callType == ECallType.UniTask )
@@ -241,21 +242,22 @@ namespace UIBindings
             // awaitableMethod.GetResultMethod( awaiter );
         }
 
-        private static Action<TTarget, Object, Object> Construct2ParamsDelegate<TTarget>( MethodInfo method )
+        //Construct 2 params closed delegate with boxing
+        private static Action<Object, Object> Construct2ParamsDelegate( Object source, MethodInfo method )
         {
             var paramz = method.GetParameters();
             var type1 = paramz[ 0 ].ParameterType;
             var type2 = paramz[ 1 ].ParameterType;
             var convertMethod = typeof(CallBinding).GetMethod( nameof( Convert2ParamsDelegate ), BindingFlags.NonPublic | BindingFlags.Static );
-            var closedConvertMethod = convertMethod.MakeGenericMethod( typeof(TTarget), type1, type2 );
-            var result = (Action<TTarget, Object, Object>)closedConvertMethod.Invoke( null, new object[] { method } );
+            var closedConvertMethod = convertMethod.MakeGenericMethod( type1, type2 );
+            var result = (Action<Object, Object>)closedConvertMethod.Invoke( null, new [] { source, method } );
             return result;
         }
 
-        private static Action<TTarget, Object, Object> Convert2ParamsDelegate<TTarget, TParam1, TParam2>( MethodInfo method )
+        private static Action<Object, Object> Convert2ParamsDelegate<TParam1, TParam2>( Object source, MethodInfo method )
         {
-            var strong = (Action<TTarget, TParam1, TParam2>) Delegate.CreateDelegate( typeof(Action<TTarget, TParam1, TParam2>), method );
-            Action<TTarget, Object, Object> weak = (target, p1, p2) => strong( target, (TParam1)p1, (TParam2)p2 );
+            var strong = (Action<TParam1, TParam2>) Delegate.CreateDelegate( typeof(Action<TParam1, TParam2>), source, method );
+            Action<Object, Object> weak = (p1, p2) => strong( (TParam1)p1, (TParam2)p2 );
             return weak;
         }
 
