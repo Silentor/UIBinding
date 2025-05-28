@@ -13,7 +13,8 @@ namespace UIBindings
 
         private void Awake( )
         {
-            SelectorBinding.Awake( this );
+            SelectorBinding.SetDebugInfo( this, nameof(SelectorBinding) );
+            SelectorBinding.Awake(  );
             SelectorBinding.SourceChanged += OnSelectorValueChanged;
         }
 

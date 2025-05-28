@@ -19,20 +19,26 @@ namespace UIBindings
 
         public abstract TOutput Convert( TInput value );
 
-        public override DataProvider InitAttachToSource(  [NotNull] DataProvider prevConverter, Boolean isTwoWay )
+        //Returns false if attach to source failed, probably incompatible types
+        public override bool InitAttachToSource(  [NotNull] DataProvider prevConverter, Boolean isTwoWay )
         {
             if ( prevConverter == null ) throw new ArgumentNullException( nameof(prevConverter) );
             if ( prevConverter is IDataReader<TInput> properSource )
             {
                 _prev =  properSource;
-                return prevConverter;
+                OnAttachToSource( prevConverter, isTwoWay );
             }
             else
             {
                 var implicitTypeConverter = ImplicitConversion.GetConverter( prevConverter, typeof(TInput) );
-                _prev = (IDataReader<TInput>)implicitTypeConverter;
-                return implicitTypeConverter;
+                if ( implicitTypeConverter != null )
+                {
+                    _prev = (IDataReader<TInput>)implicitTypeConverter;
+                    OnAttachToSource( implicitTypeConverter, isTwoWay );
+                }
             }
+
+            return _prev != null;
         }
 
         public override ConverterBase GetReverseConverter( )
@@ -56,5 +62,7 @@ namespace UIBindings
             value = default;
             return false;
         }
+
+        protected virtual void OnAttachToSource( DataProvider prevConverter, Boolean isTwoWay ) { }
     }
 }

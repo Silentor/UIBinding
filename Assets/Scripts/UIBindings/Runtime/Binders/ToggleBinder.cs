@@ -17,7 +17,8 @@ namespace UIBindings
                 Toggle = GetComponent<Toggle>();
             Assert.IsTrue( Toggle );
 
-            ValueBinding.Awake( this );
+            ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
+            ValueBinding.Awake(  );
             ValueBinding.SourceChanged += ProcessSourceToTarget;
             
         }

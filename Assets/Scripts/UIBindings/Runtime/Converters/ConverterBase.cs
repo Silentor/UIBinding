@@ -17,6 +17,11 @@ namespace UIBindings
         /// Type of input data that this provider can accept
         /// </summary>
         public abstract Type InputType { get; }
+
+        public override String ToString( )
+        {
+            return $"{GetType().Name} (Input: {InputType.Name}, IsTwoWay: {IsTwoWay})";
+        }
     } 
 
     /// <summary>
@@ -30,7 +35,13 @@ namespace UIBindings
         
         public abstract Type OutputType { get; }
 
-        public abstract DataProvider InitAttachToSource(   DataProvider prevConverter, Boolean isTwoWay );
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="prevConverter"></param>
+        /// <param name="isTwoWay"></param>
+        /// <returns>False if attach failed</returns>
+        public abstract bool InitAttachToSource(   DataProvider prevConverter, Boolean isTwoWay );
 
         public abstract ConverterBase GetReverseConverter( );
 
@@ -61,5 +72,9 @@ namespace UIBindings
             throw new InvalidOperationException("Base type was not found");
         }
 
+        public override String ToString( )
+        {
+            return $"{GetType().Name} (Input: {InputType.Name}, Output: {OutputType.Name}, IsTwoWay: {IsTwoWay})";
+        }
     }
 }

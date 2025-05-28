@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -16,6 +17,7 @@ namespace UIBindings
 {
     public class TestMonoBehSource : MonoBehaviour, INotifyPropertyChanged 
     {
+        public GameObject DelayedCanvas; //For testing delayed canvas creation
         public Sprite TestSprite; 
 
         private Single  _sourceFloat;
@@ -203,7 +205,16 @@ namespace UIBindings
 
         private void Start( )
         {
-            OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
+            Application.targetFrameRate = 30;
+
+            if ( DelayedCanvas )
+            {
+                StartCoroutine( DelayedCanvasEnable() );
+            }
+            else
+            {
+                OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
+            }
 
             var enumProp = GetType().GetProperty( nameof(SourceEnum), BindingFlags.Public | BindingFlags.Instance );
             var getter = enumProp.GetGetMethod( true );
@@ -214,6 +225,14 @@ namespace UIBindings
             Func<int> boxedGetterToEnum = ( ) => (int)boxedGetter.DynamicInvoke(  );
             _boxedGetter = boxedGetterToEnum;
         }
+
+        private IEnumerator DelayedCanvasEnable( )
+        {
+            yield return new WaitForSeconds( 1f );
+            DelayedCanvas.SetActive( true );
+            OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
+        }
+
 
         //Construct 1 params instance func delegate with boxing
         private static Func<IntedEnum> ConstructFunc1( Object source, MethodInfo method )

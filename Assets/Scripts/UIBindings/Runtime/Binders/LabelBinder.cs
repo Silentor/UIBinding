@@ -3,6 +3,7 @@ using TMPro;
 using UIBindings.Runtime;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Profiling;
 using Object = System.Object;
 
 namespace UIBindings
@@ -18,8 +19,9 @@ namespace UIBindings
                 Label = GetComponent<TextMeshProUGUI>();
             Assert.IsTrue( Label );
 
-            TextBinding.Awake( this );
-            TextBinding.SourceChanged += ProcessSourceToTarget; 
+            TextBinding.SetDebugInfo( this, nameof(TextBinding) );
+            TextBinding.Awake(  );
+            TextBinding.SourceChanged += ProcessSourceToTarget;
         }
 
         private void ProcessSourceToTarget(Object sender, String value )

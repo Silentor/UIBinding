@@ -60,6 +60,11 @@ namespace UIBindings.Adapters
                 _setter( value );
             }
         }
+
+        public override String ToString( )
+        {
+            return  $"{nameof(PropertyAdapter<T>)}: {typeof(T).Name} property '{_source.GetType().Name}.{_getter.Method.Name}' on source '{_source}'";
+        }
     }
 
     public abstract class PropertyAdapter : DataProvider

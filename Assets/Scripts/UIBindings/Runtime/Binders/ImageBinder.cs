@@ -18,9 +18,11 @@ namespace UIBindings
                 Image = GetComponent<Image>();
             Assert.IsTrue( Image );
 
-            SourceImageBinding.Awake( this );
+            SourceImageBinding.SetDebugInfo( this, nameof(SourceImageBinding) );
+            SourceImageBinding.Awake(  );
             SourceImageBinding.SourceChanged += UpdateSourceImage;
-            ColorBinding.Awake( this );
+            ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );        
+            ColorBinding.Awake( );
             ColorBinding.SourceChanged += UpdateColor;
         }
 

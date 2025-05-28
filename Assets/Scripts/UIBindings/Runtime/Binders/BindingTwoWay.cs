@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using Object = System.Object;
@@ -19,17 +20,23 @@ namespace UIBindings
                 return;
             }
 
-            if( _lastConverterTargetToSource != null )
+            if ( !_isLastValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) )
             {
-                WriteConvertedValueMarker.Begin( _debugBindingProfileMarkerName );
-                _lastConverterTargetToSource.SetValue( value );
-                WriteConvertedValueMarker.End();
-            }
-            else
-            {
-                WriteDirectValueMarker.Begin( _debugBindingProfileMarkerName );
-                _directSetter( value );
-                WriteDirectValueMarker.End();
+                _isLastValueInitialized = true;
+                _lastValue = value;
+
+                if( _lastConverterTargetToSource != null )
+                {
+                    WriteConvertedValueMarker.Begin( _debugSourceBindingInfo );
+                    _lastConverterTargetToSource.SetValue( value );
+                    WriteConvertedValueMarker.End();
+                }
+                else
+                {
+                    WriteDirectValueMarker.Begin( _debugSourceBindingInfo );
+                    _directSetter( value );
+                    WriteDirectValueMarker.End();
+                }
             }
         }
 
@@ -47,8 +54,6 @@ namespace UIBindings
                 _lastConverterTargetToSource = twoWayConverter;
             else
                 _directSetter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), source, property.GetSetMethod( true ) );
-
-            _debugBindingProfileMarkerName = $"{Source.name}.{Path} <-> {debugHost.name}";
         }
 
         private Action<T>           _directSetter;

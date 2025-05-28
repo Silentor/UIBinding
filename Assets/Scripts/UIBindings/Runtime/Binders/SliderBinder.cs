@@ -19,11 +19,14 @@ namespace UIBindings
                 Slider = GetComponent<Slider>();
             Assert.IsTrue( Slider );
 
-            ValueBinding.Awake( this );
+            ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
+            ValueBinding.Awake(  );
             ValueBinding.SourceChanged += UpdateValue;
-            MinValueBinding.Awake( this );
+            MinValueBinding.SetDebugInfo( this, nameof(MinValueBinding) );
+            MinValueBinding.Awake( );
             MinValueBinding.SourceChanged += UpdateMinValue;
-            MaxValueBinding.Awake( this );
+            MaxValueBinding.SetDebugInfo( this, nameof(MaxValueBinding) );
+            MaxValueBinding.Awake(  );
             MaxValueBinding.SourceChanged += UpdateMaxValue;
         }
 

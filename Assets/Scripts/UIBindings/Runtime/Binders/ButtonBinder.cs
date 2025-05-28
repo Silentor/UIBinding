@@ -27,9 +27,11 @@ namespace UIBindings
                 Button = GetComponent<Button>();
             Assert.IsTrue(Button);
 
-            CanExecuteBinding.Awake(this);
+            CanExecuteBinding.SetDebugInfo(this, nameof(CanExecuteBinding));
+            CanExecuteBinding.Awake( );
             CanExecuteBinding.SourceChanged += CanExecuteChanged;
             _canExecute = Button.interactable;
+
             CallBinding.Awake(this);
         }
 

@@ -36,19 +36,27 @@ namespace UIBindings.Editor
             using ( new EditorGUI.DisabledGroupScope( !isEnabled ) )
             {
                 //Draw main binding label
-                var binding           = (DataBinding)property.boxedValue;
-                var sourceType        = GetSourcePropertyType( binding );
-                var sourceTypeName    = sourceType     != null ? sourceType.Name : "null";
-                var sourceName        = binding.Source != null ? binding.Source.name : "";
-                var sourcePropName    = $"{binding.Path}";
-                var sourceDisplayName = $"{sourceName}.{sourcePropName} {sourceTypeName}";
+                var binding           = (DataBinding)fieldInfo.GetValue( property.serializedObject.targetObject );
+                var sourceObjName     = binding.Source ? binding.Source.name : "";
+                var sourceProperty    = GetSourceProperty( binding );
+                var sourcePropType    = sourceProperty != null ? sourceProperty.PropertyType : null;
+                var sourceTypeName    = sourcePropType     != null ? sourcePropType.Name : "null";
+                var sourcePropName    = binding.Path;
+                var sourceDisplayName = $"{sourceTypeName} {sourceObjName}.{sourcePropName}";
                 var targetType        = binding.DataType;
                 var targetTypeName    = targetType != null ? targetType.Name : "null";
                 var isTwoWayBinding   = binding.IsTwoWay;
-                var isValid           = !isEnabled || IsSourceTargetTypesCompatible( sourceType, targetType, isTwoWayBinding, binding.Converters );
-                var arrowStr          = isTwoWayBinding ? " <-> " : " -> ";
-                var convertersCount   = binding.Converters.Count     > 0 ? $" ({binding.Converters.Count} cnvs)" : String.Empty;
-                var mainText = $"{sourceDisplayName} {arrowStr} {targetTypeName} {convertersCount}";
+                var isValid           = !isEnabled || IsSourceTargetTypesCompatible( sourcePropType, targetType, isTwoWayBinding, binding.Converters );
+                var convertersCount   = binding.Converters.Count > 0 ? $"[{binding.Converters.Count}]" : String.Empty;
+                var arrowStr          = isTwoWayBinding ? $" <-{convertersCount}-> " : $" -{convertersCount}-> ";
+                string mainText;
+                if ( Application.isPlaying && sourceProperty != null )
+                {
+                    mainText = $"{sourceDisplayName} <{sourceProperty.GetValue( binding.Source )}> {arrowStr} {targetTypeName} <{binding.GetDebugLastValue()}>";
+                    isValid  = isValid && binding.IsRuntimeValid;
+                }
+                else
+                    mainText = $"{sourceDisplayName} {arrowStr} {targetTypeName}";
                 GUI.Label( rects.Item1, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
 
                 //Draw expanded content
@@ -57,19 +65,19 @@ namespace UIBindings.Editor
                     using ( new EditorGUI.IndentLevelScope( 1 ) )
                     {
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var sourceProperty = property.FindPropertyRelative( nameof(Binding.Source) );
+                        var sourceProp = property.FindPropertyRelative( nameof(Binding.Source) );
                         //EditorGUI.PropertyField( position, sourceProperty );
-                        DrawSourceField( position, sourceProperty );
+                        DrawSourceField( position, sourceProp );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var pathProperty   = property.FindPropertyRelative( nameof(Binding.Path) );
+                        var pathProp   = property.FindPropertyRelative( nameof(Binding.Path) );
                         //EditorGUI.PropertyField( position, pathProperty );
-                        DrawPathField( position, pathProperty, binding );
+                        DrawPathField( position, pathProp, binding );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var convertersProperty = property.FindPropertyRelative( DataBinding.ConvertersPropertyName );
+                        var convertersProp = property.FindPropertyRelative( DataBinding.ConvertersPropertyName );
                         //EditorGUI.PropertyField( position, convertersProperty );
-                        DrawConvertersField( position, convertersProperty, binding, sourceType, targetType );
+                        DrawConvertersField( position, convertersProp, binding, sourcePropType, targetType );
                     }
                 }
             }
@@ -219,7 +227,7 @@ namespace UIBindings.Editor
                 return Resources.LineHeightWithMargin;
         }
 
-        private static Type GetSourcePropertyType( Binding binding )
+        private static PropertyInfo GetSourceProperty( Binding binding )
         {
             if ( !binding.Source )
                 return null;
@@ -229,12 +237,18 @@ namespace UIBindings.Editor
                 return null;
 
             var sourceType = binding.Source.GetType();
-            var sourceProperty   = sourceType.GetProperty( propertyPath );
+            var sourceProperty = sourceType.GetProperty( propertyPath );
 
             if ( sourceProperty == null )
                 return null;
 
-            return sourceProperty.PropertyType;
+            return sourceProperty;
+        }
+
+        private static Type GetSourcePropertyType( Binding binding )
+        {
+            var sourceProperty = GetSourceProperty( binding );
+            return sourceProperty != null ? sourceProperty.PropertyType : null;
         }
 
         private static Boolean IsSourceTargetTypesCompatible(Type sourceType, Type targetType, Boolean isTwoWayBinding, IReadOnlyList<ConverterBase> converters )

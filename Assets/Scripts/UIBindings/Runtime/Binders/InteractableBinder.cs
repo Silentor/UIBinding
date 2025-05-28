@@ -17,7 +17,8 @@ namespace UIBindings
                 InteractionControl = GetComponent<Selectable>();
             Assert.IsTrue( InteractionControl );
 
-            InteractableBinding.Awake( this );
+            InteractableBinding.SetDebugInfo( this, nameof(InteractableBinding) );
+            InteractableBinding.Awake( );
             InteractableBinding.SourceChanged += ProcessSourceToTarget;
         }
 

@@ -13,18 +13,6 @@ namespace UIBindings
 
         private IDataReadWriter<TInput> _prev;
 
-        public override DataProvider InitAttachToSource(  DataProvider prevConverter, Boolean isTwoWay )
-        {
-            prevConverter = base.InitAttachToSource( prevConverter, isTwoWay ); //May be modified
-            if ( isTwoWay )
-            {
-                Assert.IsTrue( prevConverter.IsTwoWay );
-                _prev = (IDataReadWriter<TInput>)prevConverter;
-            }
-
-            return prevConverter;
-        }
-
         public virtual void SetValue(TOutput value )
         {
             var convertedValue = ConvertBack( value );
@@ -37,6 +25,15 @@ namespace UIBindings
         }
 
         public abstract TInput ConvertBack( TOutput value );
+
+        protected override void OnAttachToSource(DataProvider prevConverter, Boolean isTwoWay )
+        {
+            if ( isTwoWay )
+            {
+                Assert.IsTrue( prevConverter.IsTwoWay );
+                _prev = (IDataReadWriter<TInput>)prevConverter;
+            }
+        }
 
 
         /// <summary>
@@ -59,6 +56,11 @@ namespace UIBindings
             public override TOutput ConvertBack( TInput value )
             {
                 return _myConverter.Convert( value );
+            }
+
+            public override String ToString( )
+            {
+                return $"{_myConverter.GetType().Name} reverse (Input: {InputType.Name}, Output: {OutputType.Name}, IsTwoWay: {IsTwoWay})";
             }
         }
     }

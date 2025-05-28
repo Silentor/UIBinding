@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Profiling;
 using Object = System.Object;
 
 namespace UIBindings
@@ -28,20 +29,30 @@ namespace UIBindings
 
         IEnumerator DelayAwake( )
         {
-            yield return new WaitForSeconds( 1f );
-
-            IntBinding.Awake(this);
+            yield return new WaitForSeconds( 0.5f );
+            yield return null;
+            
+            IntBinding.SetDebugInfo( this, nameof(IntBinding) );
+            IntBinding.Awake(  );
             IntBinding.SourceChanged += OnIntValueChanged;
             IntBinding.Subscribe();
-
-            yield return new WaitForSeconds( 1f );
-            Debug.Log( "awaked" );
-
-            FloatBinding.Awake(this);
+            
+            yield return new WaitForSeconds( 0.5f );
+            yield return null;
+            
+            FloatBinding.SetDebugInfo( this, nameof(FloatBinding) );
+            FloatBinding.Awake(  );
             FloatBinding.SourceChanged += OnFloatValueChanged;
             FloatBinding.Subscribe();
 
-
+            // while ( true )
+            // {
+            //     yield return null;
+            //
+            //     Profiler.BeginSample( "Binding.test" );
+            //     Profiler.EndSample();
+            // }
+        
         }
 
         private void Update( )
@@ -52,6 +63,8 @@ namespace UIBindings
 
                 _intValue += 1;
                 IntBinding.SetValue( _intValue );
+
+
             }
         }
 
