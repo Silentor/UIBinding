@@ -1,15 +1,13 @@
 ﻿using System;
-using UIBindings.Runtime;
 using UnityEngine;
 using Object = System.Object;
-using Unity.Collections.LowLevel.Unsafe;
 
 namespace UIBindings
 {
     public class GameObjectSelectBinder : MonoBehaviour
     {
         public KeyGameObject[] GameObjects;
-        public Binding<StructEnum> SelectorBinding;
+        public Binding<int> SelectorBinding;
 
         private void Awake( )
         {
@@ -33,15 +31,16 @@ namespace UIBindings
             SelectorBinding.CheckChanges();
         }
 
-        private void OnSelectorValueChanged(Object sender, StructEnum value )
+        private void OnSelectorValueChanged(Object sender, int value )
         {
             var intValue = (int)value;
-            // for ( int i = 0; i < GameObjects.Length; i++ )
-            // {
-            //     GameObjects[i].SetActive( i == intValue );
-            // }
+            for ( int i = 0; i < GameObjects.Length; i++ )
+            {
+                GameObjects[i].GameObject.SetActive( GameObjects[i].Key == intValue );
+            }
         }
 
+        [Serializable]
         public struct KeyGameObject
         {
             public int Key;

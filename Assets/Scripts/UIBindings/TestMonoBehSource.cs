@@ -21,7 +21,7 @@ namespace UIBindings
         public Sprite TestSprite; 
 
         private Single  _sourceFloat;
-        private bool    _targetBool = false;
+        private bool    _targetBool = true;
         private int _sourceInt = 5;
         private EventType _sourceEnum = EventType.MouseDown;
 
@@ -239,7 +239,7 @@ namespace UIBindings
         {
             if( Time.frameCount % 2 == 0 )            //Test notifications
             {
-                SourceFloat  = Time.time;
+                SourceFloat  = Time.time % 3f;
             }
         }
 

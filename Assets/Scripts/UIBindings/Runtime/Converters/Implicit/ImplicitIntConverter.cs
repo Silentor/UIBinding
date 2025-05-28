@@ -39,7 +39,6 @@ namespace UIBindings.Converters
 
             value = default;
             return false;
-
         }
 
         public Boolean TryGetValue(out Int64 value )
@@ -52,7 +51,6 @@ namespace UIBindings.Converters
 
             value = default;
             return false;
-
         }
 
         public Boolean TryGetValue(out Double value )
@@ -65,7 +63,6 @@ namespace UIBindings.Converters
 
             value = default;
             return false;
-
         }
 
         public void SetValue(Byte value )

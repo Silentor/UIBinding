@@ -57,6 +57,7 @@ namespace UIBindings.Converters
                    {
                            new ImplicitConverterInfo( typeof(int), typeof(ImplicitIntConverter), static inp => new ImplicitIntConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(float), typeof(ImplicitFloatConverter),  static inp => new ImplicitFloatConverter( inp ) ),
+                           new ImplicitConverterInfo( typeof(bool), typeof(ImplicitBoolConverter), static inp => new ImplicitBoolConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(byte), typeof(ImplicitByteConverter),  static inp => new ImplicitByteConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(double), typeof(ImplicitDoubleConverter),  static inp => new ImplicitDoubleConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(long), typeof(ImplicitLongConverter), static inp => new ImplicitLongConverter( inp ) ),

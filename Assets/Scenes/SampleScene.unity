@@ -1188,7 +1188,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &708498990
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1224,13 +1224,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   GameObjects:
-  - {fileID: 1522354467}
-  - {fileID: 671348609}
-  - {fileID: 1212438242}
+  - Key: 0
+    GameObject: {fileID: 1522354467}
+  - Key: 1
+    GameObject: {fileID: 671348609}
+  - Key: 2
+    GameObject: {fileID: 1212438242}
   SelectorBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path: SourceEnum
+    Path: SourceFloat
     _converters:
       Converters: []
   references:
@@ -2092,7 +2095,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1597489497
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2838,7 +2841,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2098577698
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2852,19 +2855,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   IntBinding:
-    Enabled: 1
+    Enabled: 0
     Source: {fileID: 1625701090}
     Path: SourceByte
     _converters:
       Converters: []
   FloatBinding:
-    Enabled: 1
+    Enabled: 0
     Source: {fileID: 1625701090}
     Path: SourceByte
     _converters:
       Converters:
       - rid: 7690191651494953054
-  WriteIntValue: 0
+  EnumBinding:
+    Enabled: 1
+    Source: {fileID: 1625701090}
+    Path: SourceEnum
+    _converters:
+      Converters: []
+  WriteEnumValue: 0
   references:
     version: 2
     RefIds:

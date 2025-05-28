@@ -514,6 +514,7 @@ namespace UIBindings.Editor
             if ( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )
             {
                 RemoveConverter( convertersProp, index );
+                GUIUtility.ExitGUI();       //Exit immediately to avoid issues with modified converters list
             }
 
             position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
