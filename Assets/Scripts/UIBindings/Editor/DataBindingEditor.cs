@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using JetBrains.Annotations;
+using UIBindings.Converters;
 using UIBindings.Editor.Utils;
-using UIBindings.Runtime;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace UIBindings.Editor
 {
@@ -16,40 +14,40 @@ namespace UIBindings.Editor
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label )
         {
-            using (  new EditorGUI.PropertyScope( position, label, property ) ) ;
+            using ( new EditorGUI.PropertyScope( position, label, property ) ) ;
 
             position.height = EditorGUIUtility.singleLineHeight;
             var labelRect = position;
 
-            //Draw label
+            //Draw property label
             labelRect.width = EditorGUIUtility.labelWidth;
             property.isExpanded = EditorGUI.Foldout( labelRect, property.isExpanded, label, true );
 
-            //Draw main content
+            //Draw main content line
             var mainLineContentPosition = position;
             mainLineContentPosition.xMin += EditorGUIUtility.labelWidth;
             var rects = GUIUtils.GetHorizontalRects( mainLineContentPosition, 2, 0, 20 );
-            var enabledProp = property.FindPropertyRelative( nameof(Binding.Enabled) );
-
-            var isEnabled = enabledProp.boolValue;
-            var binding = (DataBinding)property.boxedValue;
-            var bindingTypeInfo    = GetBindingTypeInfo( binding );
-            var sourceType     = GetSourcePropertyType( binding );
-            var sourceTypeName = sourceType            != null ? sourceType.Name : "null";
-            var sourceName = binding.Source != null ? binding.Source.name : "";
-            var sourcePropName = $".{binding.Path}";
-            var sourceDisplayName = $"{sourceName}{sourcePropName} {sourceTypeName}";
-            var targetType = bindingTypeInfo.valueType;
-            var targetTypeName = targetType != null ? targetType.Name : "null";
-            var isValid = !isEnabled || IsSourceTargetTypesCompatible( sourceType, targetType, binding.Converters );
-            var arrowStr = bindingTypeInfo.templateType == typeof(BindingTwoWay<>) ? " <-> " : " -> ";
-            var convertersCount = binding.Converters.Count > 0 ? $" ({binding.Converters.Count} cnvs)" : String.Empty;
 
             //Draw Enabled toggle
+            var enabledProp = property.FindPropertyRelative( nameof(Binding.Enabled) );
+            var isEnabled = enabledProp.boolValue;
             EditorGUI.PropertyField( rects.Item2, enabledProp, GUIContent.none );
 
             using ( new EditorGUI.DisabledGroupScope( !isEnabled ) )
             {
+                //Draw main binding label
+                var binding           = (DataBinding)property.boxedValue;
+                var sourceType        = GetSourcePropertyType( binding );
+                var sourceTypeName    = sourceType     != null ? sourceType.Name : "null";
+                var sourceName        = binding.Source != null ? binding.Source.name : "";
+                var sourcePropName    = $"{binding.Path}";
+                var sourceDisplayName = $"{sourceName}.{sourcePropName} {sourceTypeName}";
+                var targetType        = binding.DataType;
+                var targetTypeName    = targetType != null ? targetType.Name : "null";
+                var isTwoWayBinding   = binding.IsTwoWay;
+                var isValid           = !isEnabled || IsSourceTargetTypesCompatible( sourceType, targetType, isTwoWayBinding, binding.Converters );
+                var arrowStr          = isTwoWayBinding ? " <-> " : " -> ";
+                var convertersCount   = binding.Converters.Count     > 0 ? $" ({binding.Converters.Count} cnvs)" : String.Empty;
                 var mainText = $"{sourceDisplayName} {arrowStr} {targetTypeName} {convertersCount}";
                 GUI.Label( rects.Item1, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
 
@@ -179,7 +177,7 @@ namespace UIBindings.Editor
             if ( convertersProp.isArray && convertersProp.arraySize > 0 )
             {
                 convertersProp.isExpanded = EditorGUI.Foldout( labelRect, convertersProp.isExpanded, convertersProp.displayName );
-                var isValid = IsSourceTargetTypesCompatible( sourceType, targetType, binding.Converters );
+                var isValid = IsSourceTargetTypesCompatible( sourceType, targetType, binding.IsTwoWay, binding.Converters );
                 GUI.Label( mainContentPosition, $"Count {convertersProp.arraySize}", isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
                 position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                 _convertersFieldHeight += Resources.LineHeightWithMargin;
@@ -194,7 +192,8 @@ namespace UIBindings.Editor
                         {
                             var converterHeight = DrawConverterField( ref position, i, convertersProp, prevType, binding );
                             _convertersFieldHeight += converterHeight;
-                            prevType = ConverterBase.GetConverterTypeInfo( binding.Converters[ i ] ).output;
+                            var converter = binding.Converters[ i ];
+                            prevType = converter != null ? ConverterBase.GetConverterTypeInfo( converter ).output : null;
                             //position = position.Translate( new Vector2( 0, converterHeight ) );
                         }
                     }
@@ -203,7 +202,7 @@ namespace UIBindings.Editor
             else
             {
                 //No converters present, show message and button to add converter
-                GUI.Label( labelRect, convertersProp.displayName);
+                GUI.Label( EditorGUI.IndentedRect( labelRect ), convertersProp.displayName);
                 var rects = GUIUtils.GetHorizontalRects( mainContentPosition, 2, 0, 20 );
                 GUI.Label( rects.Item1, "No converters" );
                 if ( GUI.Button( rects.Item2, Resources.AddButtonContent ) )
@@ -218,11 +217,6 @@ namespace UIBindings.Editor
                        + Math.Max( _convertersFieldHeight, Resources.LineHeightWithMargin);        
             else
                 return Resources.LineHeightWithMargin;
-        }
-
-        private static (Type valueType, Type templateType) GetBindingTypeInfo ( Binding binding )
-        {
-            return DataBinding.GetBindingTypeInfo( binding.GetType() );
         }
 
         private static Type GetSourcePropertyType( Binding binding )
@@ -243,35 +237,67 @@ namespace UIBindings.Editor
             return sourceProperty.PropertyType;
         }
 
-        private static Boolean IsSourceTargetTypesCompatible(Type sourceType, Type targetType, IReadOnlyList<ConverterBase> converters )
+        private static Boolean IsSourceTargetTypesCompatible(Type sourceType, Type targetType, Boolean isTwoWayBinding, IReadOnlyList<ConverterBase> converters )
         {
             if (sourceType == null || targetType == null)
                 return false;
 
             // If no converters, check direct assignability
             if (converters.Count == 0)
-                return targetType == sourceType;
+                return sourceType == targetType || ImplicitConversion.IsConversionSupported( sourceType, targetType );
 
             // Check the chain: sourceType -> [converter1] -> ... -> [converterN] -> targetType
-            Type currentType = sourceType;
             for (int i = 0; i < converters.Count; i++)
             {
                 var converter     = converters[i];
                 if (converter == null)              //Something wrong with converter
                     return false;
-                var typeInfo = ConverterBase.GetConverterTypeInfo(converter);
-                // The converter's input type must be assignable from the current type
-                if (!typeInfo.input.IsAssignableFrom(currentType))
+
+                if ( !IsConverterValid( sourceType, converter, isTwoWayBinding, out _ ) )
                     return false;
-                currentType = typeInfo.output;
+
+                sourceType = converter.OutputType;
             }
+
             // After all converters, the result type must be assignable to the target type
-            return targetType.IsAssignableFrom(currentType);
+            return sourceType == targetType || ImplicitConversion.IsConversionSupported( sourceType, targetType );
         }
+
+        private static Boolean IsConverterValid(Type prevType, ConverterBase converter, bool isBindingTwoWay, out string report )
+        {
+            if( prevType == null )
+            {
+                report = "Previous type is null.";
+                return false;
+            }
+
+            if( converter == null )
+            {
+                report = "Converter is null.";
+                return false;
+            }
+
+            if ( isBindingTwoWay && !converter.IsTwoWay )
+            {
+                report = "Cannot use one-way converter for two-way binding.";
+                return false;
+            }
+
+            var isAssignable = prevType == converter.InputType || ImplicitConversion.IsConversionSupported( prevType, converter.InputType );
+            if ( !isAssignable )
+            {
+                report = $"Converter {converter.GetType().Name} input type {converter.InputType.Name} is not compatible with previous type {prevType.Name}.";
+                return false;
+            }
+
+            report = null;
+            return true;
+        }
+
 
 #region Converters stuff
 
-        private static readonly IReadOnlyList<ConverterTypeInfo> ConverterTypes = PrepareTypeCache();
+        private static readonly IReadOnlyList<ConverterTypeInfo> AllConverterTypes = PrepareTypeCache();
         private float _convertersFieldHeight;
 
         private static IReadOnlyList<ConverterTypeInfo> PrepareTypeCache( )
@@ -317,7 +343,7 @@ namespace UIBindings.Editor
         {
             var converters = binding.Converters;
             var currentOutputType = GetConverterTypeToAppend( binding, converters );
-            var compatibleTypes   = GetCompatibleConverters( currentOutputType );
+            var compatibleTypes   = GetCompatibleConverters( currentOutputType, binding.IsTwoWay );
 
             if( compatibleTypes.Count == 0 )
             {
@@ -353,18 +379,23 @@ namespace UIBindings.Editor
             convertersProp.serializedObject.ApplyModifiedProperties();
         }
 
-        private static IReadOnlyList<ConverterType> GetCompatibleConverters ( Type sourceType )
+        private static IReadOnlyList<ConverterType> GetCompatibleConverters ( Type sourceType, bool isTwoWayBinding )
         {
             var result = new List<ConverterType>();
-            foreach ( var converter in ConverterTypes )
+            foreach ( var converter in AllConverterTypes )
             {
-                if ( converter.InputType == sourceType )
+                var isConverterTwoWay = converter.TemplateType == typeof(ConverterTwoWayBase<,>);
+
+                if( isTwoWayBinding && !isConverterTwoWay )
+                    continue;                       //Skip one way converters in two way binding
+
+                if ( converter.InputType == sourceType || ImplicitConversion.IsConversionSupported( sourceType, converter.InputType ))
                 {
-                    result.Add( new ConverterType( converter ) );
+                    result.Add( new ConverterType( converter ) );       //Direct mode
                 }
-                else if ( converter.TemplateType == typeof(ConverterTwoWayBase<,>) && converter.OutputType == sourceType )
+                else if ( isConverterTwoWay && (converter.OutputType == sourceType || ImplicitConversion.IsConversionSupported( sourceType, converter.OutputType )))
                 {
-                    result.Add( new ConverterType( converter ) { IsReverseMode = true } );
+                    result.Add( new ConverterType( converter ) { IsReverseMode = true } );  //Reverse mode
                 }
             }
 
@@ -385,7 +416,10 @@ namespace UIBindings.Editor
             var converter = (ConverterBase)converterProp.boxedValue;
             if ( converter == null )
             {
-                GUI.Label( titleRect, "(null)", Resources.ErrorLabel );
+                EditorGUI.LabelField( titleRect, $"Converter {index}", "(null)", Resources.ErrorLabel );
+                if ( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )                    
+                    RemoveConverter( convertersProp, index );
+
                 position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                 return position.height;
             }
@@ -395,11 +429,12 @@ namespace UIBindings.Editor
                 title += " (R)";
 
             var typeInfo  = ConverterBase.GetConverterTypeInfo( converter );
-            var direction = $"{typeInfo.input.Name} -> {typeInfo.output.Name}";
+            var direction = converter.IsTwoWay ? "<->" : "->";
+            var isValid = IsConverterValid( prevType, converter, binding.IsTwoWay, out var report );
+            var infoStr = $"{typeInfo.input.Name} {direction} {typeInfo.output.Name}";
+            var info = new GUIContent( infoStr, tooltip: !isValid ? report : null );
         
-            var isValid = !(prevType != null && typeInfo.input != prevType);
-        
-            EditorGUI.LabelField( position, title, direction, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
+            EditorGUI.LabelField( position, new GUIContent(title), info, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
             if( isLastConverter && GUI.Button( appendBtnRect, Resources.AddButtonContent ) )
             {
                 AppendConverter( binding, convertersProp );

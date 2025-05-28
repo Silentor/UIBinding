@@ -4,32 +4,31 @@ using UnityEngine.Assertions;
 
 namespace UIBindings
 {
-    public abstract class ConverterTwoWayBase<TInput, TOutput> : ConverterOneWayBase<TInput, TOutput>, ITwoWayConverter<TOutput>
+    public abstract class ConverterTwoWayBase<TInput, TOutput> : ConverterOneWayBase<TInput, TOutput>, IDataReadWriter<TOutput>
     {
-        private ITwoWayConverter<TInput> _prev;
-        private Action<TInput>  _setter;
+        public override Boolean IsTwoWay => true;
 
-        public override void InitAttachToSourceProperty(Object source, PropertyInfo sourceProp )
+        public override Type InputType => !ReverseMode ? typeof(TInput) : typeof(TOutput);
+        public override Type OutputType => !ReverseMode ? typeof(TOutput) : typeof(TInput);
+
+        private IDataReadWriter<TInput> _prev;
+
+        public override DataProvider InitAttachToSource(  DataProvider prevConverter, Boolean isTwoWay )
         {
-            base.InitAttachToSourceProperty( source, sourceProp );
+            prevConverter = base.InitAttachToSource( prevConverter, isTwoWay ); //May be modified
+            if ( isTwoWay )
+            {
+                Assert.IsTrue( prevConverter.IsTwoWay );
+                _prev = (IDataReadWriter<TInput>)prevConverter;
+            }
 
-            _setter = (Action<TInput>)Delegate.CreateDelegate( typeof(Action<TInput>), source, sourceProp.GetSetMethod() );
+            return prevConverter;
         }
 
-        public override void InitAttachToSourceConverter(Object prevConverter )
-        {
-            base.InitAttachToSourceConverter( prevConverter );
-            _prev = (ITwoWayConverter<TInput>)prevConverter;
-        }
-
-        public virtual void ProcessTargetToSource(TOutput value )
+        public virtual void SetValue(TOutput value )
         {
             var convertedValue = ConvertBack( value );
-
-            if( _prev != null )
-                _prev.ProcessTargetToSource( convertedValue );
-            else
-                _setter.Invoke( convertedValue );
+            _prev.SetValue( convertedValue );
         }
 
         public override ConverterBase GetReverseConverter( )
@@ -52,17 +51,6 @@ namespace UIBindings
                 _myConverter = myConverter;
             }
 
-            // public override void InitAttachToSourceProperty( Object source, PropertyInfo sourceProp )
-            // {
-            //     _getter = (Func<TOutput>)Delegate.CreateDelegate( typeof(Func<TOutput>),     source, sourceProp.GetGetMethod() );
-            //     _setter = (Action<TOutput>)Delegate.CreateDelegate( typeof(Action<TOutput>), source, sourceProp.GetSetMethod() );
-            // }
-
-            // public override void InitAttachToSourceConverter( Object prevConverter )
-            // {
-            //     _prev = (ITwoWayConverter<TOutput>)prevConverter;
-            // }
-
             public override TInput Convert( TOutput value )
             {
                 return _myConverter.ConvertBack( value );
@@ -72,17 +60,6 @@ namespace UIBindings
             {
                 return _myConverter.Convert( value );
             }
-
-
-            // public override void ProcessTargetToSource(TInput value )
-            // {
-            //     var convertedValue = ConvertBack( value );
-            //
-            //     if( _prev != null )
-            //         _prev.ProcessTargetToSource( convertedValue );
-            //     else
-            //         _setter.Invoke( convertedValue );
-            // }
         }
     }
 }

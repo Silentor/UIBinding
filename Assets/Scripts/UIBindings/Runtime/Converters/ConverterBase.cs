@@ -1,22 +1,36 @@
 ﻿using System;
-using System.Reflection;
-using UnityEngine;
 using UnityEngine.Assertions;
-using Object = System.Object;
 
 namespace UIBindings
 {
+    /// <summary>
+    /// Item of data binding pipeline. Always has one input and possible has many outputs. Always implements at least one <see cref="IDataReader{TOutput}"/>
+    /// </summary>
+    public abstract class DataProvider
+    {
+        /// <summary>
+        /// Would it be process data in both directions. If true, it must implement al least one <see cref="IDataReadWriter{TOutput}"/>
+        /// </summary>
+        public abstract bool IsTwoWay { get; }
+
+        /// <summary>
+        /// Type of input data that this provider can accept
+        /// </summary>
+        public abstract Type InputType { get; }
+    } 
+
+    /// <summary>
+    /// User accessible converters with inspector in Unity Editor.
+    /// </summary>
     [Serializable]
-    public abstract class ConverterBase
+    public abstract class ConverterBase : DataProvider
     {
         //Two way converters can  be used output->input if needed
         public bool ReverseMode;          //todo consider this
-
-        //For first converter in chain (attached to source property)
-        public abstract void InitAttachToSourceProperty( Object source, PropertyInfo sourceProp );
         
-        //For all other converters in chain
-        public abstract void InitAttachToSourceConverter( Object prevConverter );
+        public abstract Type OutputType { get; }
+
+        public abstract DataProvider InitAttachToSource(   DataProvider prevConverter, Boolean isTwoWay );
 
         public abstract ConverterBase GetReverseConverter( );
 

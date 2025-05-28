@@ -10,6 +10,8 @@ namespace UIBindings
     [Serializable]
     public class BindingTwoWay<T> : Binding<T>
     {
+        public override Boolean IsTwoWay => true;
+
         public void SetValue( T value )
         {
             if( !Enabled || !_isValid || !_isSubscribed )
@@ -20,7 +22,7 @@ namespace UIBindings
             if( _lastConverterTargetToSource != null )
             {
                 WriteConvertedValueMarker.Begin( _debugBindingProfileMarkerName );
-                _lastConverterTargetToSource.ProcessTargetToSource( value );
+                _lastConverterTargetToSource.SetValue( value );
                 WriteConvertedValueMarker.End();
             }
             else
@@ -31,31 +33,25 @@ namespace UIBindings
             }
         }
 
-        private Action<T> _directSetter;
-
-        protected override void DoAwake(MonoBehaviour host, PropertyInfo property )
+        protected override void DoAwake( Object source, PropertyInfo property, DataProvider lastConverter, MonoBehaviour debugHost )
         {
-            base.DoAwake( host, property );
+            base.DoAwake( source, property, lastConverter, debugHost );
 
             if ( !property.CanWrite )
             {
-                Debug.LogError($"[{nameof(Binding)}] Property {property.DeclaringType.Name}.{property.Name} is read-only and cannot be used for two-way binding.", host);
+                Debug.LogError($"[{nameof(Binding)}] Property {property.DeclaringType.Name}.{property.Name} is read-only and cannot be used for two-way binding.", debugHost);
                 return;
-            } 
-
-            if ( Converters.Count > 0 )
-            {
-                _lastConverterTargetToSource = (ITwoWayConverter<T>)_lastConverter; 
             }
+
+            if( lastConverter is IDataReadWriter<T> twoWayConverter )
+                _lastConverterTargetToSource = twoWayConverter;
             else
-            {
-                var setMethod = property.GetSetMethod();
-                _directSetter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), Source, setMethod );
-            }
+                _directSetter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), source, property.GetSetMethod( true ) );
 
-            _debugBindingProfileMarkerName = $"{Source.name}.{Path} <-> {host.name}";
+            _debugBindingProfileMarkerName = $"{Source.name}.{Path} <-> {debugHost.name}";
         }
 
-        private ITwoWayConverter<T> _lastConverterTargetToSource;
+        private Action<T>           _directSetter;
+        private IDataReadWriter<T> _lastConverterTargetToSource;
     }
 }

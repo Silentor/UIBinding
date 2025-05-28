@@ -1,28 +1,38 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using UnityEngine.Assertions;
+using JetBrains.Annotations;
+using UIBindings.Converters;
 using Object = System.Object;
 
 namespace UIBindings
 {
-    public abstract class ConverterOneWayBase<TInput, TOutput> : ConverterBase, IOneWayConverter<TOutput>
+    public abstract class ConverterOneWayBase<TInput, TOutput> : ConverterBase, IDataReader<TOutput>
     {
-        private IOneWayConverter<TInput> _prev;
-        protected Func<TInput> _getter;
-        private TInput _lastValue;
-        private Boolean _isLastValueInited;
+        public override Boolean IsTwoWay => false;
+
+        public override Type InputType  => typeof(TInput);
+
+        public override Type OutputType => typeof(TOutput);
+
+        private IDataReader<TInput> _prev;
+        //private TInput _lastValue;
+        //private Boolean _isLastValueInited;
 
         public abstract TOutput Convert( TInput value );
 
-        public override void InitAttachToSourceProperty(Object source, PropertyInfo sourceProp )
+        public override DataProvider InitAttachToSource(  [NotNull] DataProvider prevConverter, Boolean isTwoWay )
         {
-            _getter = (Func<TInput>)Delegate.CreateDelegate( typeof(Func<TInput>), source, sourceProp.GetGetMethod() );
-        }
-
-        public override void InitAttachToSourceConverter(Object prevConverter )
-        {
-            _prev = (IOneWayConverter<TInput>) prevConverter;
+            if ( prevConverter == null ) throw new ArgumentNullException( nameof(prevConverter) );
+            if ( prevConverter is IDataReader<TInput> properSource )
+            {
+                _prev =  properSource;
+                return prevConverter;
+            }
+            else
+            {
+                var implicitTypeConverter = ImplicitConversion.GetConverter( prevConverter, typeof(TInput) );
+                _prev = (IDataReader<TInput>)implicitTypeConverter;
+                return implicitTypeConverter;
+            }
         }
 
         public override ConverterBase GetReverseConverter( )
@@ -30,26 +40,17 @@ namespace UIBindings
             throw new NotImplementedException( "Not supported for one way converters" );
         }
 
-        public virtual Boolean TryGetValueFromSource( out TOutput value )
+        public virtual Boolean TryGetValue( out TOutput value )
         {
-            if ( _prev != null )
+            if( _prev.TryGetValue( out var prevValue ))
             {
-                if( _prev.TryGetValueFromSource( out var prevValue ))
-                {
-                    value = Convert( prevValue );
-                    return true;
-                }
-            }
-            else
-            {
-                var sourceValue = _getter.Invoke();
-                if( !_isLastValueInited || !EqualityComparer<TInput>.Default.Equals( sourceValue, _lastValue ) )
-                {
-                    _lastValue         = sourceValue;
-                    _isLastValueInited = true;
-                    value              = Convert( sourceValue );
-                    return true;
-                }
+                value = Convert( prevValue );
+                // if( !_isLastValueInited || !EqualityComparer<TOutput>.Default.Equals( value, _lastValue ) )
+                // {
+                //     _lastValue         = value;
+                //     _isLastValueInited = true;
+                // }
+                return true;
             }
 
             value = default;

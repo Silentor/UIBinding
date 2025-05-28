@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
+using UIBindings.Adapters;
+using UIBindings.Converters;
+using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using Unity.Profiling.LowLevel;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Debug = UnityEngine.Debug;
 using Object = System.Object;
 
 namespace UIBindings
@@ -20,6 +25,10 @@ namespace UIBindings
     [Serializable]
     public abstract class DataBinding : Binding
     {
+        public abstract bool IsTwoWay { get; }
+
+        public abstract Type DataType { get; }
+
         [SerializeField]
         protected ConvertersList _converters;
         public       IReadOnlyList<ConverterBase> Converters => _converters.Converters;
@@ -50,16 +59,21 @@ namespace UIBindings
             public ConverterBase[] Converters;
         }
 
-        protected static readonly ProfilerMarker ReadDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadDirectValue", MarkerFlags.Script );
-        protected static readonly ProfilerMarker WriteDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteDirectValue", MarkerFlags.Script );
-        protected static readonly ProfilerMarker ReadConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadConvertedValue", MarkerFlags.Script );
-        protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteConvertedValue", MarkerFlags.Script );
-        protected static readonly ProfilerMarker UpdateTargetMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.UpdateTarget", MarkerFlags.Script );
+        protected static readonly ProfilerMarker AwakeMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.Awake" );
+        protected static readonly ProfilerMarker ReadDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadDirectValue" );
+        protected static readonly ProfilerMarker WriteDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteDirectValue" );
+        protected static readonly ProfilerMarker ReadConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadConvertedValue" );
+        protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteConvertedValue" );
+        protected static readonly ProfilerMarker UpdateTargetMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.UpdateTarget" );
     }
 
     [Serializable]
     public class Binding<T> : DataBinding
     {
+        public override Boolean IsTwoWay => false;
+
+        public override Type DataType => typeof(T);
+
         public void Awake( MonoBehaviour debugHost )
         {
             if ( !Enabled )   
@@ -77,61 +91,84 @@ namespace UIBindings
                 return;
             }
 
+            _debugBindingProfileMarkerName = $"{Source.name}.{Path} -> {debugHost.name}";
+            AwakeMarker.Begin( _debugBindingProfileMarkerName );
+            var timer = Stopwatch.StartNew(); 
+
             var sourceType = Source.GetType();
             var property   = sourceType.GetProperty( Path );
 
             if ( property == null )
             {
+                AwakeMarker.End();
                 Debug.LogError( $"[{nameof(Binding)}] Property {Path} not found in {sourceType.Name}", debugHost );
                 return;
             }
 
             _hostName = debugHost.name;
             _sourceNotify = Source as INotifyPropertyChanged;
+            DataProvider lastConverter = null;
 
-            var converters = _converters.Converters;
-            if ( converters.Length > 0 )
+            //Check fast pass - direct getter
+            if ( Converters.Count == 0 && property.PropertyType == typeof(T) && property.CanRead )
             {
-                //Prepare converters chain
-                for ( int i = 0; i < converters.Length; i++ )
-                    converters[ i ] = converters[ i ].ReverseMode ? converters[ i ].GetReverseConverter() : converters[ i ];
+                _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), Source, property.GetGetMethod( true ) );
+            }
+            else        //Need adapter/converters/etc
+            {
+                //First prepare property reader
+                var propReader = PropertyAdapter.GetPropertyAdapter( Source, property, IsTwoWay );
+                lastConverter = propReader;
 
-                //Connect first converter to source property
-                var firstConverter                = converters[0];
-                var (inputType, outputType, _) = ConverterBase.GetConverterTypeInfo( firstConverter );
-                Assert.IsTrue( inputType == property.PropertyType, $"[{nameof(Binding)}]-[{nameof(Awake)}] First converter {firstConverter.GetType().Name} input type {inputType} is not equal to property {property} type {property.PropertyType.Name}" );
-                firstConverter.InitAttachToSourceProperty( Source, property );
-
-                //Make each converter know about prev converter
-                var prevOutputType = outputType;
-                for ( var i = 1; i < converters.Length; i++ )
+                //Prepare conversion chain
+                var converters = _converters.Converters;
+                if ( converters.Length > 0 )
                 {
-                    var myTypes = ConverterBase.GetConverterTypeInfo( converters[i] );
-                    Assert.IsTrue( prevOutputType == myTypes.input, $"[{nameof(Binding)}]-[{nameof(Awake)}] Converter {converters[i].GetType().Name} input type {myTypes.input} is not equal to prev converter {converters[i-1].GetType().Name} output type {prevOutputType}" );
-                    converters[i].InitAttachToSourceConverter( converters[ i - 1] );
-                    prevOutputType = myTypes.output;
+                    for ( int i = 0; i < converters.Length; i++ )
+                        converters[ i ] = converters[ i ].ReverseMode ? converters[ i ].GetReverseConverter() : converters[ i ];
+
+                    //Connect first converter to source property
+                    var firstConverter                = converters[0];
+                    firstConverter.InitAttachToSource( propReader, IsTwoWay );
+                    lastConverter = firstConverter; 
+                    //var (inputType, outputType, _) = ConverterBase.GetConverterTypeInfo( firstConverter );
+                    //Assert.IsTrue( inputType == property.PropertyType, $"[{nameof(Binding)}]-[{nameof(Awake)}] First converter {firstConverter.GetType().Name} input type {inputType} is not equal to property {property} type {property.PropertyType.Name}" );
+                    //firstConverter.InitAttachToSourceProperty( Source, property );
+
+                    //Make each converter know about prev converter
+                    //var prevOutputType = outputType;
+                    for ( var i = 1; i < converters.Length; i++ )
+                    {
+                        //var myTypes = ConverterBase.GetConverterTypeInfo( converters[i] );
+                        //Assert.IsTrue( prevOutputType == myTypes.input, $"[{nameof(Binding)}]-[{nameof(Awake)}] Converter {converters[i].GetType().Name} input type {myTypes.input} is not equal to prev converter {converters[i-1].GetType().Name} output type {prevOutputType}" );
+                        converters[i].InitAttachToSource( converters[ i - 1], IsTwoWay );
+                        lastConverter = converters[ i ];
+                        //prevOutputType = myTypes.output;
+                    }
+
+                    //Connect last converter to binder 
+                    //_lastConverter = (IOneWayConverter<T>)converters[^1];
                 }
-                
-                //Connect last converter to binder
-                _lastConverter = (ITwoWayConverter<T>)converters[^1];
-            }
-            else                //No converters, just use the property getter
-            {
-                if ( typeof(T) != property.PropertyType )
+
+                if ( lastConverter is IDataReader<T> compatibleConverter )
                 {
-                    Debug.LogError($"[{nameof(Binding)}] Binding expect type {typeof(T).Name}, but property {property.DeclaringType.Name}.{property.Name} has type {property.PropertyType.Name}. Consider to add converter.");
-                    return;
-                } 
-                var getMethod = property.GetGetMethod();
-                _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), Source, getMethod );
+                    _lastReader = compatibleConverter;
+                }
+                else
+                {
+                    lastConverter = ImplicitConversion.GetConverter( lastConverter, typeof(T) );
+                    _lastReader = ( IDataReader<T> )lastConverter;
+                }
             }
-
-            _debugBindingProfileMarkerName = $"{Source.name}.{Path} -> {debugHost.name}";
-            DoAwake( debugHost, property );
-
+            
+            DoAwake( Source, property, lastConverter, debugHost );
              
             _host = debugHost;
             _isValid = true;
+
+            timer.Stop();
+            Debug.Log( $"Awaked for {timer.Elapsed.TotalMicroseconds()} mks, {_hostName}, {property.Name}, is two way {IsTwoWay}" );
+            AwakeMarker.End();
         }
 
         public void Subscribe()
@@ -168,13 +205,13 @@ namespace UIBindings
                 if ( _directGetter != null )
                 {
                     ReadDirectValueMarker.Begin( _debugBindingProfileMarkerName );
-                    value = _directGetter.Invoke();
+                    value = _directGetter();
                     ReadDirectValueMarker.End();
                 }
                 else
                 {
                     ReadConvertedValueMarker.Begin( _debugBindingProfileMarkerName );
-                    isChangedOnSource = _lastConverter.TryGetValueFromSource( out value );
+                    isChangedOnSource = _lastReader.TryGetValue( out value );
                     ReadConvertedValueMarker.End();
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
@@ -195,7 +232,7 @@ namespace UIBindings
 
         public event Action<Object, T> SourceChanged;
 
-        protected virtual void DoAwake( MonoBehaviour host, PropertyInfo property ) { }
+        protected virtual void DoAwake(  Object source, PropertyInfo property, DataProvider lastConverter, MonoBehaviour debugHost  ) { }
 
         private void OnSourcePropertyChanged(Object sender, String propertyName )
         {
@@ -211,7 +248,7 @@ namespace UIBindings
         protected bool _isValid;
         protected T _lastSourceValue;
         protected bool _isLastValueInitialized;
-        protected IOneWayConverter<T> _lastConverter;
+        protected IDataReader<T> _lastReader;
         protected Boolean _isSubscribed;
         protected String _hostName;
         private MonoBehaviour _host;
