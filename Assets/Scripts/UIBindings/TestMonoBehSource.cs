@@ -23,9 +23,9 @@ namespace UIBindings
         private Single  _sourceFloat;
         private bool    _targetBool = false;
         private int _sourceInt = 5;
-        private ETestEnum _sourceEnum = ETestEnum.Value2;
+        private EventType _sourceEnum = EventType.MouseDown;
 
-        private Func<IntedEnum> _fastGetter;
+        private Func<StructEnum> _fastGetter;
         private Func<Int32> _boxedGetter;
 
 
@@ -54,10 +54,10 @@ namespace UIBindings
 
         public Sprite SourceSprite => TestSprite;
 
-        public ETestEnum SourceEnum
+        public EventType SourceEnum
         {
             get => _sourceEnum;
-            //set => _sourceEnum = value;
+            set => _sourceEnum = value;
         }
 
         //Should be read by any int binding
@@ -66,7 +66,7 @@ namespace UIBindings
             get => (byte)_sourceEnum;
             set
             {
-                _sourceEnum = (ETestEnum)value;
+                _sourceEnum = (EventType)value;
                 //Debug.Log( $"{nameof(SourceByte)} property is modified to {value}" );
             }
         }
@@ -88,8 +88,8 @@ namespace UIBindings
             //throw new OperationCanceledException( "Test exception" );
             //throw new Exception( "Test exception" );
 
-            var newValue = ((int)_sourceEnum + 1) % 3;
-            _sourceEnum = (ETestEnum)newValue;
+            var newValue = ((int)_sourceEnum + 1) % 16;
+            _sourceEnum = (EventType)newValue;
             //Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] " );
 
             OnPropertyChanged( nameof(SourceByte) );
@@ -215,15 +215,6 @@ namespace UIBindings
             {
                 OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
             }
-
-            var enumProp = GetType().GetProperty( nameof(SourceEnum), BindingFlags.Public | BindingFlags.Instance );
-            var getter = enumProp.GetGetMethod( true );
-            var getterInt = ConstructFunc1( this, getter );
-            _fastGetter = getterInt;
-
-            var boxedGetter = Delegate.CreateDelegate( typeof(Func<>).MakeGenericType(enumProp.PropertyType), this, getter );
-            Func<int> boxedGetterToEnum = ( ) => (int)boxedGetter.DynamicInvoke(  );
-            _boxedGetter = boxedGetterToEnum;
         }
 
         private IEnumerator DelayedCanvasEnable( )
@@ -231,27 +222,18 @@ namespace UIBindings
             yield return new WaitForSeconds( 1f );
             DelayedCanvas.SetActive( true );
             OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
+            yield return null;yield return null;yield return null;
+            SourceByte += 1; 
+            OnPropertyChanged( null );
+            yield return null;yield return null;yield return null;
+            SourceByte += 1;
+            OnPropertyChanged( null );
+            yield return null;yield return null;yield return null;
+            SourceByte += 1;
+            OnPropertyChanged( null );
+            yield return null;
+            OnPropertyChanged( null );
         }
-
-
-        //Construct 1 params instance func delegate with boxing
-        private static Func<IntedEnum> ConstructFunc1( Object source, MethodInfo method )
-        {
-            var type1               = method.ReturnType;
-            var convertMethod       = typeof(TestMonoBehSource).GetMethod( nameof( ConvertFunc1 ), BindingFlags.NonPublic | BindingFlags.Static );
-            var closedConvertMethod = convertMethod.MakeGenericMethod( type1 );
-            var result              = (Func<IntedEnum>)closedConvertMethod.Invoke( null, new [] { source, method } );
-            return result;
-        }
-
-        private static Func<IntedEnum> ConvertFunc1<TEnum>( Object source, MethodInfo method ) where TEnum : struct, Enum, IConvertible //where TNumeric : struct, IConvertible
-        {
-            var enm = (Func<TEnum>) Delegate.CreateDelegate( typeof(Func<TEnum>), source, method );
-            Func<IntedEnum> num  = () => new IntedEnum(UnsafeUtility.EnumToInt( enm( )), typeof(TEnum));
-            return num;
-        }
-
-
 
         void Update()
         {
@@ -276,12 +258,5 @@ namespace UIBindings
 
         public event Action<Object, String> PropertyChanged;
 
-    }
-
-    public enum ETestEnum
-    {
-        Value1,
-        Value2,
-        Value3
     }
 }

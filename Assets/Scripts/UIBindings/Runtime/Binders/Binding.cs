@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Reflection;
 using UIBindings.Adapters;
 using UIBindings.Converters;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
-using Unity.Profiling.LowLevel;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Debug = UnityEngine.Debug;

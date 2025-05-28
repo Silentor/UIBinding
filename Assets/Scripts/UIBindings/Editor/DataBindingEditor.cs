@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using UIBindings.Adapters;
 using UIBindings.Converters;
 using UIBindings.Editor.Utils;
 using UnityEditor;
@@ -46,18 +47,21 @@ namespace UIBindings.Editor
                 var targetType        = binding.DataType;
                 var targetTypeName    = targetType != null ? targetType.Name : "null";
                 var isTwoWayBinding   = binding.IsTwoWay;
-                var isValid           = !isEnabled || IsSourceTargetTypesCompatible( sourcePropType, targetType, isTwoWayBinding, binding.Converters );
+                var sourceAdapterType = PropertyAdapter.GetAdaptedType( sourcePropType );
+                var validationReport  = String.Empty;
+                var isValid           = !isEnabled || ( IsSourceValid( binding, sourceProperty, out validationReport ) && IsSourceTargetTypesCompatible( sourceAdapterType, targetType, isTwoWayBinding, binding.Converters, out validationReport ));
                 var convertersCount   = binding.Converters.Count > 0 ? $"[{binding.Converters.Count}]" : String.Empty;
                 var arrowStr          = isTwoWayBinding ? $" <-{convertersCount}-> " : $" -{convertersCount}-> ";
-                string mainText;
+                string mainTextStr;
                 if ( Application.isPlaying && sourceProperty != null )
                 {
-                    mainText = $"{sourceDisplayName} <{sourceProperty.GetValue( binding.Source )}> {arrowStr} {targetTypeName} <{binding.GetDebugLastValue()}>";
-                    isValid  = isValid && binding.IsRuntimeValid;
+                    mainTextStr = $"{sourceDisplayName} <{sourceProperty.GetValue( binding.Source )}> {arrowStr} {targetTypeName} <{binding.GetDebugLastValue()}>";
+                    isValid  = isValid && (binding.IsRuntimeValid || !binding.Enabled);
                 }
                 else
-                    mainText = $"{sourceDisplayName} {arrowStr} {targetTypeName}";
-                GUI.Label( rects.Item1, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
+                    mainTextStr = $"{sourceDisplayName} {arrowStr} {targetTypeName}";
+
+                GUI.Label( rects.Item1, new GUIContent(mainTextStr, tooltip: validationReport), isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
 
                 //Draw expanded content
                 if ( property.isExpanded )
@@ -185,8 +189,8 @@ namespace UIBindings.Editor
             if ( convertersProp.isArray && convertersProp.arraySize > 0 )
             {
                 convertersProp.isExpanded = EditorGUI.Foldout( labelRect, convertersProp.isExpanded, convertersProp.displayName );
-                var isValid = IsSourceTargetTypesCompatible( sourceType, targetType, binding.IsTwoWay, binding.Converters );
-                GUI.Label( mainContentPosition, $"Count {convertersProp.arraySize}", isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
+                var isValid = IsSourceTargetTypesCompatible( sourceType, targetType, binding.IsTwoWay, binding.Converters, out var report );
+                GUI.Label( mainContentPosition, new GUIContent( $"Count {convertersProp.arraySize}", tooltip: report), isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
                 position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                 _convertersFieldHeight += Resources.LineHeightWithMargin;
 
@@ -227,7 +231,7 @@ namespace UIBindings.Editor
                 return Resources.LineHeightWithMargin;
         }
 
-        private static PropertyInfo GetSourceProperty( Binding binding )
+        public static PropertyInfo GetSourceProperty( Binding binding )
         {
             if ( !binding.Source )
                 return null;
@@ -245,36 +249,89 @@ namespace UIBindings.Editor
             return sourceProperty;
         }
 
-        private static Type GetSourcePropertyType( Binding binding )
+        public static Type GetSourcePropertyType( Binding binding )
         {
             var sourceProperty = GetSourceProperty( binding );
             return sourceProperty != null ? sourceProperty.PropertyType : null;
         }
 
-        private static Boolean IsSourceTargetTypesCompatible(Type sourceType, Type targetType, Boolean isTwoWayBinding, IReadOnlyList<ConverterBase> converters )
+        private static bool IsSourceValid( DataBinding binding, PropertyInfo sourceProperty, out string report )
         {
-            if (sourceType == null || targetType == null)
+            report = String.Empty;
+
+            if ( !binding.Source )
+            {
+                report = "Source is not set";
                 return false;
+            }
+
+            if ( sourceProperty == null )
+            {
+                report = $"Source property '{binding.Path}' is not found on {binding.Source.GetType().Name}";
+                return false;
+            }
+
+            if( !sourceProperty.CanWrite && binding.IsTwoWay )
+            {
+                report = $"Source property '{binding.Path}' is read-only, but binding is two-way.";
+                return false;
+            }
+
+            if ( !sourceProperty.CanRead )
+            {
+                report = $"Write only source property '{binding.Path}' is not supported.";
+                return false;   
+            }
+
+            return true;
+        }
+
+        private static Boolean IsSourceTargetTypesCompatible(Type sourceType, Type targetType, Boolean isTwoWayBinding, IReadOnlyList<ConverterBase> converters, out string report )
+        {
+            report = String.Empty;
+
+            if ( sourceType == null || targetType == null )
+            {
+                report = "Source or target type is not defined";
+                return false;
+            }
 
             // If no converters, check direct assignability
-            if (converters.Count == 0)
-                return sourceType == targetType || ImplicitConversion.IsConversionSupported( sourceType, targetType );
+            if ( converters.Count == 0 )
+            {
+                if ( sourceType == targetType || ImplicitConversion.IsConversionSupported( sourceType, targetType ) )
+                    return true;
+                else
+                {
+                    report = $"Source type {sourceType.Name} is not compatible with target type {targetType.Name}.";
+                    return false;
+                }
+            }
 
             // Check the chain: sourceType -> [converter1] -> ... -> [converterN] -> targetType
             for (int i = 0; i < converters.Count; i++)
             {
                 var converter     = converters[i];
-                if (converter == null)              //Something wrong with converter
+                if ( converter == null )              //Something wrong with converter
+                {
+                    report = $"Converter at index {i} is null.";
                     return false;
+                }
 
-                if ( !IsConverterValid( sourceType, converter, isTwoWayBinding, out _ ) )
+                if ( !IsConverterValid( sourceType, converter, isTwoWayBinding, out report ) )
                     return false;
 
                 sourceType = converter.OutputType;
             }
 
             // After all converters, the result type must be assignable to the target type
-            return sourceType == targetType || ImplicitConversion.IsConversionSupported( sourceType, targetType );
+            if ( sourceType == targetType || ImplicitConversion.IsConversionSupported( sourceType, targetType ) )
+                return true;
+            else
+            {
+                report = $"Final last converter's type {sourceType.Name} is not compatible with target type {targetType.Name}.";
+                return false;
+            }
         }
 
         private static Boolean IsConverterValid(Type prevType, ConverterBase converter, bool isBindingTwoWay, out string report )

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using JetBrains.Annotations;
+using UIBindings.Runtime;
 using UnityEngine.Assertions;
 
 namespace UIBindings.Adapters
@@ -10,6 +11,7 @@ namespace UIBindings.Adapters
     {
         public override Boolean IsTwoWay { get; }
         public override Type InputType  => typeof(T);
+        public override Type OutputType  => typeof(T);
 
         private readonly Object      _source;
         private readonly Func<T>     _getter;
@@ -69,23 +71,39 @@ namespace UIBindings.Adapters
 
     public abstract class PropertyAdapter : DataProvider
     {
-        public static PropertyAdapter GetPropertyAdapter( object source, PropertyInfo property, bool isTwoWay )
+        public abstract Type OutputType  { get; }
+
+        /// <summary>
+        /// Sometimes we need to adapt type of property to some other type, for example, if it is enum we want to use StructEnum
+        /// </summary>
+        /// <param name="propertyType"></param>
+        /// <returns></returns>
+        public static Type GetAdaptedType( Type propertyType )
         {
-            var type = property.PropertyType;
+            if ( propertyType == null ) return null;
+            if ( propertyType.IsEnum ) return typeof(StructEnum);
+            return propertyType;
+        }
+
+        public static PropertyAdapter GetPropertyAdapter( object source, PropertyInfo propertyInfo, bool isTwoWayBinding )
+        {
+            var type = propertyInfo.PropertyType;
 
             //Fast way for some common types
             if ( type == typeof(int) )
-                return new PropertyAdapter<int>( source, property, isTwoWay );
+                return new PropertyAdapter<int>( source, propertyInfo, isTwoWayBinding );
             else if ( type == typeof(float) )
-                return new PropertyAdapter<float>( source, property, isTwoWay );
+                return new PropertyAdapter<float>( source, propertyInfo, isTwoWayBinding );
             else if( type == typeof(bool) )
-                return new PropertyAdapter<bool>( source, property, isTwoWay );
+                return new PropertyAdapter<bool>( source, propertyInfo, isTwoWayBinding );
             else if ( type == typeof(string) )
-                return new PropertyAdapter<string>( source, property, isTwoWay );
+                return new PropertyAdapter<string>( source, propertyInfo, isTwoWayBinding );
+            else if( type.IsEnum )
+                return new StructEnumPropertyAdapter( source, propertyInfo, isTwoWayBinding );
 
             //Slow way for all other types
             var adapterType = typeof(PropertyAdapter<>).MakeGenericType( type );
-            return (PropertyAdapter)Activator.CreateInstance( adapterType, source, property, isTwoWay );
+            return (PropertyAdapter)Activator.CreateInstance( adapterType, source, propertyInfo, isTwoWayBinding );
         } 
     }
 }

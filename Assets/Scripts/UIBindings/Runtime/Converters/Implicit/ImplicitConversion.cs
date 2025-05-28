@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UIBindings.Runtime;
 
 namespace UIBindings.Converters
 {
@@ -59,6 +60,7 @@ namespace UIBindings.Converters
                            new ImplicitConverterInfo( typeof(byte), typeof(ImplicitByteConverter),  static inp => new ImplicitByteConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(double), typeof(ImplicitDoubleConverter),  static inp => new ImplicitDoubleConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(long), typeof(ImplicitLongConverter), static inp => new ImplicitLongConverter( inp ) ),
+                           new ImplicitConverterInfo( typeof(StructEnum), typeof(ImplicitEnumConverter), static inp => new ImplicitEnumConverter( inp ) ),
                    };
         }
 

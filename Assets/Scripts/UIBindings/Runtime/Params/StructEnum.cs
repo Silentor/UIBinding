@@ -2,18 +2,18 @@
 
 namespace UIBindings.Runtime
 {
-    public readonly struct IntedEnum : IEquatable<IntedEnum>
+    public readonly struct StructEnum : IEquatable<StructEnum>
     {
         public readonly int  Value;
         public readonly Type EnumType;
 
-        public IntedEnum( int value, Type type )
+        public StructEnum( int value, Type type )
         {
             Value    = value;
             EnumType = type;
         }
 
-        public static explicit operator int( IntedEnum value )
+        public static explicit operator int( StructEnum value )
         {
             return value.Value;
         }
@@ -21,17 +21,17 @@ namespace UIBindings.Runtime
         public override string ToString()
         {
             var @enum = Enum.ToObject( EnumType, Value );
-            return @enum.ToString();
+            return $"{@enum.ToString()} ({EnumType.Name})";
         }
 
-        public bool Equals(IntedEnum other)
+        public bool Equals(StructEnum other)
         {
             return Value == other.Value && EnumType.Equals( other.EnumType );
         }
 
         public override bool Equals(object obj)
         {
-            return obj is IntedEnum other && Equals( other );
+            return obj is StructEnum other && Equals( other );
         }
 
         public override int GetHashCode( )
@@ -39,12 +39,12 @@ namespace UIBindings.Runtime
             return HashCode.Combine( Value, EnumType );
         }
 
-        public static bool operator ==(IntedEnum left, IntedEnum right)
+        public static bool operator ==(StructEnum left, StructEnum right)
         {
             return left.Equals( right );
         }
 
-        public static bool operator !=(IntedEnum left, IntedEnum right)
+        public static bool operator !=(StructEnum left, StructEnum right)
         {
             return !left.Equals( right );
         }

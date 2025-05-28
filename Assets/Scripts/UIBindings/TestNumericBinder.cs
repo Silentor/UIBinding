@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using UIBindings.Runtime;
 using UnityEngine;
 using UnityEngine.Profiling;
 using Object = System.Object;
@@ -10,9 +11,11 @@ namespace UIBindings
     {
         public BindingTwoWay<int>     IntBinding;
         public Binding<float>         FloatBinding;
+        public BindingTwoWay<StructEnum>     EnumBinding;
 
-        public bool WriteIntValue = false;
+        public bool WriteEnumValue = false;
         private Int32 _intValue;
+        private Type _enumType;
 
         void Awake() 
         {
@@ -24,7 +27,19 @@ namespace UIBindings
             // FloatBinding.SourceChanged += OnFloatValueChanged;
             // FloatBinding.Subscribe();
 
-            StartCoroutine( DelayAwake() );
+            EnumBinding.SetDebugInfo( this, nameof(EnumBinding) );
+            EnumBinding.Awake(  );
+            EnumBinding.SourceChanged += OnEnumValueChanged;
+            EnumBinding.Subscribe();
+
+
+            //StartCoroutine( DelayAwake() );
+        }
+
+        private void OnEnumValueChanged(Object arg1, StructEnum arg2 )
+        {
+            _enumType = arg2.EnumType;
+            Debug.Log( arg2 );
         }
 
         IEnumerator DelayAwake( )
@@ -45,6 +60,8 @@ namespace UIBindings
             FloatBinding.SourceChanged += OnFloatValueChanged;
             FloatBinding.Subscribe();
 
+
+
             // while ( true )
             // {
             //     yield return null;
@@ -57,12 +74,12 @@ namespace UIBindings
 
         private void Update( )
         {
-            if ( WriteIntValue )
+            if ( WriteEnumValue )
             {
-                WriteIntValue = false;
+                WriteEnumValue = false;
 
                 _intValue += 1;
-                IntBinding.SetValue( _intValue );
+                EnumBinding.SetValue( new StructEnum( _intValue, _enumType ) );
 
 
             }
@@ -72,6 +89,7 @@ namespace UIBindings
         {
             IntBinding.CheckChanges();
             FloatBinding.CheckChanges();
+            EnumBinding.CheckChanges();
         }
 
 

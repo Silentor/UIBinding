@@ -6,10 +6,10 @@ using Unity.Collections.LowLevel.Unsafe;
 
 namespace UIBindings
 {
-    public class GameObjectsEnumBinder : MonoBehaviour
+    public class GameObjectSelectBinder : MonoBehaviour
     {
-        public GameObject[] GameObjects;
-        public Binding<IntedEnum> SelectorBinding;
+        public KeyGameObject[] GameObjects;
+        public Binding<StructEnum> SelectorBinding;
 
         private void Awake( )
         {
@@ -33,13 +33,19 @@ namespace UIBindings
             SelectorBinding.CheckChanges();
         }
 
-        private void OnSelectorValueChanged(Object sender, IntedEnum value )
+        private void OnSelectorValueChanged(Object sender, StructEnum value )
         {
             var intValue = (int)value;
             // for ( int i = 0; i < GameObjects.Length; i++ )
             // {
             //     GameObjects[i].SetActive( i == intValue );
             // }
+        }
+
+        public struct KeyGameObject
+        {
+            public int Key;
+            public GameObject GameObject;
         }
     }
 }
