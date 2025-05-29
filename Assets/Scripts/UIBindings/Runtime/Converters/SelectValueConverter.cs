@@ -4,7 +4,7 @@
 
 namespace UIBindings
 {
-    public abstract class SelectValueConverter<TSerializable> : ConverterOneWayBase<int, TSerializable>
+    public abstract class SelectValueConverter<TSerializable> : SimpleConverterOneWayBase<int, TSerializable>
     {
         public KeyValue<TSerializable>[] Values;
         public TSerializable DefaultValue;

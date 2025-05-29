@@ -4,19 +4,24 @@ using UnityEngine.Assertions;
 
 namespace UIBindings
 {
-    public abstract class ConverterTwoWayBase<TInput, TOutput> : ConverterOneWayBase<TInput, TOutput>, IDataReadWriter<TOutput>
+    /// <summary>
+    /// Just implement Convert and ConvertBack methods to create a simple two-way converter. Its support automatic reverse mode, so it can swap input and output types.
+    /// </summary>
+    /// <typeparam name="TInput"></typeparam>
+    /// <typeparam name="TOutput"></typeparam>
+    public abstract class SimpleConverterTwoWayBase<TInput, TOutput> : SimpleConverterOneWayBase<TInput, TOutput>, IDataReadWriter<TOutput>
     {
         public override Boolean IsTwoWay => true;
 
         public override Type InputType => !ReverseMode ? typeof(TInput) : typeof(TOutput);
         public override Type OutputType => !ReverseMode ? typeof(TOutput) : typeof(TInput);
 
-        private IDataReadWriter<TInput> _prev;
+        private IDataReadWriter<TInput> _prevWriter;
 
         public virtual void SetValue(TOutput value )
         {
             var convertedValue = ConvertBack( value );
-            _prev.SetValue( convertedValue );
+            _prevWriter.SetValue( convertedValue );
         }
 
         public override ConverterBase GetReverseConverter( )
@@ -31,19 +36,18 @@ namespace UIBindings
             if ( isTwoWay )
             {
                 Assert.IsTrue( prevConverter.IsTwoWay );
-                _prev = (IDataReadWriter<TInput>)prevConverter;
+                _prevWriter = (IDataReadWriter<TInput>)prevConverter;
             }
         }
-
 
         /// <summary>
         /// Wrapper to make this two way converter to be used in reverse mode (swap input and output types)
         /// </summary>
-        public class ReverseModeWrapper : ConverterTwoWayBase<TOutput, TInput>
+        public class ReverseModeWrapper : SimpleConverterTwoWayBase<TOutput, TInput>
         {
-            private readonly ConverterTwoWayBase<TInput, TOutput> _myConverter;
+            private readonly SimpleConverterTwoWayBase<TInput, TOutput> _myConverter;
 
-            public ReverseModeWrapper( ConverterTwoWayBase<TInput, TOutput> myConverter )
+            public ReverseModeWrapper( SimpleConverterTwoWayBase<TInput, TOutput> myConverter )
             {
                 _myConverter = myConverter;
             }

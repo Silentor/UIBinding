@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using UIBindings.Converters;
 using UnityEngine.Assertions;
 
 namespace UIBindings
@@ -41,7 +43,7 @@ namespace UIBindings
         /// <param name="prevConverter"></param>
         /// <param name="isTwoWay"></param>
         /// <returns>False if attach failed</returns>
-        public abstract bool InitAttachToSource(   DataProvider prevConverter, Boolean isTwoWay );
+        public abstract bool InitAttachToSource( DataProvider prevConverter, Boolean isTwoWay );
 
         public abstract ConverterBase GetReverseConverter( );
 
@@ -61,7 +63,7 @@ namespace UIBindings
             {
                 converterType = converterType.BaseType;
                 if (converterType.IsGenericType 
-                    && (converterType.GetGenericTypeDefinition() == typeof(ConverterOneWayBase<,>) || converterType.GetGenericTypeDefinition() == typeof(ConverterTwoWayBase<,>)))
+                    && (converterType.GetGenericTypeDefinition() == typeof(SimpleConverterOneWayBase<,>) || converterType.GetGenericTypeDefinition() == typeof(SimpleConverterTwoWayBase<,>) || converterType.GetGenericTypeDefinition() == typeof(ConverterBase<,>)))
                 {
                     var inputType  = converterType.GetGenericArguments()[0];
                     var outputType = converterType.GetGenericArguments()[1];
@@ -76,5 +78,42 @@ namespace UIBindings
         {
             return $"{GetType().Name} (Input: {InputType.Name}, Output: {OutputType.Name}, IsTwoWay: {IsTwoWay})";
         }
+    }
+
+    public abstract class ConverterBase<TInput, TOutput> : ConverterBase
+    {
+        public override Type InputType  => typeof(TInput);
+
+        public override Type OutputType => typeof(TOutput);
+
+        //Returns false if attach to source failed, probably incompatible types
+        public override bool InitAttachToSource(  [NotNull] DataProvider prevConverter, Boolean isTwoWay )
+        {
+            if ( prevConverter == null ) throw new ArgumentNullException( nameof(prevConverter) );
+            if ( prevConverter is IDataReader<TInput> properSource )
+            {
+                _prev =  properSource;
+                OnAttachToSource( prevConverter, isTwoWay );
+            }
+            else
+            {
+                var implicitTypeConverter = ImplicitConversion.GetConverter( prevConverter, typeof(TInput) );
+                if ( implicitTypeConverter != null )
+                {
+                    _prev = (IDataReader<TInput>)implicitTypeConverter;
+                    OnAttachToSource( implicitTypeConverter, isTwoWay );
+                }
+            }
+
+            return _prev != null;
+        }
+
+        protected virtual void OnAttachToSource( DataProvider prevConverter, Boolean isTwoWay )
+        {
+            //Default implementation does nothing
+            //Override this method if you need to do something on attach
+        }
+
+        protected IDataReader<TInput> _prev;
     }
 }

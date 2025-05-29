@@ -1,6 +1,6 @@
 ﻿namespace UIBindings
 {
-    public class InvertConverter : ConverterTwoWayBase<bool, bool>
+    public class InvertConverter : SimpleConverterTwoWayBase<bool, bool>
     {
         public override bool Convert(bool value)
         {

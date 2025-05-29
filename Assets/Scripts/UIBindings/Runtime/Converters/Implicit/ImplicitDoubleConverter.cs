@@ -17,55 +17,32 @@ namespace UIBindings.Converters
             _writer = source as IDataReadWriter<double>;
         }
 
-        public Boolean TryGetValue(out Byte value )
+        public EResult TryGetValue(out Byte value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue.ClampToByte();
-                return true;
-            }
-
-            value = default;
-            return false;
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue.ClampToByte() : (Byte)0;
+            return result;
         }
 
-        public Boolean TryGetValue(out int value )
+        public EResult TryGetValue(out Int32 value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue.ClampToInt32();
-                return true;
-            }
-
-            value = default;
-            return false;
-
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue.ClampToInt32() : 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out Int64 value )
+        public EResult TryGetValue(out Int64 value )
         {            
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue.ClampToInt64();
-                return true;
-            }
-
-            value = default;
-            return false;
-
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue.ClampToInt64() : 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out float value )
+        public EResult TryGetValue(out Single value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue.ClampToFloat();
-                return true;
-            }
-
-            value = default;
-            return false;
-
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue.ClampToFloat() : 0;
+            return result;
         }
 
         public void SetValue(Byte value )

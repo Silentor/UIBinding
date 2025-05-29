@@ -17,52 +17,32 @@ namespace UIBindings.Converters
             _writer = source as IDataReadWriter<int>;
         }
 
-        public Boolean TryGetValue(out Byte value )
+        public EResult TryGetValue(out Byte value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue.ClampToByte();
-                return true;
-            }
-
-            value = default;
-            return false;
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue.ClampToByte() : (Byte)0;
+            return result;
         }
 
-        public Boolean TryGetValue(out Single value )
+        public EResult TryGetValue(out Single value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue;
-                return true;
-            }
-
-            value = default;
-            return false;
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue : 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out Int64 value )
+        public EResult TryGetValue(out Int64 value )
         {            
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue;
-                return true;
-            }
-
-            value = default;
-            return false;
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue : 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out Double value )
+        public EResult TryGetValue(out Double value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue;
-                return true;
-            }
-
-            value = default;
-            return false;
+            var result = _reader.TryGetValue( out var sourceValue );
+            value = result != EResult.NotChanged ? sourceValue : 0;
+            return result;
         }
 
         public void SetValue(Byte value )

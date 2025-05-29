@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class BoolToStringConverter : ConverterTwoWayBase<bool, String>
+    public class BoolToStringConverter : SimpleConverterTwoWayBase<bool, String>
     {
         [Header("Bool to string settings")]        
         public string TrueString = "True";

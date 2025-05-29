@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class FloatToStringConverter : ConverterTwoWayBase<float, string>
+    public class FloatToStringConverter : SimpleConverterTwoWayBase<float, string>
     {
         [Header("Float to string settings")]
         public float ValueOnParseError = 0;

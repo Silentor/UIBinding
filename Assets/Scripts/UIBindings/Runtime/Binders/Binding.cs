@@ -233,7 +233,7 @@ namespace UIBindings
         {
             if ( !Enabled || !_isValid || !_isSubscribed ) return;
 
-            if( _sourceNotify == null || _sourceChanged )
+            if( _sourceNotify == null || _sourceChanged || _isTweened )
             {
                 T value;
                 var isChangedOnSource = true;
@@ -246,7 +246,9 @@ namespace UIBindings
                 else
                 {
                     ReadConvertedValueMarker.Begin( _debugSourceBindingInfo );
-                    isChangedOnSource = _lastReader.TryGetValue( out value );
+                    var changeStatus = _lastReader.TryGetValue( out value );
+                    isChangedOnSource = changeStatus != EResult.NotChanged;
+                    _isTweened = changeStatus == EResult.Tweened;
                     ReadConvertedValueMarker.End();
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
@@ -304,6 +306,7 @@ namespace UIBindings
         private String _debugBindingName;
         private String _debugBindingInfo;
         protected string _debugSourceBindingInfo;
+        private Boolean _isTweened;
     }
 
 }

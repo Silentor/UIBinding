@@ -94,7 +94,7 @@ namespace UIBindings.Adapters
             return false;
         }
 
-        public Boolean TryGetValue(out StructEnum value )
+        public EResult TryGetValue(out StructEnum value )
         {
             var propValue = _getter();
             if( !_isInited || _lastValue != propValue )
@@ -102,11 +102,11 @@ namespace UIBindings.Adapters
                 _lastValue = propValue;
                 _isInited  = true;
                 value      = propValue;
-                return true;
+                return EResult.Changed;
             }
 
             value = default;
-            return false;
+            return EResult.NotChanged;
         }
 
         public void SetValue(StructEnum value )

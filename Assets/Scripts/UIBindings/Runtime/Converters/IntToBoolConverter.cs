@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class IntToBoolConverter : ConverterTwoWayBase<int, bool>
+    public class IntToBoolConverter : SimpleConverterTwoWayBase<int, bool>
     {
         [Header("Int to bool settings")]
         public int StepValue = 1;

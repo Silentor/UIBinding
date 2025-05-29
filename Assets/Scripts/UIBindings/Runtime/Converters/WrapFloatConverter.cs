@@ -2,7 +2,7 @@
 
 namespace UIBindings
 {
-    public class WrapFloatConverter : ConverterOneWayBase<float, float>
+    public class WrapFloatConverter : SimpleConverterOneWayBase<float, float>
     {
         public float MinValue = 0; 
         public float MaxValue = 1; 

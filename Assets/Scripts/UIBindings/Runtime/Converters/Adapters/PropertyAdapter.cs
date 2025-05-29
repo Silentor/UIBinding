@@ -36,7 +36,7 @@ namespace UIBindings.Adapters
                 _setter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), source, propertyInfo.GetSetMethod( true ) );
         }
 
-        public Boolean TryGetValue(out T value )
+        public EResult TryGetValue(out T value )
         {
             var propValue = _getter();
             if( !_isInited || !EqualityComparer<T>.Default.Equals( propValue, _lastValue ) )        //TODO Check performance of EqualityComparer, consider using custom property adapter for some primitive types
@@ -44,11 +44,11 @@ namespace UIBindings.Adapters
                 _lastValue = propValue;
                 _isInited  = true;
                 value      = propValue;
-                return true;
+                return EResult.Changed;
             }
 
             value = default;
-            return false;
+            return EResult.NotChanged;
         }
 
         public void SetValue(T value )

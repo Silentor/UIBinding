@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class UppercaseConverter : ConverterTwoWayBase<String, String>
+    public class UppercaseConverter : SimpleConverterTwoWayBase<String, String>
     {
         public override String Convert(String value)
         {

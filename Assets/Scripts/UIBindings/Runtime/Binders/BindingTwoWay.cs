@@ -11,7 +11,10 @@ namespace UIBindings
     [Serializable]
     public class BindingTwoWay<T> : Binding<T>
     {
-        public override Boolean IsTwoWay => true;
+        //Some binders can temporarily switch to one-way mode, for example, when they are not interactable.
+        public bool OverrideOneWayMode = false;
+
+        public override Boolean IsTwoWay => !OverrideOneWayMode;
 
         public void SetValue( T value )
         {

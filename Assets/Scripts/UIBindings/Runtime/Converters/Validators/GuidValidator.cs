@@ -2,7 +2,7 @@
 
 namespace UIBindings
 {
-    public class GuidValidator : ConverterOneWayBase<Guid, bool>
+    public class GuidValidator : SimpleConverterOneWayBase<Guid, bool>
     {
         public override bool Convert( Guid value )
         {

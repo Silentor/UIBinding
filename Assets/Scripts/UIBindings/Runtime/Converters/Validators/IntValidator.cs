@@ -2,7 +2,7 @@
 
 namespace UIBindings
 {
-    public class IntValidator : ConverterOneWayBase<int, bool>
+    public class IntValidator : SimpleConverterOneWayBase<int, bool>
     {
         public int MinValue = 0;
         public int MaxValue = 100;

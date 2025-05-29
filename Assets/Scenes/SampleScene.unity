@@ -272,10 +272,12 @@ MonoBehaviour:
   TextBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path: SourceInt
+    Path: TargetBool
     _converters:
       Converters:
-      - rid: 7690191678907613274
+      - rid: 7690191692283510858
+      - rid: 7690191692283510861
+      - rid: 7690191692283510863
   ColorBinding:
     Enabled: 0
     Source: {fileID: 0}
@@ -285,18 +287,23 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 7690191678907613274
-      type: {class: SelectStringConverter, ns: UIBindings, asm: UIBindings}
+    - rid: 7690191692283510858
+      type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 1
+        StepValue: 0.5
+        FalseValue: 0
+        TrueValue: 1000
+    - rid: 7690191692283510861
+      type: {class: SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
         ReverseMode: 0
-        Values:
-        - Key: 1
-          Value: one
-        - Key: 3
-          Value: three
-        - Key: 5
-          Value: five
-        DefaultValue: none
+        SmoothTime: 0.3
+    - rid: 7690191692283510863
+      type: {class: FloatToStringConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        ValueOnParseError: 0
 --- !u!1 &94969475
 GameObject:
   m_ObjectHideFlags: 0
@@ -880,6 +887,7 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 7690191678907613250
+    OverrideOneWayMode: 0
   references:
     version: 2
     RefIds:
@@ -1201,7 +1209,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &708498990
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1561,11 +1569,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Slider: {fileID: 0}
   ValueBinding:
-    Enabled: 1
+    Enabled: 0
     Source: {fileID: 1625701090}
-    Path: SourceInt
+    Path: TargetBool
     _converters:
       Converters: []
+    OverrideOneWayMode: 0
   MinValueBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
@@ -1579,6 +1588,7 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 7690191598759182412
+      - rid: 7690191692283510855
   references:
     version: 2
     RefIds:
@@ -1587,8 +1597,13 @@ MonoBehaviour:
       data:
         ReverseMode: 1
         StepValue: 0.5
-        FalseValue: 5
+        FalseValue: 1
         TrueValue: 10
+    - rid: 7690191692283510855
+      type: {class: SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        SmoothTime: 0.3
 --- !u!1 &976848425
 GameObject:
   m_ObjectHideFlags: 0
@@ -2108,7 +2123,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1597489497
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2197,6 +2212,7 @@ MonoBehaviour:
     Path: TargetBool
     _converters:
       Converters: []
+    OverrideOneWayMode: 0
   references:
     version: 2
     RefIds: []
@@ -2506,7 +2522,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1896152129
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2897,29 +2913,38 @@ MonoBehaviour:
     Path: SourceByte
     _converters:
       Converters: []
+    OverrideOneWayMode: 0
   FloatBinding:
-    Enabled: 0
+    Enabled: 1
     Source: {fileID: 1625701090}
-    Path: SourceByte
+    Path: TargetBool
     _converters:
       Converters:
-      - rid: 7690191651494953054
+      - rid: 7690191692283510847
+      - rid: 7690191692283510848
   EnumBinding:
-    Enabled: 1
+    Enabled: 0
     Source: {fileID: 1625701090}
     Path: SourceEnum
     _converters:
       Converters: []
+    OverrideOneWayMode: 0
   WriteEnumValue: 0
   references:
     version: 2
     RefIds:
-    - rid: 7690191651494953054
-      type: {class: WrapFloatConverter, ns: UIBindings, asm: UIBindings}
+    - rid: 7690191692283510847
+      type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 1
+        StepValue: 0.5
+        FalseValue: 0
+        TrueValue: 10
+    - rid: 7690191692283510848
+      type: {class: SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
         ReverseMode: 0
-        MinValue: 0
-        MaxValue: 1
+        SmoothTime: 0.3
 --- !u!4 &2098577699
 Transform:
   m_ObjectHideFlags: 0
@@ -2953,7 +2978,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2114483293
 RectTransform:
   m_ObjectHideFlags: 0

@@ -72,5 +72,12 @@ namespace UIBindings
         {
             Slider.minValue = value;
         }
+
+        // private void OnValidate( )
+        // {
+        //     var slider = Slider || GetComponent<Slider>();
+        //     if( slider )
+        //         ValueBinding.OverrideOneWayMode = !Slider.interactable;
+        // }
     }
 }

@@ -19,13 +19,15 @@ namespace UIBindings
 
         void Awake() 
         {
-            // IntBinding.Awake(this);
-            // IntBinding.SourceChanged += OnIntValueChanged;
-            // IntBinding.Subscribe();
-            //
-            // FloatBinding.Awake(this);
-            // FloatBinding.SourceChanged += OnFloatValueChanged;
-            // FloatBinding.Subscribe();
+            IntBinding.SetDebugInfo( this, nameof(IntBinding) );
+            IntBinding.Awake();
+            IntBinding.SourceChanged += OnIntValueChanged;
+            IntBinding.Subscribe();
+            
+            FloatBinding.SetDebugInfo( this, nameof(FloatBinding) );
+            FloatBinding.Awake();
+            FloatBinding.SourceChanged += OnFloatValueChanged;
+            FloatBinding.Subscribe();
 
             EnumBinding.SetDebugInfo( this, nameof(EnumBinding) );
             EnumBinding.Awake(  );
@@ -42,35 +44,24 @@ namespace UIBindings
             Debug.Log( arg2 );
         }
 
-        IEnumerator DelayAwake( )
-        {
-            yield return new WaitForSeconds( 0.5f );
-            yield return null;
-            
-            IntBinding.SetDebugInfo( this, nameof(IntBinding) );
-            IntBinding.Awake(  );
-            IntBinding.SourceChanged += OnIntValueChanged;
-            IntBinding.Subscribe();
-            
-            yield return new WaitForSeconds( 0.5f );
-            yield return null;
-            
-            FloatBinding.SetDebugInfo( this, nameof(FloatBinding) );
-            FloatBinding.Awake(  );
-            FloatBinding.SourceChanged += OnFloatValueChanged;
-            FloatBinding.Subscribe();
-
-
-
-            // while ( true )
-            // {
-            //     yield return null;
-            //
-            //     Profiler.BeginSample( "Binding.test" );
-            //     Profiler.EndSample();
-            // }
-        
-        }
+        // IEnumerator DelayAwake( )
+        // {
+        //     yield return new WaitForSeconds( 0.5f );
+        //     yield return null;
+        //     
+        //     IntBinding.SetDebugInfo( this, nameof(IntBinding) );
+        //     IntBinding.Awake(  );
+        //     IntBinding.SourceChanged += OnIntValueChanged;
+        //     IntBinding.Subscribe();
+        //     
+        //     yield return new WaitForSeconds( 0.5f );
+        //     yield return null;
+        //     
+        //     FloatBinding.SetDebugInfo( this, nameof(FloatBinding) );
+        //     FloatBinding.Awake(  );
+        //     FloatBinding.SourceChanged += OnFloatValueChanged;
+        //     FloatBinding.Subscribe();
+        // }
 
         private void Update( )
         {

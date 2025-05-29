@@ -2,7 +2,7 @@
 
 namespace UIBindings
 {
-    public class WrapIntConverter : ConverterOneWayBase<int, int>
+    public class WrapIntConverter : SimpleConverterOneWayBase<int, int>
     {
         public int MinValue = 0; 
         public int MaxValue = 1; 

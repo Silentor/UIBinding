@@ -7,6 +7,13 @@
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        bool TryGetValue( out TOutput value );
+        EResult TryGetValue( out TOutput value );
+    }
+
+    public enum EResult
+    {
+        NotChanged,
+        Changed,
+        Tweened
     }
 }

@@ -21,43 +21,43 @@ namespace UIBindings.Converters
             _writer = source as IDataReadWriter<StructEnum>;
         }
 
-        public Boolean TryGetValue(out Int32 value )
+        public EResult TryGetValue(out Int32 value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
+            var result = _reader.TryGetValue( out var sourceValue );
+            if ( result != EResult.NotChanged )
             {
                 _enumType = sourceValue.EnumType;
                 value = sourceValue.Value;
-                return true;
             }
-
-            value = default;
-            return false;
+            else
+                value = 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out Byte value )
+        public EResult TryGetValue(out Byte value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
+            var result = _reader.TryGetValue( out var sourceValue );
+            if ( result != EResult.NotChanged )
             {
                 _enumType = sourceValue.EnumType;
-                value = sourceValue.Value.ClampToByte();
-                return true;
+                value     = sourceValue.Value.ClampToByte();
             }
-
-            value = default;
-            return false;
+            else
+                value = 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out Int64 value )
+        public EResult TryGetValue(out Int64 value )
         {            
-            if ( _reader.TryGetValue( out var sourceValue ) )
+            var result = _reader.TryGetValue( out var sourceValue );
+            if ( result != EResult.NotChanged )
             {
                 _enumType = sourceValue.EnumType;
-                value = sourceValue.Value;
-                return true;
+                value     = sourceValue.Value;
             }
-
-            value = default;
-            return false;
+            else
+                value = 0;
+            return result;
         }
 
         public void SetValue(Int32 value )

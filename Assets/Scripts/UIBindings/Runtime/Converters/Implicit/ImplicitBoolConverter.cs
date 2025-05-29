@@ -17,40 +17,34 @@ namespace UIBindings.Converters
             _writer = source as IDataReadWriter<bool>;
         }
 
-        public Boolean TryGetValue(out Byte value )
+        public EResult TryGetValue(out Byte value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
+            var result = _reader.TryGetValue( out var sourceValue );
+            if ( result != EResult.NotChanged )
                 value = sourceValue ? (Byte)1 : (Byte)0;
-                return true;
-            }
-
-            value = default;
-            return false;
+            else
+                value = 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out int value )
+        public EResult TryGetValue(out Int32 value )
         {
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
+            var result = _reader.TryGetValue( out var sourceValue );
+            if ( result != EResult.NotChanged )
                 value = sourceValue ? 1 : 0;
-                return true;
-            }
-
-            value = default;
-            return false;
+            else
+                value = 0;
+            return result;
         }
 
-        public Boolean TryGetValue(out long value )
+        public EResult TryGetValue(out Int64 value )
         {            
-            if ( _reader.TryGetValue( out var sourceValue ) )
-            {
-                value = sourceValue ? 1L : 0L;
-                return true;
-            }
-
-            value = default;
-            return false;
+            var result = _reader.TryGetValue( out var sourceValue );
+            if ( result != EResult.NotChanged )
+                value = sourceValue ? 1 : 0;
+            else
+                value = 0;
+            return result;
         }
 
         public void SetValue(Byte value )

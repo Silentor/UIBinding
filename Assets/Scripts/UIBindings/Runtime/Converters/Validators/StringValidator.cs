@@ -2,7 +2,7 @@
 
 namespace UIBindings
 {
-    public class StringValidator : ConverterOneWayBase<String, bool>
+    public class StringValidator : SimpleConverterOneWayBase<String, bool>
     {
         public override bool Convert( String value )
         {

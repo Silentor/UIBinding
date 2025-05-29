@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class IntToStringConverter : ConverterTwoWayBase<int, string>
+    public class IntToStringConverter : SimpleConverterTwoWayBase<int, string>
     {
         [Header("String to int settings")]
         public int ValueOnParseError = 0;

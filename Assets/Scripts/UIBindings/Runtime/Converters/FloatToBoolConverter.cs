@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class FloatToBoolConverter : ConverterTwoWayBase<float, bool>
+    public class FloatToBoolConverter : SimpleConverterTwoWayBase<float, bool>
     {
         [Header("Float to bool settings")]
         public float StepValue = 0.5f;

@@ -462,7 +462,7 @@ namespace UIBindings.Editor
             var result = new List<ConverterType>();
             foreach ( var converter in AllConverterTypes )
             {
-                var isConverterTwoWay = converter.TemplateType == typeof(ConverterTwoWayBase<,>);
+                var isConverterTwoWay = converter.TemplateType == typeof(SimpleConverterTwoWayBase<,>);
 
                 if( isTwoWayBinding && !isConverterTwoWay )
                     continue;                       //Skip one way converters in two way binding
