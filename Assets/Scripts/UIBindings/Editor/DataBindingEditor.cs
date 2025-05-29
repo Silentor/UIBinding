@@ -13,6 +13,11 @@ namespace UIBindings.Editor
     [CustomPropertyDrawer( typeof(Binding<>), true )]
     public class DataBindingEditor : PropertyDrawer
     {
+        /// <summary>
+        /// Sometimes embedded property drawers want to know what is the type of source property.
+        /// </summary>
+        public static Type SourcePropertyType { get; private set; } 
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label )
         {
             using ( new EditorGUI.PropertyScope( position, label, property ) ) ;
@@ -66,6 +71,8 @@ namespace UIBindings.Editor
                 //Draw expanded content
                 if ( property.isExpanded )
                 {
+                    SourcePropertyType = sourcePropType; //Hack, set static property for embedded drawers
+
                     using ( new EditorGUI.IndentLevelScope( 1 ) )
                     {
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
@@ -81,7 +88,7 @@ namespace UIBindings.Editor
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                         var convertersProp = property.FindPropertyRelative( DataBinding.ConvertersPropertyName );
                         //EditorGUI.PropertyField( position, convertersProperty );
-                        DrawConvertersField( position, convertersProp, binding, sourcePropType, targetType );
+                        DrawConvertersField( position, convertersProp, binding, sourceAdapterType, targetType );
                     }
                 }
             }
@@ -197,7 +204,7 @@ namespace UIBindings.Editor
                 if ( convertersProp.isExpanded )
                 {
                     //Draw every converter
-                    Type prevType = GetSourcePropertyType( binding );
+                    Type prevType = sourceType;
                     using ( new EditorGUI.IndentLevelScope(1) )
                     {
                         for ( int i = 0; i < convertersProp.arraySize; i++ )

@@ -137,7 +137,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &73728716
 RectTransform:
   m_ObjectHideFlags: 0
@@ -275,15 +275,28 @@ MonoBehaviour:
     Path: SourceInt
     _converters:
       Converters:
-      - rid: 7690191598759182409
+      - rid: 7690191678907613274
+  ColorBinding:
+    Enabled: 0
+    Source: {fileID: 0}
+    Path: 
+    _converters:
+      Converters: []
   references:
     version: 2
     RefIds:
-    - rid: 7690191598759182409
-      type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
+    - rid: 7690191678907613274
+      type: {class: SelectStringConverter, ns: UIBindings, asm: UIBindings}
       data:
         ReverseMode: 0
-        ValueOnParseError: 0
+        Values:
+        - Key: 1
+          Value: one
+        - Key: 3
+          Value: three
+        - Key: 5
+          Value: five
+        DefaultValue: none
 --- !u!1 &94969475
 GameObject:
   m_ObjectHideFlags: 0
@@ -317,7 +330,7 @@ RectTransform:
   m_Father: {fileID: 100095710}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -958,7 +971,7 @@ RectTransform:
   m_Father: {fileID: 568608785}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1225,15 +1238,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   GameObjects:
   - Key: 0
-    GameObject: {fileID: 1522354467}
+    Value: {fileID: 1522354467}
   - Key: 1
-    GameObject: {fileID: 671348609}
-  - Key: 2
-    GameObject: {fileID: 1212438242}
+    Value: {fileID: 671348609}
+  - Key: 10
+    Value: {fileID: 0}
   SelectorBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path: SourceFloat
+    Path: SourceEnum
     _converters:
       Converters: []
   references:
@@ -1460,7 +1473,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &957776148
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2493,7 +2506,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1896152129
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2567,18 +2580,42 @@ MonoBehaviour:
   SourceImageBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path: SourceSprite
+    Path: TargetBool
     _converters:
-      Converters: []
+      Converters:
+      - rid: 7690191678907613272
   ColorBinding:
-    Enabled: 0
-    Source: {fileID: 0}
-    Path: 
+    Enabled: 1
+    Source: {fileID: 1625701090}
+    Path: SourceInt
     _converters:
-      Converters: []
+      Converters:
+      - rid: 7690191678907613271
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 7690191678907613271
+      type: {class: SelectColorConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        Values:
+        - Key: 0
+          Value: {r: 1, g: 0, b: 0, a: 1}
+        - Key: 1
+          Value: {r: 0, g: 0.2391901, b: 1, a: 1}
+        - Key: 9
+          Value: {r: 0, g: 1, b: 0.04225135, a: 1}
+        DefaultValue: {r: 0, g: 0, b: 0, a: 1}
+    - rid: 7690191678907613272
+      type: {class: SelectSpriteConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        Values:
+        - Key: 1
+          Value: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+        - Key: 0
+          Value: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+        DefaultValue: {fileID: 10917, guid: 0000000000000000f000000000000000, type: 0}
 --- !u!1 &1975891308
 GameObject:
   m_ObjectHideFlags: 0
@@ -2916,7 +2953,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2114483293
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3055,6 +3092,13 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 7690191598759182411
+  ColorBinding:
+    Enabled: 1
+    Source: {fileID: 1625701090}
+    Path: SourceFloat
+    _converters:
+      Converters:
+      - rid: 7690191678907613275
   references:
     version: 2
     RefIds:
@@ -3065,6 +3109,18 @@ MonoBehaviour:
         TrueString: True
         FalseString: False
         ValueOnParseError: 0
+    - rid: 7690191678907613275
+      type: {class: SelectColorConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        Values:
+        - Key: 0
+          Value: {r: 0.27450982, g: 0.3764706, b: 0.4862745, a: 1}
+        - Key: 1
+          Value: {r: 1, g: 0, b: 0, a: 1}
+        - Key: 2
+          Value: {r: 0.6462264, g: 1, b: 0.9508256, a: 1}
+        DefaultValue: {r: 1, g: 0, b: 0.93989515, a: 1}
 --- !u!1001 &3384473827124313058
 PrefabInstance:
   m_ObjectHideFlags: 0

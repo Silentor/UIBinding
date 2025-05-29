@@ -1,4 +1,4 @@
-﻿using System;
+﻿using UIBindings.Runtime.Types;
 using UnityEngine;
 using Object = System.Object;
 
@@ -6,8 +6,8 @@ namespace UIBindings
 {
     public class GameObjectSelectBinder : MonoBehaviour
     {
-        public KeyGameObject[] GameObjects;
-        public Binding<int> SelectorBinding;
+        public KeyValue<GameObject>[]   GameObjects;
+        public Binding<int>             SelectorBinding;
 
         private void Awake( )
         {
@@ -33,18 +33,12 @@ namespace UIBindings
 
         private void OnSelectorValueChanged(Object sender, int value )
         {
-            var intValue = (int)value;
             for ( int i = 0; i < GameObjects.Length; i++ )
             {
-                GameObjects[i].GameObject.SetActive( GameObjects[i].Key == intValue );
+                var kv = GameObjects[i];
+                if( kv.Value )
+                    kv.Value.SetActive( kv.Key == value );
             }
-        }
-
-        [Serializable]
-        public struct KeyGameObject
-        {
-            public int Key;
-            public GameObject GameObject;
         }
     }
 }

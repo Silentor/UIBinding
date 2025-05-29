@@ -1,5 +1,5 @@
 ﻿using System;
-using UIBindings.Editor.Utils;
+using UIBindings.Runtime.Types;
 using UnityEditor;
 using UnityEngine;
 
@@ -23,15 +23,15 @@ namespace UIBindings.Editor
             EditorGUILayout.PropertyField( bindingProp );
 
             var gosProp = serializedObject.FindProperty( nameof(_target.GameObjects) );
-            KeyGameObjectDrawer.KeyType = GetSourcePropertyType( bindingProp );
+            var sourcePropertyType = GetSourcePropertyType( bindingProp );
             EditorGUILayout.PropertyField( gosProp );
 
             //Editor tools
-            if ( KeyGameObjectDrawer.KeyType.IsEnum )
+            if ( sourcePropertyType.IsEnum )
             {
                 if ( GUILayout.Button( "Generate enum entries", GUILayout.Width( 200 ) ) )
                 {
-                    var enumValues = Enum.GetValues( KeyGameObjectDrawer.KeyType );
+                    var enumValues = Enum.GetValues( sourcePropertyType );
                     foreach ( var enumValue in enumValues )
                     {
                         var key = Convert.ToInt32( enumValue );
@@ -50,7 +50,7 @@ namespace UIBindings.Editor
         {
             for ( int i = 0; i < gameObjectsProp.arraySize; i++ )
             {
-                var keyProp = gameObjectsProp.GetArrayElementAtIndex( i ).FindPropertyRelative( nameof(GameObjectSelectBinder.KeyGameObject.Key) );
+                var keyProp = gameObjectsProp.GetArrayElementAtIndex( i ).FindPropertyRelative( nameof(KeyValue<bool>.Key) );
                 if ( keyProp.intValue == key )
                 {
                     return true;
@@ -64,8 +64,8 @@ namespace UIBindings.Editor
         {
             gameObjectsProp.arraySize++;
             var newElement = gameObjectsProp.GetArrayElementAtIndex( gameObjectsProp.arraySize - 1 );
-            newElement.FindPropertyRelative( nameof(GameObjectSelectBinder.KeyGameObject.Key) ).intValue = key;
-            newElement.FindPropertyRelative( nameof(GameObjectSelectBinder.KeyGameObject.GameObject) ).objectReferenceValue = go;
+            newElement.FindPropertyRelative( nameof(KeyValue<bool>.Key) ).intValue = key;
+            newElement.FindPropertyRelative( nameof(KeyValue<bool>.Value) ).objectReferenceValue = go;
         }
 
         private Type GetSourcePropertyType( SerializedProperty bindingProperty )
@@ -84,50 +84,5 @@ namespace UIBindings.Editor
 
             return keyType;
         }
-    }
-
-    [CustomPropertyDrawer(typeof(GameObjectSelectBinder.KeyGameObject))]
-    public class KeyGameObjectDrawer : PropertyDrawer
-    {
-        public static Type KeyType ;
-
-        public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
-        {
-            EditorGUI.BeginProperty( position, label, property );
-
-            var keyProp = property.FindPropertyRelative( nameof(GameObjectSelectBinder.KeyGameObject.Key) );
-            var goProp = property.FindPropertyRelative( nameof(GameObjectSelectBinder.KeyGameObject.GameObject) );
-
-            var isWide = !KeyType.IsPrimitive ;
-            var rects = GUIUtils.GetHorizontalRects( position, 5, isWide ? 0 : 100, 0 );
-
-            EditorGUI.BeginChangeCheck();
-            if( KeyType.IsPrimitive )
-            {
-                if( KeyType == typeof(bool) )
-                    keyProp.intValue = EditorGUI.Toggle( rects.Item1, keyProp.intValue != 0 ) ? 1 : 0;
-                else
-                    keyProp.intValue = EditorGUI.IntField( rects.Item1, keyProp.intValue );
-            }
-            else if( KeyType.IsEnum )
-            {
-                var enumValue = (Enum)Enum.ToObject( KeyType, keyProp.intValue );
-                enumValue = EditorGUI.EnumPopup( rects.Item1, enumValue );
-                keyProp.intValue = Convert.ToInt32( enumValue );
-            }
-            else
-            {
-                EditorGUI.LabelField( rects.Item1, "Key type not supported: " + KeyType.Name );
-            }
-
-            EditorGUI.PropertyField( rects.Item2, goProp, GUIContent.none);
-
-            EditorGUI.EndProperty();
-        }
-
-        // private Type GetSourceType( SerializedProperty property )
-        // {
-        //     var binderObject = ()property.serializedObject.targetObject
-        // }
     }
 }

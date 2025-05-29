@@ -1,9 +1,7 @@
 ﻿using System;
 using TMPro;
-using UIBindings.Runtime;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 using Object = System.Object;
 
 namespace UIBindings
@@ -12,6 +10,7 @@ namespace UIBindings
     {
         public TextMeshProUGUI          Label;
         public Binding<String>          TextBinding;
+        public Binding<Color>           ColorBinding            = new (){Enabled = false};
 
         private void Awake( )
         {
@@ -21,28 +20,39 @@ namespace UIBindings
 
             TextBinding.SetDebugInfo( this, nameof(TextBinding) );
             TextBinding.Awake(  );
-            TextBinding.SourceChanged += ProcessSourceToTarget;
+            TextBinding.SourceChanged += ProcessText;
+
+            ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );
+            ColorBinding.Awake(  );
+            ColorBinding.SourceChanged += ProcessColor;
         }
 
-        private void ProcessSourceToTarget(Object sender, String value )
+        private void ProcessText(Object sender, String value )
         {
             Label.text = value;
+        }
+
+        private void ProcessColor(Object sender, Color value )
+        {
+            Label.color = value;
         }
 
         private void OnEnable( )
         {
             TextBinding.Subscribe();
+            ColorBinding.Subscribe();
         }
 
         private void OnDisable( )
         {
             TextBinding.Unsubscribe();
+            ColorBinding.Unsubscribe();
         }
 
         private void LateUpdate( )
         {
             TextBinding.CheckChanges();
+            ColorBinding.CheckChanges();
         }
     }
-
 }
