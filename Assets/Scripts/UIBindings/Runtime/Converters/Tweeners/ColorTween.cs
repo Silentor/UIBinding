@@ -100,7 +100,8 @@ namespace UIBindings.Tweeners
 
             while ( playTime <= duration && !cancel.IsCancellationRequested )
             {
-                playTime      += Time.deltaTime;
+                var deltaTime = GetDeltaTime();
+                playTime      += deltaTime;
                 var currentHSV = ColorHSV.LerpHSV( fromHSV, toHSV, playTime / duration );
                 _currentValue =  currentHSV;
                 await Awaitable.NextFrameAsync( );

@@ -35,11 +35,6 @@ namespace UIBindings
             Toggle.onValueChanged.RemoveListener( OnToggleValueChanged );
         }
 
-        private void LateUpdate( )
-        {
-            ValueBinding.CheckChanges();
-        }
-
         private void OnToggleValueChanged(Boolean newValue )
         {
             ValueBinding.SetValue( newValue );

@@ -58,12 +58,5 @@ namespace UIBindings
             ScaleBinding.Unsubscribe();
             LocalRotationBinding.Unsubscribe();
         }
-
-        private void LateUpdate( )
-        {
-            LocalPositionBinding.CheckChanges();
-            ScaleBinding.CheckChanges();
-            LocalRotationBinding.CheckChanges();
-        }
     }
 }

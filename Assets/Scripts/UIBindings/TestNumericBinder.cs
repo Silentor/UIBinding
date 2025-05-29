@@ -76,14 +76,6 @@ namespace UIBindings
             }
         }
 
-        private void LateUpdate( )
-        {
-            IntBinding.CheckChanges();
-            FloatBinding.CheckChanges();
-            EnumBinding.CheckChanges();
-        }
-
-
         private void OnIntValueChanged(Object sender, Int32 value )
         {
             Debug.Log( $"[{nameof(TestNumericBinder)}]-[{nameof(OnIntValueChanged)}] {value}" );

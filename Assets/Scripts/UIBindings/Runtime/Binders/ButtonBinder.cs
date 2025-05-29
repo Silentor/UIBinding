@@ -45,11 +45,6 @@ namespace UIBindings
         {
             CanExecuteBinding.Unsubscribe();
             Button.onClick.RemoveListener(OnButtonClick);
-    }
-
-        private void LateUpdate()
-        {
-            CanExecuteBinding.CheckChanges();
         }
 
         private void CanExecuteChanged(object sender, bool value)

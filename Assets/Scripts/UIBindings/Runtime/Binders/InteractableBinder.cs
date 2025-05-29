@@ -32,11 +32,6 @@ namespace UIBindings
             InteractableBinding.Unsubscribe();
         }
 
-        private void LateUpdate( )
-        {
-            InteractableBinding.CheckChanges();
-        }
-
         private void ProcessSourceToTarget(Object sender, Boolean value )
         {
             InteractionControl.interactable = value;

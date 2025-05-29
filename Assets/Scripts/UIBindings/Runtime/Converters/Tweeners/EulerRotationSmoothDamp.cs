@@ -110,9 +110,10 @@ namespace UIBindings.Tweeners
         {
             while ( !(AlmostEquals(_currentValue, _targetValue) || cancellationToken.IsCancellationRequested) ) 
             {
-                _currentValue.x = Mathf.SmoothDampAngle( _currentValue.x, _targetValue.x, ref _velo.x, SmoothTime, Mathf.Infinity, Time.deltaTime );
-                _currentValue.y = Mathf.SmoothDampAngle( _currentValue.y, _targetValue.y, ref _velo.y, SmoothTime, Mathf.Infinity, Time.deltaTime );
-                _currentValue.z = Mathf.SmoothDampAngle( _currentValue.z, _targetValue.z, ref _velo.z, SmoothTime, Mathf.Infinity, Time.deltaTime );
+                var deltaTime = GetDeltaTime();
+                _currentValue.x = Mathf.SmoothDampAngle( _currentValue.x, _targetValue.x, ref _velo.x, SmoothTime, Mathf.Infinity, deltaTime );
+                _currentValue.y = Mathf.SmoothDampAngle( _currentValue.y, _targetValue.y, ref _velo.y, SmoothTime, Mathf.Infinity, deltaTime );
+                _currentValue.z = Mathf.SmoothDampAngle( _currentValue.z, _targetValue.z, ref _velo.z, SmoothTime, Mathf.Infinity, deltaTime );
                 await Awaitable.NextFrameAsync(  );
             }
 

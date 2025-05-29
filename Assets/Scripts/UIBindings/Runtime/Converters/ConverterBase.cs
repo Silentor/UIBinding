@@ -42,8 +42,9 @@ namespace UIBindings
         /// </summary>
         /// <param name="prevConverter"></param>
         /// <param name="isTwoWay"></param>
+        /// <param name="unscaledTime"></param>
         /// <returns>False if attach failed</returns>
-        public abstract bool InitAttachToSource( DataProvider prevConverter, Boolean isTwoWay );
+        public abstract Boolean InitAttachToSource(  DataProvider prevConverter, Boolean isTwoWay, Boolean unscaledTime );
 
         public abstract ConverterBase GetReverseConverter( );
 
@@ -87,7 +88,7 @@ namespace UIBindings
         public override Type OutputType => typeof(TOutput);
 
         //Returns false if attach to source failed, probably incompatible types
-        public override bool InitAttachToSource(  [NotNull] DataProvider prevConverter, Boolean isTwoWay )
+        public override Boolean InitAttachToSource(   [NotNull] DataProvider prevConverter, Boolean isTwoWay, Boolean unscaledTime )
         {
             if ( prevConverter == null ) throw new ArgumentNullException( nameof(prevConverter) );
             if ( prevConverter is IDataReader<TInput> properSource )
@@ -105,6 +106,7 @@ namespace UIBindings
                 }
             }
 
+            _unscaledTime = unscaledTime;
             return _prev != null;
         }
 
@@ -114,6 +116,12 @@ namespace UIBindings
             //Override this method if you need to do something on attach
         }
 
+        protected float GetDeltaTime( )
+        {
+            return _unscaledTime ? UnityEngine.Time.unscaledDeltaTime : UnityEngine.Time.deltaTime;
+        }
+
         protected IDataReader<TInput> _prev;
+        protected Boolean _unscaledTime;
     }
 }

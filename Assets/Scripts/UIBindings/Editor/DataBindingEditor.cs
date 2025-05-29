@@ -86,9 +86,16 @@ namespace UIBindings.Editor
                         DrawPathField( position, pathProp, binding );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var convertersProp = property.FindPropertyRelative( DataBinding.ConvertersPropertyName );
-                        //EditorGUI.PropertyField( position, convertersProperty );
-                        DrawConvertersField( position, convertersProp, binding, sourceAdapterType, targetType );
+                        var updateProp = property.FindPropertyRelative( nameof(DataBinding.Update) );
+                        EditorGUI.PropertyField( position, updateProp );
+
+                        using ( new EditorGUI.DisabledScope( sourceProperty == null ) )
+                        {
+                            position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                            var convertersProp = property.FindPropertyRelative( DataBinding.ConvertersPropertyName );
+                            //EditorGUI.PropertyField( position, convertersProperty );
+                            DrawConvertersField( position, convertersProp, binding, sourceAdapterType, targetType );
+                        }
                     }
                 }
             }
@@ -177,7 +184,7 @@ namespace UIBindings.Editor
             }
             else
             {
-                using ( new EditorGUI.DisabledScope() )
+                using ( new EditorGUI.DisabledScope( true ) )
                 {
                     GUI.TextField( position, "(Source not set)", Resources.DisabledTextField );
                 }
@@ -232,7 +239,7 @@ namespace UIBindings.Editor
         public override Single GetPropertyHeight(SerializedProperty property, GUIContent label )
         {
             if ( property.isExpanded )
-                return Resources.LineHeightWithMargin * 3 //Main line + Source + Path
+                return Resources.LineHeightWithMargin * 4 //Main line + Source + Path
                        + Math.Max( _convertersFieldHeight, Resources.LineHeightWithMargin);        
             else
                 return Resources.LineHeightWithMargin;

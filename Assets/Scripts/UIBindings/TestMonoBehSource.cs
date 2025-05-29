@@ -1,21 +1,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using UIBindings.Runtime;
-using UIBindings.Runtime.Utils;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
+using UIBindings.Runtime.PlayerLoop;
 using UnityEngine;
-using UnityEngine.Assertions;
+using UnityEngine.LowLevel;
+using UnityEngine.PlayerLoop;
 using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TestMonoBehSource : MonoBehaviour, INotifyPropertyChanged 
+    public class TestMonoBehSource : MonoBehaviour, INotifyPropertyChanged
     {
         public GameObject DelayedCanvas; //For testing delayed canvas creation
         public Sprite TestSprite; 
@@ -202,7 +200,6 @@ namespace UIBindings
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamTextureBool)}] value={value1.format}, value2={value2}" );
         }
 
-
         private void Start( )
         {
             Application.targetFrameRate = 30;
@@ -257,6 +254,5 @@ namespace UIBindings
          }
 
         public event Action<Object, String> PropertyChanged;
-
     }
 }

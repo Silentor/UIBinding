@@ -46,13 +46,6 @@ namespace UIBindings
             Slider.onValueChanged.RemoveListener( OnValueChange );
         }
 
-        private void LateUpdate( )
-        {
-            ValueBinding.CheckChanges();
-            MinValueBinding.CheckChanges();
-            MaxValueBinding.CheckChanges();
-        }
-
         private void OnValueChange(Single value )
         {
             ValueBinding.SetValue( value );

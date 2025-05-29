@@ -274,14 +274,23 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191692283510858
-      - rid: 7690191692283510865
+      - rid: 7690191692283510896
+      - rid: 7690191692283510897
   ColorBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191692283510870
@@ -295,11 +304,6 @@ MonoBehaviour:
         StepValue: 0.5
         FalseValue: 0
         TrueValue: 1000
-    - rid: 7690191692283510865
-      type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        ValueOnParseError: 0
     - rid: 7690191692283510870
       type: {class: ColorTween, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
@@ -307,6 +311,16 @@ MonoBehaviour:
         From: {r: 1, g: 0, b: 0, a: 1}
         To: {r: 0, g: 1, b: 0, a: 1}
         TweenTime: 1
+    - rid: 7690191692283510896
+      type: {class: FloatSmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        SmoothTime: 0.3
+    - rid: 7690191692283510897
+      type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        ValueOnParseError: 0
 --- !u!114 &73728720
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -324,6 +338,10 @@ MonoBehaviour:
     Enabled: 0
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191692283510883
@@ -332,6 +350,10 @@ MonoBehaviour:
     Enabled: 0
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191692283510873
@@ -339,6 +361,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191692283510887
@@ -963,6 +989,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: SourceFloat
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191678907613250
@@ -1334,6 +1364,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: SourceEnum
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters: []
   references:
@@ -1651,6 +1685,10 @@ MonoBehaviour:
     Enabled: 0
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters: []
     OverrideOneWayMode: 0
@@ -1658,12 +1696,20 @@ MonoBehaviour:
     Enabled: 0
     Source: {fileID: 1625701090}
     Path: 
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters: []
   MaxValueBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191598759182412
@@ -2286,6 +2332,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters: []
     OverrideOneWayMode: 0
@@ -2569,6 +2619,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191633970888768
@@ -2673,6 +2727,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191678907613272
@@ -2680,6 +2738,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: SourceInt
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191678907613271
@@ -2987,6 +3049,10 @@ MonoBehaviour:
     Enabled: 0
     Source: {fileID: 1625701090}
     Path: SourceByte
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters: []
     OverrideOneWayMode: 0
@@ -2994,6 +3060,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191692283510847
@@ -3001,6 +3071,10 @@ MonoBehaviour:
     Enabled: 0
     Source: {fileID: 1625701090}
     Path: SourceEnum
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters: []
     OverrideOneWayMode: 0
@@ -3184,6 +3258,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: TargetBool
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191598759182411
@@ -3191,6 +3269,10 @@ MonoBehaviour:
     Enabled: 1
     Source: {fileID: 1625701090}
     Path: SourceFloat
+    Update:
+      Mode: 0
+      Delay: 0
+      UnscaledTime: 0
     _converters:
       Converters:
       - rid: 7690191678907613275

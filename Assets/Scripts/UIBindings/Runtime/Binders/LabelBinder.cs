@@ -48,11 +48,5 @@ namespace UIBindings
             TextBinding.Unsubscribe();
             ColorBinding.Unsubscribe();
         }
-
-        private void LateUpdate( )
-        {
-            TextBinding.CheckChanges();
-            ColorBinding.CheckChanges();
-        }
     }
 }

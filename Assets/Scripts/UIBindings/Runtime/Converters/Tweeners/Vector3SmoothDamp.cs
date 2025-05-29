@@ -107,7 +107,8 @@ namespace UIBindings.Tweeners
         {
             while ( !(AlmostEquals(_currentValue, _targetValue) || cancellationToken.IsCancellationRequested) ) 
             {
-                _currentValue = Vector3.SmoothDamp( _currentValue, _targetValue, ref _velo, SmoothTime, Mathf.Infinity, Time.deltaTime );
+                var deltaTime = GetDeltaTime();
+                _currentValue = Vector3.SmoothDamp( _currentValue, _targetValue, ref _velo, SmoothTime, Mathf.Infinity, deltaTime );
                 await Awaitable.NextFrameAsync(  );
             }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UIBindings.Adapters;
 using UIBindings.Converters;
+using UIBindings.Runtime.PlayerLoop;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using UnityEngine;
@@ -26,6 +27,8 @@ namespace UIBindings
         public abstract bool IsTwoWay { get; }
 
         public abstract Type DataType { get; }
+
+        public UpdateMode Update = new (){Mode = EUpdateMode.AfterLateUpdate};
 
         [SerializeField]
         protected ConvertersList _converters = new (){Converters = Array.Empty<ConverterBase>()};
@@ -61,6 +64,22 @@ namespace UIBindings
             public ConverterBase[] Converters;
         }
 
+        [Serializable]
+        public struct UpdateMode
+        {
+            public EUpdateMode  Mode;
+            public float        Delay;
+            public bool         UnscaledTime;
+        }
+
+        public enum EUpdateMode
+        {
+            AfterUpdate,
+            BeforeLateUpdate,
+            AfterLateUpdate,
+            Manual
+        }
+
         protected static readonly ProfilerMarker ReadDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadDirectValue" );
         protected static readonly ProfilerMarker WriteDirectValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.WriteDirectValue" );
         protected static readonly ProfilerMarker ReadConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(Binding)}.ReadConvertedValue" );
@@ -69,7 +88,7 @@ namespace UIBindings
     }
 
     [Serializable]
-    public class Binding<T> : DataBinding
+    public class Binding<T> : DataBinding, IAfterLateUpdate, IBeforeLateUpdate, IUpdate
     {
         public override Boolean IsTwoWay => false;
 
@@ -151,7 +170,7 @@ namespace UIBindings
 
                     //Connect first converter to source property
                     var firstConverter                = converters[0];
-                    var result = firstConverter.InitAttachToSource( propReader, IsTwoWay );
+                    var result = firstConverter.InitAttachToSource( propReader, IsTwoWay, Update.UnscaledTime );
                     if( !result )
                     {
                         Debug.LogError( $"[{nameof(Binding)}] First converter {firstConverter} cannot be attached to source property adapter {propReader} at binding {_debugSourceBindingInfo}", _debugHost );
@@ -166,7 +185,7 @@ namespace UIBindings
                         var prevConverter = converters[i - 1];
                         var currentConverter = converters[i];
 
-                        result = converters[i].InitAttachToSource( converters[ i - 1], IsTwoWay );
+                        result = converters[i].InitAttachToSource( converters[ i - 1], IsTwoWay, Update.UnscaledTime );
                         if ( !result )
                         {
                             Debug.LogError( $"[{nameof(Binding)}] Converter {currentConverter} cannot be attached to previous converter {prevConverter} at binding {_debugSourceBindingInfo}", _debugHost );
@@ -208,63 +227,49 @@ namespace UIBindings
 
         public void Subscribe()
         {
-            if( !Enabled || _isSubscribed ) return;
+            if( !Enabled || !_isValid || _isSubscribed ) return;
 
             if ( _sourceNotify != null )                
                 _sourceNotify.PropertyChanged += OnSourcePropertyChanged;
+            switch ( Update.Mode )
+            {
+                case EUpdateMode.AfterLateUpdate:   UpdateManager.RegisterAfterLateUpdate( this ); break;
+                case EUpdateMode.BeforeLateUpdate:  UpdateManager.RegisterBeforeLateUpdate( this ); break;
+                case EUpdateMode.AfterUpdate:       UpdateManager.RegisterUpdate( this ); break;
+                case EUpdateMode.Manual:            break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            _currentUpdateMode = Update.Mode;
 
             _isSubscribed = true;
         }
 
         public void Unsubscribe()
         {
-            if( !_isSubscribed ) return;
+            if( !Enabled || !_isValid || !_isSubscribed ) return;
 
             if ( _sourceNotify != null )                
                 _sourceNotify.PropertyChanged -= OnSourcePropertyChanged;
+            switch ( _currentUpdateMode )
+            {
+                case EUpdateMode.AfterLateUpdate:  UpdateManager.UnregisterAfterLateUpdate( this ); break;
+                case EUpdateMode.BeforeLateUpdate: UpdateManager.UnregisterBeforeLateUpdate( this ); break;
+                case EUpdateMode.AfterUpdate:      UpdateManager.UnregisterUpdate( this ); break;
+                case EUpdateMode.Manual:           break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
             _isSubscribed = false;
         }
 
-        /// <summary>
-        /// To get change event at desired time (LateUpdate for example)
-        /// </summary>
-        public void CheckChanges( )
+        public void ManuallyCheckChanges( )
         {
             if ( !Enabled || !_isValid || !_isSubscribed ) return;
 
-            if( _sourceNotify == null || _sourceChanged || _isTweened )
-            {
-                T value;
-                var isChangedOnSource = true;
-                if ( _directGetter != null )
-                {
-                    ReadDirectValueMarker.Begin( _debugSourceBindingInfo );
-                    value = _directGetter();
-                    ReadDirectValueMarker.End();
-                }
-                else
-                {
-                    ReadConvertedValueMarker.Begin( _debugSourceBindingInfo );
-                    var changeStatus = _lastReader.TryGetValue( out value );
-                    isChangedOnSource = changeStatus != EResult.NotChanged;
-                    _isTweened = changeStatus == EResult.Tweened;
-                    ReadConvertedValueMarker.End();
-                    //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
-                }
-
-                if( isChangedOnSource && (!_isLastValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) ))
-                {
-                    _isLastValueInitialized   = true;
-                    _lastValue = value;
-
-                    UpdateTargetMarker.Begin( _debugSourceBindingInfo );
-                    SourceChanged?.Invoke( Source, value );
-                    UpdateTargetMarker.End( );
-                }
-
-                _sourceChanged = false;
-            }
+            CheckChangesInternal( );
         }
 
         public event Action<Object, T> SourceChanged;
@@ -290,6 +295,75 @@ namespace UIBindings
             }
         }
 
+        /// <summary>
+        /// To get change event at desired time (LateUpdate for example)
+        /// </summary>
+        private void CheckChangesInternal( )
+        {
+            if( _sourceNotify == null || _sourceChanged || _isTweened )
+            {
+                T   value;
+                var isChangedOnSource = true;
+                if ( _directGetter != null )
+                {
+                    ReadDirectValueMarker.Begin( _debugSourceBindingInfo );
+                    value = _directGetter();
+                    ReadDirectValueMarker.End();
+                }
+                else
+                {
+                    ReadConvertedValueMarker.Begin( _debugSourceBindingInfo );
+                    var changeStatus = _lastReader.TryGetValue( out value );
+                    isChangedOnSource = changeStatus != EResult.NotChanged;
+                    _isTweened        = changeStatus == EResult.Tweened;
+                    ReadConvertedValueMarker.End();
+                    //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
+                }
+
+                if( isChangedOnSource && (!_isLastValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) ))
+                {
+                    _isLastValueInitialized = true;
+                    _lastValue              = value;
+
+                    UpdateTargetMarker.Begin( _debugSourceBindingInfo );
+                    SourceChanged?.Invoke( Source, value );
+                    UpdateTargetMarker.End( );
+                }
+
+                _sourceChanged = false;
+            }
+        }
+
+        private void CheckChangesPeriodically( )
+        {
+            if ( Update.Delay == 0 )
+                CheckChangesInternal( );
+            else
+            {
+                var time = Update.UnscaledTime ? Time.unscaledTime : Time.time;
+                if( time - _lastUpdateTime >= Update.Delay )
+                {
+                    _lastUpdateTime = time;
+                    CheckChangesInternal( );
+                }
+            }
+        }
+
+        void IBeforeLateUpdate.DoBeforeLateUpdate( )
+        {
+            CheckChangesPeriodically();           
+        }
+
+        void IAfterLateUpdate.DoAfterLateUpdate( )
+        {
+            CheckChangesPeriodically();           
+        }
+
+        void IUpdate.DoUpdate( )
+        {
+            CheckChangesPeriodically();           
+        }
+
         private INotifyPropertyChanged _sourceNotify;
         private Func<T> _directGetter;
         private Boolean _sourceChanged;
@@ -298,7 +372,9 @@ namespace UIBindings
         protected bool _isLastValueInitialized;
         protected IDataReader<T> _lastReader;
         protected Boolean _isSubscribed;
-
+        private Boolean _isTweened;
+        private EUpdateMode _currentUpdateMode = EUpdateMode.Manual;
+        private float _lastUpdateTime;
 
         //Debug data, to make useful logs is something goes wrong
         private MonoBehaviour _debugHost;
@@ -306,7 +382,8 @@ namespace UIBindings
         private String _debugBindingName;
         private String _debugBindingInfo;
         protected string _debugSourceBindingInfo;
-        private Boolean _isTweened;
+        
+
     }
 
 }

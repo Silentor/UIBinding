@@ -26,11 +26,6 @@ namespace UIBindings
             SelectorBinding.Unsubscribe();
         }
 
-        private void LateUpdate( )
-        {
-            SelectorBinding.CheckChanges();
-        }
-
         private void OnSelectorValueChanged(Object sender, int value )
         {
             for ( int i = 0; i < GameObjects.Length; i++ )

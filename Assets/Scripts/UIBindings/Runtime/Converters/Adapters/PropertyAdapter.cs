@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using JetBrains.Annotations;
 using UIBindings.Runtime;
+using Unity.Profiling;
 using UnityEngine.Assertions;
 
 namespace UIBindings.Adapters
@@ -38,15 +39,19 @@ namespace UIBindings.Adapters
 
         public EResult TryGetValue(out T value )
         {
+            ReadPropertyMarker.Begin( nameof(T) );
+            
             var propValue = _getter();
             if( !_isInited || !EqualityComparer<T>.Default.Equals( propValue, _lastValue ) )        //TODO Check performance of EqualityComparer, consider using custom property adapter for some primitive types
             {
                 _lastValue = propValue;
                 _isInited  = true;
                 value      = propValue;
+                ReadPropertyMarker.End();
                 return EResult.Changed;
             }
 
+            ReadPropertyMarker.End();
             value = default;
             return EResult.NotChanged;
         }
@@ -55,12 +60,14 @@ namespace UIBindings.Adapters
         {
             Assert.IsTrue( IsTwoWay );
 
+            WritePropertyMarker.Begin( nameof(T) );
             if( !_isInited || !EqualityComparer<T>.Default.Equals( value, _lastValue ) )
             {
                 _lastValue = value;
                 _isInited  = true;
                 _setter( value );
             }
+            WritePropertyMarker.End();
         }
 
         public override String ToString( )
@@ -105,5 +112,8 @@ namespace UIBindings.Adapters
             var adapterType = typeof(PropertyAdapter<>).MakeGenericType( type );
             return (PropertyAdapter)Activator.CreateInstance( adapterType, source, propertyInfo, isTwoWayBinding );
         } 
+
+        protected static readonly ProfilerMarker ReadPropertyMarker = new ( ProfilerCategory.Scripts,  $"{nameof(PropertyAdapter)}.ReadProperty" );
+        protected static readonly ProfilerMarker WritePropertyMarker = new ( ProfilerCategory.Scripts,  $"{nameof(PropertyAdapter)}.WriteProperty" );
     }
 }

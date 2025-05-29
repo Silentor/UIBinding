@@ -38,12 +38,6 @@ namespace UIBindings
             ColorBinding.Unsubscribe();
         }
 
-        private void LateUpdate( )
-        {
-            SourceImageBinding.CheckChanges();
-            ColorBinding.CheckChanges();
-        }
-
         private void UpdateSourceImage(Object sender, Sprite sprite )
         {
             Image.sprite = sprite;
