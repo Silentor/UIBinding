@@ -495,8 +495,11 @@ namespace UIBindings.Editor
             if ( converter == null )
             {
                 EditorGUI.LabelField( titleRect, $"Converter {index}", "(null)", Resources.ErrorLabel );
-                if ( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )                    
+                if ( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )
+                {
                     RemoveConverter( convertersProp, index );
+                    GUIUtility.ExitGUI();       //Exit immediately to avoid issues with modified converters list
+                }
 
                 position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                 return position.height;

@@ -28,7 +28,7 @@ namespace UIBindings
         public abstract Type DataType { get; }
 
         [SerializeField]
-        protected ConvertersList _converters;
+        protected ConvertersList _converters = new (){Converters = Array.Empty<ConverterBase>()};
         public       IReadOnlyList<ConverterBase> Converters => _converters.Converters;
         public const String                       ConvertersPropertyName = nameof(_converters);
 

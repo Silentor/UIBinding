@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 73728718}
   - component: {fileID: 73728717}
   - component: {fileID: 73728719}
+  - component: {fileID: 73728720}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -211,8 +212,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -276,14 +277,14 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 7690191692283510858
-      - rid: 7690191692283510861
-      - rid: 7690191692283510863
+      - rid: 7690191692283510865
   ColorBinding:
-    Enabled: 0
-    Source: {fileID: 0}
-    Path: 
+    Enabled: 1
+    Source: {fileID: 1625701090}
+    Path: TargetBool
     _converters:
-      Converters: []
+      Converters:
+      - rid: 7690191692283510870
   references:
     version: 2
     RefIds:
@@ -294,16 +295,94 @@ MonoBehaviour:
         StepValue: 0.5
         FalseValue: 0
         TrueValue: 1000
-    - rid: 7690191692283510861
-      type: {class: SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        SmoothTime: 0.3
-    - rid: 7690191692283510863
-      type: {class: FloatToStringConverter, ns: UIBindings, asm: UIBindings}
+    - rid: 7690191692283510865
+      type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
       data:
         ReverseMode: 0
         ValueOnParseError: 0
+    - rid: 7690191692283510870
+      type: {class: ColorTween, ns: UIBindings.Tweeners, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        From: {r: 1, g: 0, b: 0, a: 1}
+        To: {r: 0, g: 1, b: 0, a: 1}
+        TweenTime: 1
+--- !u!114 &73728720
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 73728715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543f99d5ab964ed48a9f1ecf8a429ae9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Transform: {fileID: 0}
+  LocalPositionBinding:
+    Enabled: 0
+    Source: {fileID: 1625701090}
+    Path: TargetBool
+    _converters:
+      Converters:
+      - rid: 7690191692283510883
+      - rid: 7690191692283510884
+  ScaleBinding:
+    Enabled: 0
+    Source: {fileID: 1625701090}
+    Path: TargetBool
+    _converters:
+      Converters:
+      - rid: 7690191692283510873
+  LocalRotationBinding:
+    Enabled: 1
+    Source: {fileID: 1625701090}
+    Path: TargetBool
+    _converters:
+      Converters:
+      - rid: 7690191692283510887
+      - rid: 7690191692283510888
+  references:
+    version: 2
+    RefIds:
+    - rid: 7690191692283510873
+      type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 1
+        StepValue: 0.5
+        FalseValue: 1
+        TrueValue: 3
+    - rid: 7690191692283510883
+      type: {class: SelectVector3Converter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        Values:
+        - Key: 0
+          Value: {x: 0, y: 0, z: 0}
+        - Key: 1
+          Value: {x: 100, y: 0, z: 0}
+        DefaultValue: {x: 0, y: 0, z: 0}
+    - rid: 7690191692283510884
+      type: {class: Vector3SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        SmoothTime: 0.3
+    - rid: 7690191692283510887
+      type: {class: SelectVector3Converter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        Values:
+        - Key: 0
+          Value: {x: 0, y: 0, z: -45}
+        - Key: 1
+          Value: {x: 0, y: 0, z: 45}
+        DefaultValue: {x: 0, y: 0, z: 0}
+    - rid: 7690191692283510888
+      type: {class: EulerRotationSmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
+      data:
+        ReverseMode: 0
+        SmoothTime: 0.3
 --- !u!1 &94969475
 GameObject:
   m_ObjectHideFlags: 0
@@ -337,7 +416,7 @@ RectTransform:
   m_Father: {fileID: 100095710}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -979,7 +1058,7 @@ RectTransform:
   m_Father: {fileID: 568608785}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1481,7 +1560,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &957776148
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1588,10 +1667,12 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 7690191598759182412
-      - rid: 7690191692283510855
+      - rid: -2
   references:
     version: 2
     RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
     - rid: 7690191598759182412
       type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
       data:
@@ -1599,11 +1680,6 @@ MonoBehaviour:
         StepValue: 0.5
         FalseValue: 1
         TrueValue: 10
-    - rid: 7690191692283510855
-      type: {class: SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        SmoothTime: 0.3
 --- !u!1 &976848425
 GameObject:
   m_ObjectHideFlags: 0
@@ -2921,7 +2997,6 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 7690191692283510847
-      - rid: 7690191692283510848
   EnumBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
@@ -2940,11 +3015,6 @@ MonoBehaviour:
         StepValue: 0.5
         FalseValue: 0
         TrueValue: 10
-    - rid: 7690191692283510848
-      type: {class: SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        SmoothTime: 0.3
 --- !u!4 &2098577699
 Transform:
   m_ObjectHideFlags: 0

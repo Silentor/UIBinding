@@ -38,4 +38,8 @@ namespace UIBindings
     {
     }
 
+    public class SelectVector3Converter : SelectValueConverter<Vector3>
+    {
+    }
+
 }
