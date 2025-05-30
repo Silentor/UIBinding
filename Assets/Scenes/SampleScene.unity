@@ -272,20 +272,22 @@ MonoBehaviour:
   Label: {fileID: 0}
   TextBinding:
     Enabled: 1
-    Source: {fileID: 1625701090}
-    Path: TargetBool
+    Source: {fileID: 102900000, guid: 8ae471dfd27647f5a745631fd61a2184, type: 3}
+    SourceType: UnityEditor.ShaderGraph.Drawing.StickyNodeChangeEvent, Unity.ShaderGraph.Editor,
+      Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    BindToType: 1
+    Path: change
     Update:
-      Mode: 0
-      Delay: 0
+      Mode: 1
+      Delay: 0.2
       UnscaledTime: 0
     _converters:
-      Converters:
-      - rid: 7690191692283510858
-      - rid: 7690191692283510896
-      - rid: 7690191692283510897
+      Converters: []
   ColorBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -297,13 +299,6 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 7690191692283510858
-      type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 1
-        StepValue: 0.5
-        FalseValue: 0
-        TrueValue: 1000
     - rid: 7690191692283510870
       type: {class: ColorTween, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
@@ -311,16 +306,6 @@ MonoBehaviour:
         From: {r: 1, g: 0, b: 0, a: 1}
         To: {r: 0, g: 1, b: 0, a: 1}
         TweenTime: 1
-    - rid: 7690191692283510896
-      type: {class: FloatSmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        SmoothTime: 0.3
-    - rid: 7690191692283510897
-      type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
-        ValueOnParseError: 0
 --- !u!114 &73728720
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -337,6 +322,8 @@ MonoBehaviour:
   LocalPositionBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -349,6 +336,8 @@ MonoBehaviour:
   ScaleBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -360,6 +349,8 @@ MonoBehaviour:
   LocalRotationBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -988,6 +979,8 @@ MonoBehaviour:
   ValueBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: SourceFloat
     Update:
       Mode: 0
@@ -1363,6 +1356,8 @@ MonoBehaviour:
   SelectorBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: SourceEnum
     Update:
       Mode: 0
@@ -1684,6 +1679,8 @@ MonoBehaviour:
   ValueBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -1695,6 +1692,8 @@ MonoBehaviour:
   MinValueBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: 
     Update:
       Mode: 0
@@ -1705,6 +1704,8 @@ MonoBehaviour:
   MaxValueBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -2331,6 +2332,8 @@ MonoBehaviour:
   ValueBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -2605,6 +2608,8 @@ MonoBehaviour:
   CallBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: CallMe
     Params:
     - Primitive: 1101487145
@@ -2618,6 +2623,8 @@ MonoBehaviour:
   CanExecuteBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -2726,6 +2733,8 @@ MonoBehaviour:
   SourceImageBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -2737,6 +2746,8 @@ MonoBehaviour:
   ColorBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: SourceInt
     Update:
       Mode: 0
@@ -3048,6 +3059,8 @@ MonoBehaviour:
   IntBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: SourceByte
     Update:
       Mode: 0
@@ -3059,7 +3072,10 @@ MonoBehaviour:
   FloatBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
-    Path: TargetBool
+    SourceType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    BindToType: 1
+    Path: normalized
     Update:
       Mode: 0
       Delay: 0
@@ -3070,6 +3086,8 @@ MonoBehaviour:
   EnumBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: SourceEnum
     Update:
       Mode: 0
@@ -3257,6 +3275,8 @@ MonoBehaviour:
   TextBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: TargetBool
     Update:
       Mode: 0
@@ -3268,6 +3288,8 @@ MonoBehaviour:
   ColorBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
     Path: SourceFloat
     Update:
       Mode: 0

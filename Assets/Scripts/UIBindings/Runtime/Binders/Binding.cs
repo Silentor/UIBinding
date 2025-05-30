@@ -17,7 +17,11 @@ namespace UIBindings
     public abstract class Binding
     {
         public        Boolean                   Enabled             = true;                        //Checked once on start!
+
         public        UnityEngine.Object        Source;
+        public        String                    SourceType;
+        public        Boolean                   BindToType;
+
         public        String                    Path;
     }
 
@@ -112,7 +116,7 @@ namespace UIBindings
             _debugSourceBindingInfo = $"{sourceName}.{Path} {direction} {_debugBindingInfo}";
         }
 
-        public void Awake(  )
+        public void Awake( Object sourceObject = null )
         {
             if ( !Enabled )   
                 return;
