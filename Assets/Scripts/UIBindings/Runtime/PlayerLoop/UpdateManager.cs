@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
@@ -9,6 +10,7 @@ namespace UIBindings.Runtime.PlayerLoop
 {
     /// <summary>
     /// I dont bother unsubscribing from Player Loop on exit Play mode, just make sure to not subscribe twice on next Play mode start.
+    /// But i'm clear all subscriptions on exiting Play mode, so no hanging references.
     /// </summary>
     public static class UpdateManager
     {
@@ -82,24 +84,24 @@ namespace UIBindings.Runtime.PlayerLoop
             var defaultSystems = UnityEngine.LowLevel.PlayerLoop.GetCurrentPlayerLoop();
 
             var myBeforeLateUpdate = new PlayerLoopSystem
-                                    {
-                                            subSystemList  = null,
-                                            updateDelegate = OnBeforeLateUpdate,
-                                            type           = typeof(UIBindingBeforeLateUpdate)
-                                    };
+                                     {
+                                             subSystemList  = null,
+                                             updateDelegate = OnBeforeLateUpdate,
+                                             type           = typeof(UpdateManagerBeforeLateUpdate)
+                                     };
 
             var myAfterLateUpdate = new PlayerLoopSystem
                                     {
                                             subSystemList  = null,
                                             updateDelegate = OnAfterLateUpdate,
-                                            type           = typeof(UIBindingAfterLateUpdate)
+                                            type           = typeof(UpdateManagerAfterLateUpdate)
                                     };
 
             var myUpdateSystem = new PlayerLoopSystem
                                  {
                                          subSystemList  = null,
                                          updateDelegate = OnUpdate,
-                                         type           = typeof(UIBindingUpdate)
+                                         type           = typeof(UpdateManagerUpdate)
                                  };
 
             AddInSystem( ref defaultSystems, typeof(Update.ScriptRunBehaviourUpdate), myUpdateSystem, 0 );
@@ -143,70 +145,71 @@ namespace UIBindings.Runtime.PlayerLoop
 
                 return false;
             }
-        }
 
-        static bool AddBeforeSystem( ref PlayerLoopSystem loopSystem, Type siblingSystem, PlayerLoopSystem systemToAdd )
-        {
-            if ( loopSystem.subSystemList != null )
+
+            static bool AddBeforeSystem( ref PlayerLoopSystem loopSystem, Type siblingSystem, PlayerLoopSystem systemToAdd )
             {
-                var siblingSystemIndex = FindSystem( loopSystem.subSystemList, siblingSystem );
-                if ( siblingSystemIndex >= 0 )
+                if ( loopSystem.subSystemList != null )
                 {
-                    if( FindSystem( loopSystem.subSystemList, systemToAdd.type ) >= 0 )
-                        return true; //Already added
+                    var siblingSystemIndex = FindSystem( loopSystem.subSystemList, siblingSystem );
+                    if ( siblingSystemIndex >= 0 )
+                    {
+                        if( FindSystem( loopSystem.subSystemList, systemToAdd.type ) >= 0 )
+                            return true; //Already added
 
-                    var newSubSystemList = new List<PlayerLoopSystem>( loopSystem.subSystemList );
-                    newSubSystemList.Insert( siblingSystemIndex, systemToAdd );
-                    loopSystem.subSystemList = newSubSystemList.ToArray();
-                    return true;
-                }
-
-                for ( int i = 0; i < loopSystem.subSystemList.Length; i++ )
-                {
-                    if ( AddBeforeSystem( ref loopSystem.subSystemList[ i ], siblingSystem, systemToAdd ) )
+                        var newSubSystemList = new List<PlayerLoopSystem>( loopSystem.subSystemList );
+                        newSubSystemList.Insert( siblingSystemIndex, systemToAdd );
+                        loopSystem.subSystemList = newSubSystemList.ToArray();
                         return true;
+                    }
+
+                    for ( int i = 0; i < loopSystem.subSystemList.Length; i++ )
+                    {
+                        if ( AddBeforeSystem( ref loopSystem.subSystemList[ i ], siblingSystem, systemToAdd ) )
+                            return true;
+                    }
                 }
+
+                return false;
             }
 
-            return false;
-        }
-
-        static bool AddAfterSystem( ref PlayerLoopSystem loopSystem, Type siblingSystem, PlayerLoopSystem systemToAdd )
-        {
-            if ( loopSystem.subSystemList != null )
+            static bool AddAfterSystem( ref PlayerLoopSystem loopSystem, Type siblingSystem, PlayerLoopSystem systemToAdd )
             {
-                var siblingSystemIndex = FindSystem( loopSystem.subSystemList, siblingSystem );
-                if ( siblingSystemIndex >= 0 )
+                if ( loopSystem.subSystemList != null )
                 {
-                    if( FindSystem( loopSystem.subSystemList, systemToAdd.type ) >= 0 )
-                        return true; //Already added
+                    var siblingSystemIndex = FindSystem( loopSystem.subSystemList, siblingSystem );
+                    if ( siblingSystemIndex >= 0 )
+                    {
+                        if( FindSystem( loopSystem.subSystemList, systemToAdd.type ) >= 0 )
+                            return true; //Already added
 
-                    var newSubSystemList = new List<PlayerLoopSystem>( loopSystem.subSystemList );
-                    var newSystemIndex   = Math.Clamp( siblingSystemIndex + 1, 0, newSubSystemList.Count );
-                    newSubSystemList.Insert( newSystemIndex, systemToAdd );
-                    loopSystem.subSystemList = newSubSystemList.ToArray();
-                    return true;
-                }
-
-                for ( int i = 0; i < loopSystem.subSystemList.Length; i++ )
-                {
-                    if ( AddAfterSystem( ref loopSystem.subSystemList[ i ], siblingSystem, systemToAdd ) )
+                        var newSubSystemList = new List<PlayerLoopSystem>( loopSystem.subSystemList );
+                        var newSystemIndex   = Math.Clamp( siblingSystemIndex + 1, 0, newSubSystemList.Count );
+                        newSubSystemList.Insert( newSystemIndex, systemToAdd );
+                        loopSystem.subSystemList = newSubSystemList.ToArray();
                         return true;
+                    }
+
+                    for ( int i = 0; i < loopSystem.subSystemList.Length; i++ )
+                    {
+                        if ( AddAfterSystem( ref loopSystem.subSystemList[ i ], siblingSystem, systemToAdd ) )
+                            return true;
+                    }
                 }
+
+                return false;
             }
 
-            return false;
-        }
-
-        private static int FindSystem( PlayerLoopSystem[] systems, Type typeToFind )
-        {
-            for ( int i = 0; i < systems.Length; i++ )
+            static int FindSystem( PlayerLoopSystem[] systems, Type typeToFind )
             {
-                if ( systems[ i ].type == typeToFind )
-                    return i;
-            }
+                for ( int i = 0; i < systems.Length; i++ )
+                {
+                    if ( systems[ i ].type == typeToFind )
+                        return i;
+                }
 
-            return -1;
+                return -1;
+            }
         }
 
         private static void Register( ref UpdateList updateList, [NotNull] Action action )
@@ -242,18 +245,28 @@ namespace UIBindings.Runtime.PlayerLoop
 
         private static void OnUpdate( )
         {
+            AfterUpdateMarker.Begin( _afterUpdateList.Actions.Count );
             DoUpdate( ref _afterUpdateList );
+            AfterUpdateMarker.End();
         }
 
         private static void OnBeforeLateUpdate( )
         {
+            BeforeLateUpdateMarker.Begin( _beforeLateUpdateList.Actions.Count );
             DoUpdate( ref _beforeLateUpdateList );
+            BeforeLateUpdateMarker.End();
         }
 
         private static void OnAfterLateUpdate( )
         {
+            AfterLateUpdateMarker.Begin( _afterLateUpdateList.Actions.Count );
             DoUpdate( ref _afterLateUpdateList );
+            AfterLateUpdateMarker.End();
         }
+
+        private static readonly ProfilerMarker AfterUpdateMarker     = new ( "UpdateManager.AfterUpdate" );
+        private static readonly ProfilerMarker BeforeLateUpdateMarker    = new ( "UpdateManager.BeforeLateUpdate" );
+        private static readonly ProfilerMarker AfterLateUpdateMarker = new ( "UpdateManager.AfterLateUpdate" );
 
         private static void DoUpdate( ref UpdateList updates )
         {
@@ -299,16 +312,16 @@ namespace UIBindings.Runtime.PlayerLoop
 #endregion
     }
 
-    internal sealed class UIBindingBeforeLateUpdate
+    internal sealed class UpdateManagerBeforeLateUpdate
     {
     }
 
-    internal sealed class UIBindingAfterLateUpdate
+    internal sealed class UpdateManagerAfterLateUpdate
     {
     }
 
 
-    internal sealed class UIBindingUpdate
+    internal sealed class UpdateManagerUpdate
     {
     }
 
