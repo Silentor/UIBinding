@@ -12,80 +12,68 @@ namespace UIBindings.Runtime.PlayerLoop
     /// </summary>
     public static class UpdateManager
     {
-        private static          Boolean                 _processUpdate;
-        private static          Boolean                 _processBeforeLateUpdate;
-        private static          Boolean                 _processAfterLateUpdate;
-        private static readonly List<IUpdate>           _delayedRemoveUpdates     = new();
-        private static readonly List<IBeforeLateUpdate>  _delayedRemoveBeforeLateUpdates = new();
-        private static readonly List<IAfterLateUpdate>  _delayedRemoveAfterLateUpdates = new();
-        private static readonly List<IUpdate>           _updates                  = new();
-        private static readonly List<IBeforeLateUpdate>  _beforeLateUpdates              = new();
-        private static readonly List<IAfterLateUpdate>   _afterLateUpdates              = new();
+        private static UpdateList _afterUpdateList = new ( new List<Action>() );
+        private static UpdateList _beforeLateUpdateList = new ( new List<Action>() );
+        private static UpdateList _afterLateUpdateList = new ( new List<Action>() );
 
-        public static void RegisterUpdate([NotNull] IUpdate update)
+        public static void Register([NotNull] IUpdate update)
         {
-            if ( update == null ) throw new ArgumentNullException( nameof(update) );
-            foreach ( var earlyUpdate in _updates )
-            {
-                if ( earlyUpdate == update )
-                    return;
-            }
-
-            _updates.Add( update );
+            RegisterUpdate( update.DoUpdate);
         }
 
-        public static void RegisterBeforeLateUpdate([NotNull] IBeforeLateUpdate lateUpdate)
+        public static void Register([NotNull] IBeforeLateUpdate update)
         {
-            if ( lateUpdate == null ) throw new ArgumentNullException( nameof(lateUpdate) );
-
-            foreach ( var upd in _beforeLateUpdates )
-            {
-                if ( upd == lateUpdate )
-                    return;
-            }
-
-            _beforeLateUpdates.Add( lateUpdate );
+            RegisterUpdate( update.DoBeforeLateUpdate);
         }
 
-
-        public static void RegisterAfterLateUpdate([NotNull] IAfterLateUpdate lateUpdate)
+        public static void Register([NotNull] IAfterLateUpdate update)
         {
-            if ( lateUpdate == null ) throw new ArgumentNullException( nameof(lateUpdate) );
-
-            foreach ( var upd in _afterLateUpdates )
-            {
-                if ( upd == lateUpdate )
-                    return;
-            }
-
-            _afterLateUpdates.Add( lateUpdate );
+            RegisterUpdate( update.DoAfterLateUpdate);
         }
 
-        public static void UnregisterUpdate([NotNull] IUpdate update)
+        public static void RegisterUpdate([NotNull] Action update)
         {
-            if ( update == null ) throw new ArgumentNullException( nameof(update) );
-            if ( _processUpdate )
-                _delayedRemoveUpdates.Add( update );
-            else
-                _updates.Remove( update );
+            Register( ref _afterUpdateList, update );
         }
 
-        public static void UnregisterBeforeLateUpdate([NotNull] IBeforeLateUpdate beforeLateUpdate)
+        public static void RegisterBeforeLateUpdate([NotNull] Action update)
         {
-            if ( beforeLateUpdate == null ) throw new ArgumentNullException( nameof(beforeLateUpdate) );
-            if ( _processBeforeLateUpdate )
-                _delayedRemoveBeforeLateUpdates.Add( beforeLateUpdate );
-            else
-                _beforeLateUpdates.Remove( beforeLateUpdate );
+            Register( ref _beforeLateUpdateList, update );
         }
 
-        public static void UnregisterAfterLateUpdate([NotNull] IAfterLateUpdate afterLateUpdate)
+        public static void RegisterAfterLateUpdate([NotNull] Action update)
         {
-            if ( afterLateUpdate == null ) throw new ArgumentNullException( nameof(afterLateUpdate) );
-            if ( _processAfterLateUpdate )
-                _delayedRemoveAfterLateUpdates.Add( afterLateUpdate );
-            else
-                _afterLateUpdates.Remove( afterLateUpdate );
+            Register( ref _afterLateUpdateList, update );
+        }
+
+        public static void Unregister([NotNull] IUpdate update)
+        {
+            UnregisterUpdate( update.DoUpdate );
+        }
+
+        public static void Unregister([NotNull] IBeforeLateUpdate update)
+        {
+            UnregisterBeforeLateUpdate( update.DoBeforeLateUpdate );
+        }
+
+        public static void Unregister([NotNull] IAfterLateUpdate update)
+        {
+            UnregisterAfterLateUpdate( update.DoAfterLateUpdate );
+        }
+
+        public static void UnregisterUpdate([NotNull] Action update)
+        {
+            Unregister( ref _afterUpdateList, update );
+        }
+
+        public static void UnregisterBeforeLateUpdate([NotNull] Action update)
+        {
+            Unregister( ref _beforeLateUpdateList, update );
+        }
+
+        public static void UnregisterAfterLateUpdate([NotNull] Action update)
+        {
+            Unregister( ref _beforeLateUpdateList, update );
         }
 
         [RuntimeInitializeOnLoadMethod]
@@ -221,65 +209,94 @@ namespace UIBindings.Runtime.PlayerLoop
             return -1;
         }
 
+        private static void Register( ref UpdateList updateList, [NotNull] Action action )
+        {
+            if ( action == null ) throw new ArgumentNullException( nameof(action) );
+
+            var list = updateList.Actions;
+            foreach ( var a in list )
+            {
+                if( a == action )
+                    return; //Already registered
+            }
+
+            updateList.Actions.Add( action );
+        } 
+
+        private static void Unregister( ref UpdateList updateList, [NotNull] Action action )
+        {
+            if ( action == null ) throw new ArgumentNullException( nameof(action) );
+
+            var indexOfExistingItem = updateList.Actions.IndexOf( action );
+            if( indexOfExistingItem < 0 )
+                return; 
+
+            //If update list processing right now and index of processing item needs to be fixed
+            if( updateList.Index >= 0 && indexOfExistingItem <= updateList.Index )
+            {
+                updateList.Index--;
+            }
+
+            updateList.Actions.RemoveAt( indexOfExistingItem );
+        } 
+
         private static void OnUpdate( )
         {
-            _processUpdate = true;
-            var i = 0;
-            while ( i < _updates.Count )
-            {
-                _updates[ i ].DoUpdate();
-                i++;
-            }
-
-            _processUpdate = false;
-
-            if ( _delayedRemoveUpdates.Count > 0 )
-            {
-                foreach ( var removeAfterLoop in _delayedRemoveUpdates )
-                    _updates.Remove( removeAfterLoop );
-                _delayedRemoveUpdates.Clear();
-            }
+            DoUpdate( ref _afterUpdateList );
         }
 
         private static void OnBeforeLateUpdate( )
         {
-            _processBeforeLateUpdate = true;
-            var i = 0;
-            while ( i < _beforeLateUpdates.Count )
-            {
-                _beforeLateUpdates[ i ].DoBeforeLateUpdate();
-                i++;
-            }
-
-            _processBeforeLateUpdate = false;
-
-            if ( _delayedRemoveBeforeLateUpdates.Count > 0 )
-            {
-                foreach ( var removeAfterLoop in _delayedRemoveBeforeLateUpdates )
-                    _beforeLateUpdates.Remove( removeAfterLoop );
-                _delayedRemoveBeforeLateUpdates.Clear();
-            }
+            DoUpdate( ref _beforeLateUpdateList );
         }
 
         private static void OnAfterLateUpdate( )
         {
-            _processAfterLateUpdate = true;
-            var i = 0;
-            while ( i < _afterLateUpdates.Count )
+            DoUpdate( ref _afterLateUpdateList );
+        }
+
+        private static void DoUpdate( ref UpdateList updates )
+        {
+            updates.Index = 0;
+            while ( updates.Index < updates.Actions.Count )
             {
-                _afterLateUpdates[ i ].DoAfterLateUpdate();
-                i++;
+                updates.Actions[ updates.Index ]();
+                updates.Index++;
             }
 
-            _processAfterLateUpdate = false;
+            updates.Index = -1;
+        }
 
-            if ( _delayedRemoveAfterLateUpdates.Count > 0 )
+        private struct UpdateList
+        {
+            public readonly List<Action> Actions;
+            public int          Index;
+
+            public UpdateList( List<Action> actions )
             {
-                foreach ( var removeAfterLoop in _delayedRemoveAfterLateUpdates )
-                    _afterLateUpdates.Remove( removeAfterLoop );
-                _delayedRemoveAfterLateUpdates.Clear();
+                Actions = actions;
+                Index   = -1;
             }
         }
+
+#region Editor
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+        private static void CleanUp( )
+        {
+            UnityEditor.EditorApplication.playModeStateChanged += state =>
+            {
+                if ( state == UnityEditor.PlayModeStateChange.ExitingPlayMode )
+                {
+                    //Unregister all updates
+                    _afterUpdateList.Actions.Clear();
+                    _beforeLateUpdateList.Actions.Clear();
+                    _afterLateUpdateList.Actions.Clear();
+                }
+            };
+        }
+#endif
+#endregion
     }
 
     internal sealed class UIBindingBeforeLateUpdate
