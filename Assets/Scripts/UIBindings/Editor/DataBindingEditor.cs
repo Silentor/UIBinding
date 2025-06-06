@@ -13,7 +13,7 @@ using Object = System.Object;
 
 namespace UIBindings.Editor
 {
-    [CustomPropertyDrawer( typeof(Binding<>), true )]
+    [CustomPropertyDrawer( typeof(ValueBinding<>), true )]
     public class DataBindingEditor : PropertyDrawer
     {
         /// <summary>
@@ -38,7 +38,7 @@ namespace UIBindings.Editor
             var rects = GUIUtils.GetHorizontalRects( mainLineContentPosition, 2, 0, 20 );
 
             //Draw Enabled toggle
-            var enabledProp = property.FindPropertyRelative( nameof(Binding.Enabled) );
+            var enabledProp = property.FindPropertyRelative( nameof(BindingBase.Enabled) );
             var isEnabled = enabledProp.boolValue;
             EditorGUI.PropertyField( rects.Item2, enabledProp, GUIContent.none );
 
@@ -61,7 +61,7 @@ namespace UIBindings.Editor
                 var convertersCount   = binding.Converters.Count > 0 ? $"[{binding.Converters.Count}]" : String.Empty;
                 var arrowStr          = isTwoWayBinding ? $" <-{convertersCount}-> " : $" -{convertersCount}-> ";
                 string mainTextStr;
-                if ( Application.isPlaying && sourceProperty != null )
+                if ( Application.isPlaying && sourceProperty != null && (binding.Source && !binding.BindToType))
                 {
                     mainTextStr = $"{sourceDisplayName} <{sourceProperty.GetValue( binding.Source )}> {arrowStr} {targetTypeName} <{binding.GetDebugLastValue()}>";
                     isValid  = isValid && (binding.IsRuntimeValid || !binding.Enabled);
@@ -84,7 +84,7 @@ namespace UIBindings.Editor
                         DrawSourceField( position, property );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var pathProp   = property.FindPropertyRelative( nameof(Binding.Path) );
+                        var pathProp   = property.FindPropertyRelative( nameof(BindingBase.Path) );
                         //EditorGUI.PropertyField( position, pathProperty );
                         DrawPathField( position, pathProp, binding );
 
@@ -111,9 +111,9 @@ namespace UIBindings.Editor
             position = EditorGUI.PrefixLabel( position, new GUIContent( "Source" ));
             
 
-            var sourceObjectProp = property.FindPropertyRelative( nameof(Binding.Source) );
-            var sourceTypeStrProp = property.FindPropertyRelative( nameof(Binding.SourceType) );
-            var bindTypeProp = property.FindPropertyRelative( nameof(Binding.BindToType) );
+            var sourceObjectProp = property.FindPropertyRelative( nameof(BindingBase.Source) );
+            var sourceTypeStrProp = property.FindPropertyRelative( nameof(BindingBase.SourceType) );
+            var bindTypeProp = property.FindPropertyRelative( nameof(BindingBase.BindToType) );
 
             var rects = GUIUtils.GetHorizontalRects( position, 1, 0, 50 );
 
@@ -212,7 +212,7 @@ namespace UIBindings.Editor
             }
         }
 
-        private void DrawPathField(  Rect position, SerializedProperty pathProp, Binding binding )
+        private void DrawPathField(  Rect position, SerializedProperty pathProp, BindingBase binding )
         {
             position = EditorGUI.PrefixLabel( position, new GUIContent( pathProp.displayName ) );
 
@@ -327,7 +327,7 @@ namespace UIBindings.Editor
                 return Resources.LineHeightWithMargin;
         }
 
-        private static (Type, String) GetSourceType(Binding binding )
+        private static (Type, String) GetSourceType(BindingBase binding )
         {
             if ( binding.BindToType )
             {
@@ -340,7 +340,7 @@ namespace UIBindings.Editor
             return (null, "source object missed");
         }
 
-        public static PropertyInfo GetSourceProperty( Binding binding )
+        public static PropertyInfo GetSourceProperty( BindingBase binding )
         {
             var (sourceType, _) = GetSourceType( binding );
             if ( sourceType == null )
@@ -354,7 +354,7 @@ namespace UIBindings.Editor
             return sourceProperty;
         }
 
-        public static Type GetSourcePropertyType( Binding binding )
+        public static Type GetSourcePropertyType( BindingBase binding )
         {
             var sourceProperty = GetSourceProperty( binding );
             return sourceProperty != null ? sourceProperty.PropertyType : null;
@@ -499,7 +499,7 @@ namespace UIBindings.Editor
             return result;
         }
 
-        private static Type GetConverterTypeToAppend( Binding binding, IReadOnlyList<ConverterBase> converters )
+        private static Type GetConverterTypeToAppend( BindingBase binding, IReadOnlyList<ConverterBase> converters )
         {
             if ( converters.Count > 0 )
                 return GetLastConverterOutputType( converters );

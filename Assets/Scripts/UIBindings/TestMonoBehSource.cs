@@ -69,6 +69,16 @@ namespace UIBindings
             }
         }
 
+        public List<Quest> SourceCollection { get;  } = new List<Quest>
+        {
+            new Quest(){},
+            new Quest(){},
+            new Quest(){},
+        };
+
+        public ViewCollection SourceCollection2 => new ViewCollection( SourceCollection, null, (q, qv) => { } );
+        
+
         public void CallMe( )
         {
             //var timer = System.Diagnostics.Stopwatch.StartNew();
@@ -212,6 +222,27 @@ namespace UIBindings
             {
                 OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
             }
+
+            //UpdateManager.RegisterUpdate( TestUpdate );
+            //UpdateManager.RegisterUpdate( TestUpdate2 );
+            //UpdateManager.RegisterUpdate( TestUpdate3 );
+        }
+
+        private void TestUpdate3( )
+        {
+            
+        }
+
+        private void TestUpdate2( )
+        {
+            UpdateManager.UnregisterUpdate( TestUpdate2 );
+
+        }
+
+        private void TestUpdate( )
+        {
+            
+
         }
 
         private IEnumerator DelayedCanvasEnable( )

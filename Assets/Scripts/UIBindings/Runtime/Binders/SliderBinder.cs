@@ -9,9 +9,9 @@ namespace UIBindings
     public class SliderBinder : MonoBehaviour
     {
         public Slider Slider;
-        public BindingTwoWay<float> ValueBinding;
-        public Binding<float>       MinValueBinding     = new (){Enabled = false};
-        public Binding<float>       MaxValueBinding     = new (){Enabled = false};
+        public ValueBindingRW<float>    ValueBinding;
+        public ValueBinding<float>       MinValueBinding     = new (){Enabled = false};
+        public ValueBinding<float>       MaxValueBinding     = new (){Enabled = false};
 
         protected void Awake( )
         {
@@ -20,13 +20,13 @@ namespace UIBindings
             Assert.IsTrue( Slider );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Awake(  );
+            ValueBinding.Init( forceOneWay: !Slider.interactable );
             ValueBinding.SourceChanged += UpdateValue;
             MinValueBinding.SetDebugInfo( this, nameof(MinValueBinding) );
-            MinValueBinding.Awake( );
+            MinValueBinding.Init( );
             MinValueBinding.SourceChanged += UpdateMinValue;
             MaxValueBinding.SetDebugInfo( this, nameof(MaxValueBinding) );
-            MaxValueBinding.Awake(  );
+            MaxValueBinding.Init(  );
             MaxValueBinding.SourceChanged += UpdateMaxValue;
         }
 

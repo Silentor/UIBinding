@@ -9,7 +9,7 @@ using Unity.Profiling.LowLevel;
 namespace UIBindings
 {
     [Serializable]
-    public class BindingTwoWay<T> : Binding<T>
+    public class ValueBindingRW<T> : ValueBinding<T>
     {
         //Some binders can temporarily switch to one-way mode, for example, when they are not interactable.
         public bool OverrideOneWayMode = false;
@@ -43,13 +43,19 @@ namespace UIBindings
             }
         }
 
-        protected override void DoAwake( Object source, PropertyInfo property, DataProvider lastConverter, MonoBehaviour debugHost )
+        protected override void DoInit( Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost )
         {
-            base.DoAwake( source, property, lastConverter, debugHost );
+            base.DoInit( source, property, lastConverter, forceOneWay, debugHost );
+
+            if( forceOneWay )
+            {
+                //Do not init two-way binding if it is forced to be one-way.
+                return;
+            }
 
             if ( !property.CanWrite )
             {
-                Debug.LogError($"[{nameof(Binding)}] Property {property.DeclaringType.Name}.{property.Name} is read-only and cannot be used for two-way binding.", debugHost);
+                Debug.LogError($"[{nameof(BindingBase)}] Property {property.DeclaringType.Name}.{property.Name} is read-only and cannot be used for two-way binding.", debugHost);
                 return;
             }
 

@@ -10,7 +10,7 @@ namespace UIBindings
     {
         public Button Button;
         public CallBinding CallBinding;
-        public Binding<bool> CanExecuteBinding;
+        public ValueBinding<bool> CanExecuteBinding;
 
         public bool DisableButtonWhileExecuting = true;
 
@@ -28,7 +28,7 @@ namespace UIBindings
             Assert.IsTrue(Button);
 
             CanExecuteBinding.SetDebugInfo(this, nameof(CanExecuteBinding));
-            CanExecuteBinding.Awake( );
+            CanExecuteBinding.Init( );
             CanExecuteBinding.SourceChanged += CanExecuteChanged;
             _canExecute = Button.interactable;
 

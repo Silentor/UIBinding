@@ -9,7 +9,7 @@ namespace UIBindings
     public class InteractableBinder : MonoBehaviour
     {
         public Selectable InteractionControl;
-        public Binding<Boolean> InteractableBinding;
+        public ValueBinding<Boolean> InteractableBinding;
 
         protected void Awake( )
         {
@@ -18,7 +18,7 @@ namespace UIBindings
             Assert.IsTrue( InteractionControl );
 
             InteractableBinding.SetDebugInfo( this, nameof(InteractableBinding) );
-            InteractableBinding.Awake( );
+            InteractableBinding.Init( );
             InteractableBinding.SourceChanged += ProcessSourceToTarget;
         }
 

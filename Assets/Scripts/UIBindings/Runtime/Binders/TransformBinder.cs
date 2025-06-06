@@ -7,9 +7,9 @@ namespace UIBindings
     public class TransformBinder : MonoBehaviour
     {
         public Transform                Transform;
-        public Binding<Vector3>         LocalPositionBinding;
-        public Binding<Vector3>         ScaleBinding         = new (){Enabled = false};
-        public Binding<Vector3>         LocalRotationBinding = new (){Enabled = false};
+        public ValueBinding<Vector3>         LocalPositionBinding;
+        public ValueBinding<Vector3>         ScaleBinding         = new (){Enabled = false};
+        public ValueBinding<Vector3>         LocalRotationBinding = new (){Enabled = false};
 
         private void Awake( )
         {
@@ -18,15 +18,15 @@ namespace UIBindings
             Assert.IsTrue( Transform );
 
             LocalPositionBinding.SetDebugInfo( this, nameof(LocalPositionBinding) );
-            LocalPositionBinding.Awake(  );
+            LocalPositionBinding.Init(  );
             LocalPositionBinding.SourceChanged += ProcessLocalPosition;
 
             ScaleBinding.SetDebugInfo( this, nameof(ScaleBinding) );
-            ScaleBinding.Awake(  );
+            ScaleBinding.Init(  );
             ScaleBinding.SourceChanged += ProcessScale;
 
             LocalRotationBinding.SetDebugInfo( this, nameof(LocalRotationBinding) );
-            LocalRotationBinding.Awake(  );
+            LocalRotationBinding.Init(  );
             LocalRotationBinding.SourceChanged += ProcessLocalRotation;
         }
 

@@ -9,9 +9,9 @@ namespace UIBindings
 {
     public class TestNumericBinder : MonoBehaviour
     {
-        public BindingTwoWay<int>     IntBinding;
-        public Binding<float>         FloatBinding;
-        public BindingTwoWay<StructEnum>     EnumBinding;
+        public ValueBindingRW<int>     IntBinding;
+        public ValueBinding<float>         FloatBinding;
+        public ValueBindingRW<StructEnum>     EnumBinding;
 
         public bool WriteEnumValue = false;
         private Int32 _intValue;
@@ -20,17 +20,17 @@ namespace UIBindings
         void Awake() 
         {
             IntBinding.SetDebugInfo( this, nameof(IntBinding) );
-            IntBinding.Awake();
+            IntBinding.Init();
             IntBinding.SourceChanged += OnIntValueChanged;
             IntBinding.Subscribe();
             
             FloatBinding.SetDebugInfo( this, nameof(FloatBinding) );
-            FloatBinding.Awake();
+            FloatBinding.Init();
             FloatBinding.SourceChanged += OnFloatValueChanged;
             FloatBinding.Subscribe();
 
             EnumBinding.SetDebugInfo( this, nameof(EnumBinding) );
-            EnumBinding.Awake(  );
+            EnumBinding.Init(  );
             EnumBinding.SourceChanged += OnEnumValueChanged;
             EnumBinding.Subscribe();
 

@@ -7,12 +7,12 @@ namespace UIBindings
     public class GameObjectSelectBinder : MonoBehaviour
     {
         public KeyValue<GameObject>[]   GameObjects;
-        public Binding<int>             SelectorBinding;
+        public ValueBinding<int>             SelectorBinding;
 
         private void Awake( )
         {
             SelectorBinding.SetDebugInfo( this, nameof(SelectorBinding) );
-            SelectorBinding.Awake(  );
+            SelectorBinding.Init(  );
             SelectorBinding.SourceChanged += OnSelectorValueChanged;
         }
 

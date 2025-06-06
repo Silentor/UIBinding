@@ -9,8 +9,8 @@ namespace UIBindings
     public class LabelBinder : MonoBehaviour
     {
         public TextMeshProUGUI          Label;
-        public Binding<String>          TextBinding;
-        public Binding<Color>           ColorBinding            = new (){Enabled = false};
+        public ValueBinding<String>          TextBinding;
+        public ValueBinding<Color>           ColorBinding            = new (){Enabled = false};
 
         private void Awake( )
         {
@@ -19,11 +19,11 @@ namespace UIBindings
             Assert.IsTrue( Label );
 
             TextBinding.SetDebugInfo( this, nameof(TextBinding) );
-            TextBinding.Awake(  );
+            TextBinding.Init(  );
             TextBinding.SourceChanged += ProcessText;
 
             ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );
-            ColorBinding.Awake(  );
+            ColorBinding.Init(  );
             ColorBinding.SourceChanged += ProcessColor;
         }
 

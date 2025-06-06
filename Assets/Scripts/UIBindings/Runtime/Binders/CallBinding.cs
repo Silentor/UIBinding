@@ -20,7 +20,7 @@ using Cysharp.Threading.Tasks;
 namespace UIBindings
 {
     [Serializable]
-    public class CallBinding : Binding
+    public class CallBinding : BindingBase
     {
         public SerializableParam[] Params; 
 
@@ -44,13 +44,13 @@ namespace UIBindings
 
             if ( !Source )
             {
-                Debug.LogError( $"[{nameof(Binding)}] Source is not assigned at {host.name}", host );
+                Debug.LogError( $"[{nameof(BindingBase)}] Source is not assigned at {host.name}", host );
                 return;
             }
 
             if ( String.IsNullOrEmpty( Path ) )
             {
-                Debug.LogError( $"[{nameof(Binding)}] Path is not assigned at {host.name}", host );
+                Debug.LogError( $"[{nameof(BindingBase)}] Path is not assigned at {host.name}", host );
                 return;
             }
 
@@ -59,7 +59,7 @@ namespace UIBindings
 
             if ( method == null )
             {
-                Debug.LogError( $"[{nameof(Binding)}] Method {Path} not found in {sourceType.Name}", host );
+                Debug.LogError( $"[{nameof(BindingBase)}] Method {Path} not found in {sourceType.Name}", host );
                 return;
             }
 

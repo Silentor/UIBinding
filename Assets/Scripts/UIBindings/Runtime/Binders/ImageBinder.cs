@@ -9,8 +9,8 @@ namespace UIBindings
     public class ImageBinder : MonoBehaviour
     {
         public Image Image;
-        public Binding<Sprite>      SourceImageBinding;
-        public Binding<Color>       ColorBinding            = new (){Enabled = false};
+        public ValueBinding<Sprite>      SourceImageBinding;
+        public ValueBinding<Color>       ColorBinding            = new (){Enabled = false};
 
         protected void Awake( )
         {
@@ -19,10 +19,10 @@ namespace UIBindings
             Assert.IsTrue( Image );
 
             SourceImageBinding.SetDebugInfo( this, nameof(SourceImageBinding) );
-            SourceImageBinding.Awake(  );
+            SourceImageBinding.Init(  );
             SourceImageBinding.SourceChanged += UpdateSourceImage;
             ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );        
-            ColorBinding.Awake( );
+            ColorBinding.Init( );
             ColorBinding.SourceChanged += UpdateColor;
         }
 

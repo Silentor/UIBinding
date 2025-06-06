@@ -12,9 +12,13 @@ namespace UIBindings.Editor.Utils
             return new ContentColorScope( contentColor );
         }
 
-        public static (Rect, Rect, Rect) GetHorizontalRects(Rect totalPosition, float padding, ControlRectSettings control1, ControlRectSettings control2, ControlRectSettings control3)
+        public static IDisposable ZeroIndent()
         {
-            float[] widths = new float[3];
+            return new ZeroIndentScope( );
+        }
+
+        public static (Rect, Rect, Rect) GetHorizontalRects(Rect totalPosition, float padding, ControlRectSettings control1, ControlRectSettings control2, ControlRectSettings control3, bool debugDrawRects = false )
+        {
             float totalFixedWidth = 0f;
             int autoCount = 0;
             ControlRectSettings[] settings = { control1, control2, control3 };
@@ -36,6 +40,15 @@ namespace UIBindings.Editor.Utils
                 rects[i] = new Rect(x, totalPosition.y, width, totalPosition.height);
                 x += width + padding;
             }
+
+#if UNITY_EDITOR
+            if( debugDrawRects && Event.current.type == EventType.Repaint )
+            {
+                GUI.DrawTexture( rects[0], Texture2D.blackTexture, ScaleMode.StretchToFill, false );
+                GUI.DrawTexture( rects[1], Texture2D.whiteTexture, ScaleMode.StretchToFill, false );
+                GUI.DrawTexture( rects[2], Texture2D.redTexture,   ScaleMode.StretchToFill, false );
+            }
+#endif
             return (rects[0], rects[1], rects[2]);
         }
 
@@ -76,7 +89,7 @@ namespace UIBindings.Editor.Utils
         }
 
 
-        public class ContentColorScope : GUI.Scope
+        private class ContentColorScope : GUI.Scope
         {
             private readonly Color _oldContentColor;
 
@@ -89,6 +102,22 @@ namespace UIBindings.Editor.Utils
             protected override void CloseScope( )
             {
                 GUI.contentColor = _oldContentColor;
+            }
+        }
+
+        private class ZeroIndentScope : GUI.Scope
+        {
+            private readonly int _oldIndent;
+
+            public ZeroIndentScope(  )
+            {
+                _oldIndent = EditorGUI.indentLevel;
+                EditorGUI.indentLevel = 0;
+            }
+
+            protected override void CloseScope( )
+            {
+                EditorGUI.indentLevel = _oldIndent;
             }
         }
 

@@ -31,7 +31,7 @@ namespace UIBindings.Editor
             var mainLineContentPosition = position;
             mainLineContentPosition.xMin += EditorGUIUtility.labelWidth;
             var rects       = GUIUtils.GetHorizontalRects( mainLineContentPosition, 2, 0, 20 );
-            var enabledProp = property.FindPropertyRelative( nameof(Binding.Enabled) );
+            var enabledProp = property.FindPropertyRelative( nameof(BindingBase.Enabled) );
 
             var isEnabled         = enabledProp.boolValue;
             var binding           = (CallBinding)property.boxedValue;
@@ -59,12 +59,12 @@ namespace UIBindings.Editor
                     using ( new EditorGUI.IndentLevelScope( 1 ) )
                     {
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var sourceProperty = property.FindPropertyRelative( nameof(Binding.Source) );
+                        var sourceProperty = property.FindPropertyRelative( nameof(BindingBase.Source) );
                         //EditorGUI.PropertyField( position, sourceProperty );
                         DrawSourceField( position, sourceProperty );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var pathProperty   = property.FindPropertyRelative( nameof(Binding.Path) );
+                        var pathProperty   = property.FindPropertyRelative( nameof(BindingBase.Path) );
                         //EditorGUI.PropertyField( position, pathProperty );
                         var methodInfo = DrawPathField( position, pathProperty, binding );
 
@@ -176,7 +176,7 @@ namespace UIBindings.Editor
             }
         }
 
-        private MethodInfo DrawPathField(  Rect position, SerializedProperty pathProp, Binding binding )
+        private MethodInfo DrawPathField(  Rect position, SerializedProperty pathProp, BindingBase binding )
         {
             position = EditorGUI.PrefixLabel( position, new GUIContent( pathProp.displayName ) );
 

@@ -9,7 +9,7 @@ namespace UIBindings
     public class ToggleBinder : MonoBehaviour
     {
         public Toggle Toggle;
-        public BindingTwoWay<bool> ValueBinding; 
+        public ValueBindingRW<bool> ValueBinding; 
 
         protected void Awake( )
         {
@@ -18,7 +18,7 @@ namespace UIBindings
             Assert.IsTrue( Toggle );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Awake(  );
+            ValueBinding.Init( forceOneWay: !Toggle.interactable );
             ValueBinding.SourceChanged += ProcessSourceToTarget;
             
         }
