@@ -3426,7 +3426,7 @@ MonoBehaviour:
     Source: {fileID: 2095983000}
     SourceType: 
     BindToType: 0
-    Path: Quests
+    Path: Quests2
     Update:
       Mode: 2
       Delay: 0

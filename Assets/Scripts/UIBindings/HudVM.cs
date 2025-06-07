@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Object = System.Object;
 
@@ -7,9 +9,17 @@ namespace UIBindings
 {
     public class HudVM : MonoBehaviour, INotifyPropertyChanged
     {
-        private QuestManager         _questManager;
+        private QuestManager _questManager;
+        private Quest[]      _testQuestArray;
 
         public  ViewCollection Quests { get; private set; }
+
+        [CollectionBinding(bindMethodName: nameof(BindItem), processMethodName: nameof(ProcessList))]
+        public IReadOnlyList<Quest> Quests2 => _questManager.Quests;
+        //public Quest[] Quests2 => _questManager.Quests.ToArray();
+        //public Quest[] Quests2 => _testQuestArray;
+        //public IEnumerable<Quest> Quests2 => _testQuestArray;
+        //public IEnumerable Quests2 => _testQuestArray;
 
         private void BindItem( Object item, GameObject view )
         {
@@ -22,6 +32,7 @@ namespace UIBindings
 
         private void ProcessList( List<Object> viewList )
         {
+            //Sort completed quest to the end of the list
             viewList.Sort( (x, y) =>
             {
                 var questX = (Quest)x;
@@ -46,7 +57,7 @@ namespace UIBindings
 
         private void Start( )
         {
-            //PropertyChanged?.Invoke( this, null );
+            _testQuestArray = _questManager.Quests.ToArray();
         }
 
         private void QuestManagerOnQuestCompleted( QuestData questData )

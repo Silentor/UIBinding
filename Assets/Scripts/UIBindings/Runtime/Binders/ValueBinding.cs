@@ -25,17 +25,8 @@ namespace UIBindings
             if ( !Enabled )   
                 return;
 
-            if ( !Source )
-            {
-                Debug.LogError( $"[{nameof(BindingBase)}] Source is not assigned at {_debugBindingInfo}", _debugHost );
-                return;
-            }
-
-            if ( String.IsNullOrEmpty( Path ) )
-            {
-                Debug.LogError( $"[{nameof(BindingBase)}] Path is not assigned at {_debugBindingInfo}", _debugHost );
-                return;
-            }
+            AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugBindingInfo}", _debugHost );
+            AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugBindingInfo}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer(); 
 
@@ -44,11 +35,8 @@ namespace UIBindings
 
             timer.AddMarker( "GetProperty" );
 
-            if ( property == null )
-            {
-                Debug.LogError( $"[{nameof(BindingBase)}] Property {Path} not found in {sourceType.Name}", _debugHost );
-                return;
-            }
+            AssertWithContext.IsNotNull( property, $"Property {Path} not found in {sourceType.Name}", _debugHost );
+            AssertWithContext.IsTrue( property.CanRead, $"Property {Path} in {sourceType.Name} must be readable for binding", _debugHost );
 
             _sourceNotify = Source as INotifyPropertyChanged;
             DataProvider lastConverter = null;
@@ -130,7 +118,7 @@ namespace UIBindings
              
             _isValid = true;
             
-            Debug.Log( $"Awaked {timer.Elapsed.TotalMicroseconds()} mks, {_debugSourceBindingInfo}, is two way {IsTwoWay}: {report}" );
+            Debug.Log( $"Awaked {timer.Elapsed.TotalMicroseconds()} mks, {_debugSourceBindingInfo}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}: {report}" );
         }
 
         public event Action<Object, T> SourceChanged;
