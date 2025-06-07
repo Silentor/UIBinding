@@ -5,7 +5,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class HudVM : MonoBehaviour//, INotifyPropertyChanged
+    public class HudVM : MonoBehaviour, INotifyPropertyChanged
     {
         private QuestManager         _questManager;
 
@@ -46,7 +46,7 @@ namespace UIBindings
 
         private void Start( )
         {
-            PropertyChanged?.Invoke( this, null );
+            //PropertyChanged?.Invoke( this, null );
         }
 
         private void QuestManagerOnQuestCompleted( QuestData questData )

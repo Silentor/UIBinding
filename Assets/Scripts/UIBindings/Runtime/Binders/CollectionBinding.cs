@@ -2,14 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using UIBindings.Adapters;
-using UIBindings.Converters;
 using UIBindings.Runtime.Utils;
 using UnityEngine;
 using Object = System.Object;
 using Unity.Profiling;
-using UnityEngine.Profiling;
 
 namespace UIBindings
 {
@@ -107,7 +103,7 @@ namespace UIBindings
 
         protected override void    CheckChangesInternal( )
         {
-            if( _sourceNotify == null || _sourceChanged )
+            if( _sourceNotify == null || _sourceChanged || !_isLastValueInitialized )
             {
                 ViewCollection value;
                 var            isChangedOnSource = true;

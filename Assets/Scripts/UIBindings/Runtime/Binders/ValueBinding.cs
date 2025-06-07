@@ -153,7 +153,7 @@ namespace UIBindings
         /// </summary>
         protected override void CheckChangesInternal( )
         {
-            if( _sourceNotify == null || _sourceChanged || _isTweened )
+            if( _sourceNotify == null || _sourceChanged || !_isLastValueInitialized || _isTweened )
             {
                 T   value;
                 var isChangedOnSource = true;

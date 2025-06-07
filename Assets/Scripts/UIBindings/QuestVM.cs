@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Object = System.Object;
 
 namespace UIBindings
 {
-    public class QuestVM : MonoBehaviour
+    public class QuestVM : MonoBehaviour, INotifyPropertyChanged
     {
         public  String       QuestName => _quest.Data.Name;
         public bool       IsCompleted => _quest.IsCompleted;
@@ -16,6 +17,7 @@ namespace UIBindings
         {
             _quest = quest   ?? throw new ArgumentNullException( nameof( quest ) );
             _qManager  = manager ?? throw new ArgumentNullException( nameof( manager ) );
+            //OnPropertyChanged( null );
         }
 
         public void CompleteQuest( )
@@ -24,8 +26,15 @@ namespace UIBindings
                 throw new InvalidOperationException("Quest is not initialized.");
 
             _qManager.CompleteQuest(_quest.Data);
+            OnPropertyChanged( nameof( IsCompleted ) );
         }
 
+        public event Action<Object, String> PropertyChanged;
+
+        private void OnPropertyChanged( String propertyName )
+        {
+            PropertyChanged?.Invoke( this, propertyName );
+        }
     }
 
     public class QuestManager
