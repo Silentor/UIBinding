@@ -171,7 +171,7 @@ namespace UIBindings
         {
             if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
             {
-                Debug.Log( $"[{nameof(DataType)}] Source property '{propertyName}' changes detected in binding {_debugBindingInfo}", _debugHost );
+                Debug.Log( $"[{nameof(DataBinding)}] Source property '{propertyName}' changes detected in binding {_debugBindingInfo}", _debugHost );
                 _sourceChanged = true;
             }
         }

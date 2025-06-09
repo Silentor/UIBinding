@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
 using UIBindings.Runtime.Utils;
@@ -24,7 +25,7 @@ namespace UIBindings
 
         public override    Object  GetDebugLastValue( )
         {
-            return _sourceHashes;
+            return _sourceCopy;
         }
 
         public override    Boolean IsRuntimeValid => _isValid;
@@ -94,31 +95,55 @@ namespace UIBindings
             Debug.Log( $"[{nameof(CollectionBinding)}] Awaked {timer.Elapsed.TotalMicroseconds()} mks, {_debugSourceBindingInfo}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}: {report}" );
         }
 
-        public event Action<object, IReadOnlyList<object>, Action<object, GameObject>> SourceChanged; 
+        public event Action<object, IReadOnlyList<object>, Action<object, GameObject>> SourceChanged;
+        public event Action<CollectionBinding, int, object>                            ItemAdded;
+        public event Action<CollectionBinding, int, object>                            ItemRemoved;
+        public event Action<CollectionBinding, int, object>                            ItemChanged;
+        public event Action<CollectionBinding, int, int, object>                       ItemMoved;
+        public event Action<CollectionBinding>                                         CollectionChanged;   //Dramatic changes
+        
 
 
-        private readonly List<int>              _sourceHashes = new List<int>();
-        private          ViewCollection         _sourceCollection;
-        private          List<System.Object>    _processedList = new List<System.Object>();
-        private          INotifyPropertyChanged _notifyPropertyChanged;
-        private          Boolean                _propertyWasModified = true;
-        private          Func<ViewCollection>   _viewCollectionGetter;
-        private          Boolean                _isLastValueInitialized;
-        private          Func<IEnumerable>      _enumerableGetter;
-        private          Action<object, GameObject>             _bindMethod;
-        private          Action<List<Object>>                _processMethod;
+        private readonly List<object>               _sourceCopy = new List<object>();
+        private          ViewCollection             _sourceCollection;
+        private readonly         List<Object>               _processedList = new List<System.Object>();
+        private readonly         List<Object>               _processedCopy = new List<System.Object>();
+        private          INotifyPropertyChanged     _notifyPropertyChanged;
+        private          Boolean                    _isValueInitialized;
+
+        //Source property access getters
+        private          Func<ViewCollection>       _viewCollectionGetter;
+        private          Func<IEnumerable>          _enumerableGetter;
+
+        //Collection process methods
+        private          Action<object, GameObject> _bindMethod;
+        private          Action<List<Object>>       _processMethod;
 
         protected static readonly ProfilerMarker ReadViewCollectionMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollection" );
         protected static readonly ProfilerMarker ReadIEnumerableMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerable" );
 
-        private Boolean IsEqual( IReadOnlyList<int> hashes, IReadOnlyList<object> sourceList )
+        private Boolean IsEqual( IReadOnlyList<object> hashes, IReadOnlyList<object> sourceList )
         {
             if( hashes.Count != sourceList.Count )
                 return false;
 
             for ( int i = 0; i < sourceList.Count; i++ )
             {
-                if( sourceList[i].GetHashCode() != hashes[i] )
+                if( sourceList[i] != hashes[i] )
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool IsEquivalent( IReadOnlyList<object> oldList, IReadOnlyList<object> newList )
+        {
+            if ( oldList.Count != newList.Count )
+                return false;
+
+            for ( int i = 0; i < oldList.Count; i++ )
+            {
+                if ( !Equals( oldList[i], newList[i] ) )
                     return false;
             }
 
@@ -127,12 +152,13 @@ namespace UIBindings
 
         protected override void    CheckChangesInternal( )
         {
-            if( _sourceNotify == null || _sourceChanged || !_isLastValueInitialized )
+            if( _sourceNotify == null || _sourceChanged || !_isValueInitialized )
             {
                 Action<List<object> > processListAction;
                 Action<Object, GameObject> bindViewItemAction;
                 _processedList.Clear();
                 
+                //Read source collection
                 if ( _viewCollectionGetter != null )
                 {
                     ReadViewCollectionMarker.Begin( _debugSourceBindingInfo );
@@ -146,22 +172,24 @@ namespace UIBindings
                 {
                     ReadIEnumerableMarker.Begin( _debugSourceBindingInfo );
                     var enumerable = _enumerableGetter();
-                    Profiler.BeginSample( "BindingTestEnumerable" );//DEBUG
                     if ( enumerable != null )                        
                         _processedList.AddRange( enumerable.Cast<Object>() );
-                    Profiler.EndSample();
                     processListAction = _processMethod;
                     bindViewItemAction = _bindMethod;
                     ReadIEnumerableMarker.End();
                 }
 
-                if( (!_isLastValueInitialized || _sourceChanged || !IsEqual( _sourceHashes, _processedList ) ))
+                //Check for source collection modifications
+                if( !_isValueInitialized || (_sourceNotify != null ? _sourceChanged : !IsEqual( _sourceCopy, _processedList )))
                 {
-                    _isLastValueInitialized = true;
-                    _sourceHashes.Clear();              
-                    _sourceHashes.AddRange( _processedList.Select( v => v.GetHashCode() ) );
+                    _isValueInitialized = true;
+                    _sourceCopy.Clear();              
+                    _sourceCopy.AddRange( _processedList );
 
-                    processListAction( _processedList );
+                    processListAction?.Invoke( _processedList );
+
+                    //Get actual modifications
+
 
                     UpdateTargetMarker.Begin( _debugSourceBindingInfo );
                     SourceChanged?.Invoke( Source, _processedList, bindViewItemAction );
@@ -169,6 +197,76 @@ namespace UIBindings
                 }
 
                 _sourceChanged = false;
+            }
+        }
+
+        private void CompareAndFireEvents( List<object> oldList, List<object> newList ) 
+        {
+            //Fast passes
+            if( oldList.Count == 0 && newList.Count == 0 )
+                return; //Nothing to compare
+            if( (oldList.Count == 0 && newList.Count > 0) || (newList.Count == 0 && oldList.Count > 0) )
+            {
+                CollectionChanged?.Invoke( this );//Dramatic changes
+                return;
+            }
+            if( oldList.Count == newList.Count && oldList.SequenceEqual( newList ) )
+                return; //Nothing changed
+
+            //Check simple modifications
+            //Find added items
+            var added   = new List<(object, int)>();
+            for ( int i = 0; i < newList.Count; i++ )
+            {
+                if( !oldList.Contains( newList[i] ) )
+                {
+                    added.Add( (newList[i], i) );
+                }
+            }
+
+            //Simple modification - added some items without other changes
+            if( added.Count > 0 && (newList.Count - oldList.Count) == added.Count )
+            {
+                foreach ( var addedItem in added )                    
+                    ItemAdded?.Invoke( this, addedItem.Item2, addedItem.Item1 );
+                return;
+            }
+
+            //Find removed items
+            var removed = new List<(object, int)>();
+            for ( int i = 0; i < oldList.Count; i++ )
+            {
+                if( !newList.Contains( oldList[i] ) )                    
+                    removed.Add( (oldList[i], i) );
+            }
+
+            //Simple modification - removed some items without other changes
+            if( removed.Count > 0 && (oldList.Count - newList.Count) == removed.Count )
+            {
+                foreach ( var removedItem in removed )                    
+                    ItemRemoved?.Invoke( this, removedItem.Item2, removedItem.Item1 );
+                return;
+            }
+
+            //Simple modification - moved or changed some items
+            if( added.Count == removed.Count )
+            {
+                for ( int i = 0; i < added.Count; i++ )
+                {
+                    
+                }
+            }
+
+            //Check for moved items based on collected added and removed items
+            if( added.Count == removed.Count )
+            {
+                if(  )
+            }
+            
+
+            if( added.Count > 0 || removed.Count > 0 )
+            {
+                Modified?.Invoke( this, new ModifiedEventArgs { Added = added, Removed = removed } );
             }
         }
 
@@ -228,6 +326,11 @@ namespace UIBindings
 
         }
         
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bindMethodName">Must has 2 params of type object and GameObject. First param - collection item, second param - instance of item view</param>
+        /// <param name="processMethodName">Must has 1 param of type List&lt;object&gt;. You can sort/filter this list of collection items to modify visual representation</param>
         public CollectionBindingAttribute( String bindMethodName, String processMethodName = null )
         {
             BindMethodName            = bindMethodName;

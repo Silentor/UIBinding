@@ -63,7 +63,7 @@ namespace UIBindings
         private void QuestManagerOnQuestCompleted( QuestData questData )
         {
             // Notify UI about quest completion
-            PropertyChanged?.Invoke( this, nameof(Quests) );
+            PropertyChanged?.Invoke( this, nameof(Quests2) );
         }
 
         private void OnDestroy( )

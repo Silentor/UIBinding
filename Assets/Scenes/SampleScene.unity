@@ -2696,6 +2696,7 @@ MonoBehaviour:
       Converters: []
   ItemViewPrefab: {fileID: 5534317846290802235, guid: 48b224f4db7a40e40ad435c4abe7187c, type: 3}
   ItemViewsParent: {fileID: 1585752831}
+  PoolItemViews: 1
   references:
     version: 2
     RefIds: []
@@ -3435,6 +3436,7 @@ MonoBehaviour:
       Converters: []
   ItemViewPrefab: {fileID: 5534317846290802235, guid: 48b224f4db7a40e40ad435c4abe7187c, type: 3}
   ItemViewsParent: {fileID: 1117716649}
+  PoolItemViews: 1
   references:
     version: 2
     RefIds: []
