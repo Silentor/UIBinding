@@ -34,8 +34,6 @@ namespace UIBindings
         public void SetDebugInfo( MonoBehaviour host, String bindingName )
         {
             _debugHost        = host;
-            _debugHostName    = host.name;
-            _debugBindingName = bindingName;
             _debugBindingInfo = $"{DataType.Name} {host.name}.{bindingName}";
             var sourceName = Source ? Source.name : "null";
             var direction  = IsTwoWay ? "<->" : "->";
@@ -107,11 +105,9 @@ namespace UIBindings
         protected Boolean                _isSubscribed;
         private   EUpdateMode            _currentUpdateMode = EUpdateMode.Manual;
         protected float                  _lastUpdateTime;
-        protected string                 _debugSourceBindingInfo;
         protected MonoBehaviour          _debugHost;
-        private   String                 _debugHostName;
-        private   String                 _debugBindingName;
-        protected String                 _debugBindingInfo;
+        protected String                 _debugBindingInfo = string.Empty;
+        protected string                 _debugSourceBindingInfo = string.Empty;
 
 
         //Mostly debug

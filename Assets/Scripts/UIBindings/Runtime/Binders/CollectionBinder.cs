@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Pool;
 using Object = UnityEngine.Object;
 
 namespace UIBindings
@@ -14,14 +15,20 @@ namespace UIBindings
         public Transform             ItemViewsParent;
         public bool                  PoolItemViews = true;
 
-        private readonly List<GameObject> _pooledViews = new List<GameObject>();
+        private readonly Stack<GameObject> _pooledViews = new Stack<GameObject>();
 
         private void Awake( )
         {
             Collection.SetDebugInfo( this, nameof(Collection) );
             Collection.Init();
-            Collection.SourceChanged += OnCollectionModified;
+            Collection.CollectionChanged += OnCollectionModified;
+            Collection.ItemAdded += OnItemAdded;
+            Collection.ItemRemoved += OnItemRemoved;
+            Collection.ItemMoved += OnItemMoved;
+            Collection.ItemChanged += OnItemChanged;
         }
+
+        
 
         private void OnEnable( )
         {
@@ -34,64 +41,76 @@ namespace UIBindings
         }
 
 
-        private void OnCollectionModified( System.Object sender, IReadOnlyList<System.Object> collection, Action<System.Object, GameObject> bindItem )
+        private void OnCollectionModified( CollectionBinding sender, IReadOnlyList<System.Object> collection )
         {
-            if( PoolItemViews )
+            while ( ItemViewsParent.childCount > 0 )
             {
-                for( var i = 0; i < ItemViewsParent.childCount; i++) 
-                {
-                    var child = ItemViewsParent.GetChild( i ).gameObject;
-                    child.SetActive( false );
-                    _pooledViews.Add( child );
-                }
-            }
-            else
-            {
-                while ( ItemViewsParent.childCount > 0 )
-                {
-                    var child = ItemViewsParent.GetChild( 0 );
-                    child.SetParent( null, false );
-                    Destroy( child.gameObject );
-                }
+                var child = ItemViewsParent.GetChild( ItemViewsParent.childCount - 1 );
+                ReleaseViewItem( child.gameObject );
             }
 
-            if( PoolItemViews )
+            foreach ( var item in collection )
             {
-                foreach ( var item in Collection.ViewList )
-                {
-                    TryGetPooledView( out var instance );
-                    if( bindItem != null )
-                        bindItem( item, instance );
-                }
+                var viewItem           = GetViewItem();
+                if( sender.BindViewItemMethod != null )
+                    sender.BindViewItemMethod( item, viewItem );
             }
-            else
-            {
-                foreach ( var item in Collection.ViewList )
-                {
-                    var instance = Instantiate( ItemViewPrefab, ItemViewsParent );
-                    if( bindItem != null )
-                        bindItem( item, instance );
-                }
-            }
-            
         }
 
-        private bool TryGetPooledView( out GameObject view )
+        private void OnItemChanged(CollectionBinding sender, Int32 changedItemIndex, System.Object changedObject )
+        {
+            var viewItem = ItemViewsParent.GetChild( changedItemIndex ).gameObject;
+            if( sender.BindViewItemMethod != null )
+                sender.BindViewItemMethod( changedObject, viewItem );
+        }
+
+        private void OnItemMoved(CollectionBinding sender, Int32 oldIndex, Int32 newIndex, System.Object movedItem )
+        {
+            var viewItem = ItemViewsParent.GetChild( oldIndex ).gameObject;
+            viewItem.transform.SetSiblingIndex( newIndex );
+            if( sender.BindViewItemMethod != null )
+                sender.BindViewItemMethod( movedItem, viewItem );
+        }
+
+        private void OnItemRemoved(CollectionBinding sender, Int32 removedItemIndex, System.Object removedItem )
+        {
+            var viewItem = ItemViewsParent.GetChild( removedItemIndex ).gameObject;
+            ReleaseViewItem( viewItem );
+        }
+
+        private void OnItemAdded(CollectionBinding sender, Int32 addedItemIndex, System.Object addedItem )
+        {
+            var viewItem       = GetViewItem();
+            if( sender.BindViewItemMethod != null )
+                sender.BindViewItemMethod( addedItem, viewItem );
+            viewItem.transform.SetSiblingIndex( addedItemIndex );
+        }
+
+        private GameObject GetViewItem( )
         {
             if( _pooledViews.Count > 0 )
             {
-                view = _pooledViews[0];
-                _pooledViews.RemoveAt( 0 );
+                var view = _pooledViews.Pop();
                 view.SetActive( true );
-                return true;
+                return view;
             }
 
-            view = Instantiate( ItemViewPrefab, ItemViewsParent );
-            return false;
+            return Instantiate( ItemViewPrefab, ItemViewsParent );
         }
 
+        private void ReleaseViewItem( GameObject itemView )
+        {
+            if( PoolItemViews )
+            {
+                itemView.SetActive( false );
+                _pooledViews.Push( itemView );
+            }
+            else
+            {
+                Destroy( itemView );
+            }
+        }
         
     }
-
    
 }

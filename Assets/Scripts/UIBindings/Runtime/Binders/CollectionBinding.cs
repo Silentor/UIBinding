@@ -17,8 +17,9 @@ namespace UIBindings
     [Serializable]
     public class CollectionBinding : DataBinding
     {
-        public IReadOnlyList<object> SourceList => _sourceCollection?.SourceList;
         public IReadOnlyList<object> ViewList   => _processedList;
+
+        public Action<object, GameObject> BindViewItemMethod { get; private set; }
 
         public override Type    DataType => typeof(ViewCollection);
         public override Boolean IsTwoWay => false;
@@ -95,12 +96,17 @@ namespace UIBindings
             Debug.Log( $"[{nameof(CollectionBinding)}] Awaked {timer.Elapsed.TotalMicroseconds()} mks, {_debugSourceBindingInfo}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}: {report}" );
         }
 
-        public event Action<object, IReadOnlyList<object>, Action<object, GameObject>> SourceChanged;
         public event Action<CollectionBinding, int, object>                            ItemAdded;
         public event Action<CollectionBinding, int, object>                            ItemRemoved;
         public event Action<CollectionBinding, int, object>                            ItemChanged;
+        /// <summary>
+        /// Item moved from oldIndex to newIndex, object is the item itself
+        /// </summary>
         public event Action<CollectionBinding, int, int, object>                       ItemMoved;
-        public event Action<CollectionBinding>                                         CollectionChanged;   //Dramatic changes
+        /// <summary>
+        /// Dramatic changes, its better just rebuild entire collection
+        /// </summary>
+        public event Action<CollectionBinding, IReadOnlyList<object>>                  CollectionChanged;   
         
 
 
@@ -187,12 +193,12 @@ namespace UIBindings
                     _sourceCopy.AddRange( _processedList );
 
                     processListAction?.Invoke( _processedList );
-
-                    //Get actual modifications
-
+                    BindViewItemMethod = bindViewItemAction;
 
                     UpdateTargetMarker.Begin( _debugSourceBindingInfo );
-                    SourceChanged?.Invoke( Source, _processedList, bindViewItemAction );
+                    CompareAndFireEvents( _processedCopy, _processedList );
+                    _processedCopy.Clear();
+                    _processedCopy.AddRange( _processedList );
                     UpdateTargetMarker.End( );
                 }
 
@@ -207,7 +213,7 @@ namespace UIBindings
                 return; //Nothing to compare
             if( (oldList.Count == 0 && newList.Count > 0) || (newList.Count == 0 && oldList.Count > 0) )
             {
-                CollectionChanged?.Invoke( this );//Dramatic changes
+                CollectionChanged?.Invoke( this, newList );//Dramatic changes
                 return;
             }
             if( oldList.Count == newList.Count && oldList.SequenceEqual( newList ) )
@@ -222,6 +228,12 @@ namespace UIBindings
                 {
                     added.Add( (newList[i], i) );
                 }
+            }
+
+            if ( added.Count == 0 && newList.Count > oldList.Count ) //Probably was added some null items, cant find granular diff
+            {
+                CollectionChanged?.Invoke( this, newList ); //Dramatic changes
+                return;
             }
 
             //Simple modification - added some items without other changes
@@ -240,6 +252,12 @@ namespace UIBindings
                     removed.Add( (oldList[i], i) );
             }
 
+            if ( removed.Count == 0 && oldList.Count > newList.Count ) //Probably was removed some null items, cant find granular diff
+            {
+                CollectionChanged?.Invoke( this, newList ); //Dramatic changes
+                return;
+            }
+
             //Simple modification - removed some items without other changes
             if( removed.Count > 0 && (oldList.Count - newList.Count) == removed.Count )
             {
@@ -248,35 +266,41 @@ namespace UIBindings
                 return;
             }
 
-            //Simple modification - moved or changed some items
+            //Check for moved items and changed items
             if( added.Count == removed.Count )
             {
-                for ( int i = 0; i < added.Count; i++ )
+                if ( added.Count == 0 )         //Check for permutations without any additions or removals
                 {
-                    
+                    //TODO its not trivial, just skip check and fire CollectionChanged for now
+                    CollectionChanged?.Invoke( this, newList );
+                    return;
+                    // for ( int i = 0; i < newList.Count; i++ )
+                    // {
+                    //     if( !Equals(newList[i], oldList[i]) )
+                    //     {
+                    //         var indexInOldList = oldList.IndexOf( newList[i] );
+                    //         if( i < indexInOldList )                //Do not fire 2 events for same item
+                    //             ItemMoved?.Invoke( this, indexInOldList, i, newList[i] );
+                    //     }
+                    // }
+                }
+                else
+                {
+                    for ( int i = 0; i < added.Count; i++ )  //Detect changed items without changing their order
+                    {
+                        var addedItem = added[i];
+                        if( removed.TryFirst( r => addedItem.Item2 == r.Item2, out var sameIndexDifferentObject ) )
+                        {
+                            ItemChanged?.Invoke( this, addedItem.Item2, addedItem.Item1 );
+                        }
+                    }
+                    return;
                 }
             }
 
-            //Check for moved items based on collected added and removed items
-            if( added.Count == removed.Count )
-            {
-                if(  )
-            }
-            
-
-            if( added.Count > 0 || removed.Count > 0 )
-            {
-                Modified?.Invoke( this, new ModifiedEventArgs { Added = added, Removed = removed } );
-            }
+            //All other modifications consider as dramatic changes, no granular events
+            CollectionChanged?.Invoke( this, newList );
         }
-
-        public readonly struct ModifiedEventArgs
-        {
-            public readonly IReadOnlyList<(object, int)> Added;
-            public readonly IReadOnlyList<(object, int)> Removed;
-
-        }
-        
     }
 
     public class ViewCollection: IReadOnlyList<object>
