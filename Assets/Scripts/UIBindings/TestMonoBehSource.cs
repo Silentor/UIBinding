@@ -22,6 +22,7 @@ namespace UIBindings
         private bool    _targetBool = true;
         private int _sourceInt = 5;
         private EventType _sourceEnum = EventType.MouseDown;
+        private string _sourceString = "Test string";
 
         private Func<StructEnum> _fastGetter;
         private Func<Int32> _boxedGetter;
@@ -56,6 +57,16 @@ namespace UIBindings
         {
             get => _sourceEnum;
             set => _sourceEnum = value;
+        }
+
+        public String SourceString
+        {
+            get => _sourceString;
+            set
+            {
+                _sourceString = value;
+                OnPropertyChanged(  );
+            }
         }
 
         //Should be read by any int binding
@@ -214,14 +225,14 @@ namespace UIBindings
         {
             Application.targetFrameRate = 30;
 
-            if ( DelayedCanvas )
-            {
-                StartCoroutine( DelayedCanvasEnable() );
-            }
-            else
-            {
-                OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
-            }
+            // if ( DelayedCanvas )
+            // {
+            //     StartCoroutine( DelayedCanvasEnable() );
+            // }
+            // else
+            // {
+            //     OnPropertyChanged( null );          //Update all binders one time TODO consider some non manual way for init View
+            // }
 
             //UpdateManager.RegisterUpdate( TestUpdate );
             //UpdateManager.RegisterUpdate( TestUpdate2 );

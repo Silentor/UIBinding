@@ -9,9 +9,9 @@ namespace UIBindings
     public class SliderBinder : MonoBehaviour
     {
         public Slider Slider;
-        public ValueBindingRW<float>    ValueBinding;
-        public ValueBinding<float>       MinValueBinding     = new (){Enabled = false};
-        public ValueBinding<float>       MaxValueBinding     = new (){Enabled = false};
+        public ValueBindingRW<float>     ValueBinding;
+        public ValueBinding<float>       MinValueBinding;     //Optional
+        public ValueBinding<float>       MaxValueBinding;     //Optional
 
         protected void Awake( )
         {
@@ -45,6 +45,14 @@ namespace UIBindings
             MaxValueBinding.Unsubscribe();
             Slider.onValueChanged.RemoveListener( OnValueChange );
         }
+
+#if UNITY_EDITOR
+        private void Reset( )
+        {
+            MinValueBinding.Enabled = false;
+            MaxValueBinding.Enabled = false;
+        }
+#endif
 
         private void OnValueChange(Single value )
         {

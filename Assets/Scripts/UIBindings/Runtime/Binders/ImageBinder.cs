@@ -10,7 +10,7 @@ namespace UIBindings
     {
         public Image Image;
         public ValueBinding<Sprite>      SourceImageBinding;
-        public ValueBinding<Color>       ColorBinding            = new (){Enabled = false};
+        public ValueBinding<Color>       ColorBinding;                      //Optional
 
         protected void Awake( )
         {
@@ -37,6 +37,12 @@ namespace UIBindings
             SourceImageBinding.Unsubscribe();
             ColorBinding.Unsubscribe();
         }
+#if UNITY_EDITOR
+        private void Reset( )
+        {
+            ColorBinding.Enabled = false;
+        }
+#endif
 
         private void UpdateSourceImage(Object sender, Sprite sprite )
         {

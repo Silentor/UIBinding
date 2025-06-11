@@ -6,7 +6,7 @@ namespace UIBindings
 {
     public class GameObjectSelectBinder : MonoBehaviour
     {
-        public KeyValue<GameObject>[]   GameObjects;
+        public KeyValue<GameObject>[]        GameObjects;
         public ValueBinding<int>             SelectorBinding;
 
         private void Awake( )

@@ -8,9 +8,9 @@ namespace UIBindings
 {
     public class LabelBinder : MonoBehaviour
     {
-        public TextMeshProUGUI          Label;
+        public TMP_Text                      Label;
         public ValueBinding<String>          TextBinding;
-        public ValueBinding<Color>           ColorBinding            = new (){Enabled = false};
+        public ValueBinding<Color>           ColorBinding;          //Optional
 
         private void Awake( )
         {
@@ -48,5 +48,12 @@ namespace UIBindings
             TextBinding.Unsubscribe();
             ColorBinding.Unsubscribe();
         }
+
+#if UNITY_EDITOR
+        private void Reset( )
+        {
+            ColorBinding.Enabled = false;
+        }
+#endif
     }
 }

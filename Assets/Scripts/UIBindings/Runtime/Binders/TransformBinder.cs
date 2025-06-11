@@ -6,10 +6,10 @@ namespace UIBindings
 {
     public class TransformBinder : MonoBehaviour
     {
-        public Transform                Transform;
+        public Transform                     Transform;
         public ValueBinding<Vector3>         LocalPositionBinding;
-        public ValueBinding<Vector3>         ScaleBinding         = new (){Enabled = false};
-        public ValueBinding<Vector3>         LocalRotationBinding = new (){Enabled = false};
+        public ValueBinding<Vector3>         LocalRotationBinding;                  //Optional
+        public ValueBinding<Vector3>         LocalScaleBinding   ;                  //Optional
 
         private void Awake( )
         {
@@ -21,9 +21,9 @@ namespace UIBindings
             LocalPositionBinding.Init(  );
             LocalPositionBinding.SourceChanged += ProcessLocalPosition;
 
-            ScaleBinding.SetDebugInfo( this, nameof(ScaleBinding) );
-            ScaleBinding.Init(  );
-            ScaleBinding.SourceChanged += ProcessScale;
+            LocalScaleBinding.SetDebugInfo( this, nameof(LocalScaleBinding) );
+            LocalScaleBinding.Init(  );
+            LocalScaleBinding.SourceChanged += ProcessScale;
 
             LocalRotationBinding.SetDebugInfo( this, nameof(LocalRotationBinding) );
             LocalRotationBinding.Init(  );
@@ -48,15 +48,23 @@ namespace UIBindings
         private void OnEnable( )
         {
             LocalPositionBinding.Subscribe();
-            ScaleBinding.Subscribe();
+            LocalScaleBinding.Subscribe();
             LocalRotationBinding.Subscribe();
         }
 
         private void OnDisable( )
         {
             LocalPositionBinding.Unsubscribe();
-            ScaleBinding.Unsubscribe();
+            LocalScaleBinding.Unsubscribe();
             LocalRotationBinding.Unsubscribe();
         }
+
+#if UNITY_EDITOR
+        private void Reset( )
+        {
+            LocalRotationBinding.Enabled = false;
+            LocalScaleBinding.Enabled = false;
+        }
+#endif
     }
 }
