@@ -37,7 +37,7 @@ namespace UIBindings
 
         protected static readonly ProfilerMarker CallMarker = new ( ProfilerCategory.Scripts,  $"{nameof(CallBinding)}.Call", MarkerFlags.Script );
 
-        public void Awake( MonoBehaviour host )
+        public void Init( MonoBehaviour host )
         {
             if ( !Enabled )   
                 return;

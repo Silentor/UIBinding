@@ -1,16 +1,21 @@
 ﻿using System;
+using TMPro;
 using UIBindings.Runtime.Utils;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UI;
+using Object = System.Object;
 
 namespace UIBindings
 {
     public class ButtonBinder : MonoBehaviour
     {
-        public Button Button;
-        public CallBinding CallBinding;
-        public ValueBinding<bool> CanExecuteBinding;
+        public Button       Button;
+        public TMP_Text     ButtonText;
+
+        public CallBinding              CallBinding;
+        public ValueBinding<bool>       CanExecuteBinding;
+        public ValueBinding<string>     ButtonTextBinding; 
 
         public bool DisableButtonWhileExecuting = true;
 
@@ -27,24 +32,49 @@ namespace UIBindings
                 Button = GetComponent<Button>();
             Assert.IsTrue(Button);
 
+            if( ButtonTextBinding.Enabled && !ButtonText )
+            {
+                ButtonText = Button.GetComponentInChildren<TMP_Text>();
+                Assert.IsTrue(ButtonText);
+            }
+
             CanExecuteBinding.SetDebugInfo(this, nameof(CanExecuteBinding));
             CanExecuteBinding.Init( );
             CanExecuteBinding.SourceChanged += CanExecuteChanged;
             _canExecute = Button.interactable;
 
-            CallBinding.Awake(this);
+            CallBinding.Init(this);
+
+            ButtonTextBinding.SetDebugInfo( this, nameof(ButtonTextBinding) );
+            ButtonTextBinding.Init(  );
+            ButtonTextBinding.SourceChanged += ProcessButtonText;
+
         }
 
         private void OnEnable()
         {
             CanExecuteBinding.Subscribe();
+            ButtonTextBinding.Subscribe();
             Button.onClick.AddListener(OnButtonClick);
         }
 
         private void OnDisable()
         {
             CanExecuteBinding.Unsubscribe();
+            ButtonTextBinding.Unsubscribe();
             Button.onClick.RemoveListener(OnButtonClick);
+        }
+
+#if UNITY_EDITOR
+        private void Reset( )
+        {
+            ButtonTextBinding.Enabled = false;
+        }
+#endif        
+
+        private void ProcessButtonText(Object sender, String value )
+        {
+            ButtonText.text = value;
         }
 
         private void CanExecuteChanged(object sender, bool value)

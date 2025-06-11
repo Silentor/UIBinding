@@ -631,6 +631,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Button: {fileID: 0}
+  ButtonText: {fileID: 0}
   CallBinding:
     Enabled: 0
     Source: {fileID: 0}
@@ -650,12 +651,24 @@ MonoBehaviour:
       ScaledTime: 1
     _converters:
       Converters:
-      - rid: 7458025021857071161
+      - rid: 7458025021857071162
+  ButtonTextBinding:
+    Enabled: 0
+    Source: {fileID: 0}
+    SourceType: 
+    BindToType: 0
+    Path: 
+    Update:
+      Mode: 2
+      Delay: 0
+      ScaledTime: 1
+    _converters:
+      Converters: []
   DisableButtonWhileExecuting: 1
   references:
     version: 2
     RefIds:
-    - rid: 7458025021857071161
+    - rid: 7458025021857071162
       type: {class: StringValidator, ns: UIBindings, asm: UIBindings}
       data:
         ReverseMode: 0
@@ -3602,6 +3615,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Button: {fileID: 1813831432}
+  ButtonText: {fileID: 0}
   CallBinding:
     Enabled: 1
     Source: {fileID: 1625701090}
@@ -3630,6 +3644,18 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 7690191633970888768
+  ButtonTextBinding:
+    Enabled: 1
+    Source: {fileID: 0}
+    SourceType: 
+    BindToType: 0
+    Path: 
+    Update:
+      Mode: 2
+      Delay: 0
+      ScaledTime: 1
+    _converters:
+      Converters: []
   DisableButtonWhileExecuting: 1
   references:
     version: 2
@@ -3726,14 +3752,14 @@ MonoBehaviour:
   m_VerticalScrollbarEventHandler: {fileID: 0}
   m_LayoutGroup: {fileID: 0}
   m_ScrollSensitivity: 1
-  m_ContentType: 9
-  m_InputType: 1
+  m_ContentType: 7
+  m_InputType: 2
   m_AsteriskChar: 42
-  m_KeyboardType: 7
+  m_KeyboardType: 0
   m_LineType: 0
   m_HideMobileInput: 0
   m_HideSoftKeyboard: 0
-  m_CharacterValidation: 7
+  m_CharacterValidation: 0
   m_RegexValue: 
   m_GlobalPointSize: 14
   m_CharacterLimit: 0
@@ -4505,7 +4531,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Button
+  m_text: Enter pass
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
