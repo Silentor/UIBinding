@@ -583,6 +583,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Button: {fileID: 0}
+  ButtonText: {fileID: 0}
   CallBinding:
     Enabled: 1
     Source: {fileID: 692959265525729470}
@@ -603,6 +604,18 @@ MonoBehaviour:
     _converters:
       Converters:
       - rid: 2526140119387996217
+  ButtonTextBinding:
+    Enabled: 0
+    Source: {fileID: 0}
+    SourceType: 
+    BindToType: 0
+    Path: 
+    Update:
+      Mode: 2
+      Delay: 0
+      ScaledTime: 1
+    _converters:
+      Converters: []
   DisableButtonWhileExecuting: 1
   references:
     version: 2

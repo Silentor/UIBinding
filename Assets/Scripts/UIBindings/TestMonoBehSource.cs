@@ -21,7 +21,7 @@ namespace UIBindings
         private Single  _sourceFloat;
         private bool    _targetBool = true;
         private int _sourceInt = 5;
-        private EventType _sourceEnum = EventType.MouseDown;
+        private EventType _sourceEnum = EventType.MouseMove;
         private string _sourceString = "Test string";
 
         private Func<StructEnum> _fastGetter;
@@ -80,14 +80,9 @@ namespace UIBindings
             }
         }
 
-        public List<Quest> SourceCollection { get;  } = new List<Quest>
-        {
-            new Quest(){},
-            new Quest(){},
-            new Quest(){},
-        };
+        public String[] Options { get; } = new[] { "One", "Two", "Three" };
 
-        public ViewCollection SourceCollection2 => new ViewCollection( SourceCollection, null, (q, qv) => { } );
+
         
 
         public void CallMe( )
