@@ -29,7 +29,7 @@ namespace UIBindings.Runtime.Utils
         }
 
         [Conditional("UNITY_ASSERTIONS")]
-        public static void IsNotNull( UnityEngine.Object value, string message, UnityEngine.Object context )
+        public static void IsNotNull( UnityEngine.Object value, string message = null, UnityEngine.Object context = null )
         {
             if ( !value )
             {

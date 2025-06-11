@@ -74,6 +74,8 @@ namespace UIBindings
     public readonly struct QuestData
     {
         public String Name { get; init; }
+
+        public override String ToString( ) => Name;
     }
 
     public record Quest

@@ -61,6 +61,7 @@ namespace UIBindings
             }
 
             _currentUpdateMode = Update.Mode;
+            _isLastValueInitialized = false;        //Source can change while we are not subscribed, so we need to re-read it
 
             _isSubscribed = true;
         }
@@ -103,6 +104,7 @@ namespace UIBindings
         protected Boolean                _sourceChanged;
         protected bool                   _isValid;
         protected Boolean                _isSubscribed;
+        protected bool                   _isLastValueInitialized;
         private   EUpdateMode            _currentUpdateMode = EUpdateMode.Manual;
         protected float                  _lastUpdateTime;
         protected MonoBehaviour          _debugHost;

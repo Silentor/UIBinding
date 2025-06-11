@@ -224,10 +224,8 @@ namespace UIBindings
             var added   = new List<(object, int)>();
             for ( int i = 0; i < newList.Count; i++ )
             {
-                if( !oldList.Contains( newList[i] ) )
-                {
+                if( !oldList.Contains( newList[i] ) )                    
                     added.Add( (newList[i], i) );
-                }
             }
 
             if ( added.Count == 0 && newList.Count > oldList.Count ) //Probably was added some null items, cant find granular diff
@@ -261,8 +259,12 @@ namespace UIBindings
             //Simple modification - removed some items without other changes
             if( removed.Count > 0 && (oldList.Count - newList.Count) == removed.Count )
             {
-                foreach ( var removedItem in removed )                    
+                for ( var i = removed.Count - 1; i >= 0; i-- )
+                {
+                    var removedItem = removed[ i ];
                     ItemRemoved?.Invoke( this, removedItem.Item2, removedItem.Item1 );
+                }
+
                 return;
             }
 

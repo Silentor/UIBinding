@@ -177,7 +177,6 @@ namespace UIBindings
 
         protected Func<T>        _directGetter;
         protected T              _lastValue;
-        protected bool           _isLastValueInitialized;
         protected IDataReader<T> _lastReader;
         private   Boolean        _isTweened;
 
