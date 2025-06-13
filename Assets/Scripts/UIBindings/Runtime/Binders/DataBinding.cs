@@ -15,6 +15,7 @@ namespace UIBindings
     [Serializable]
     public abstract class DataBinding : BindingBase
     {
+        //How often and when to check for changes in source property
         public          UpdateMode Update = new (){Mode = EUpdateMode.AfterLateUpdate, ScaledTime = true};
 
         [SerializeField]
@@ -22,23 +23,9 @@ namespace UIBindings
         public       IReadOnlyList<ConverterBase> Converters => _converters.Converters;
         public const String                       ConvertersPropertyName = nameof(_converters);
 
-        public abstract Type       DataType { get; }
+        public abstract bool IsCompatibleWith( Type type );
 
         public abstract bool       IsTwoWay { get; }
-
-        /// <summary>
-        /// May be called before Awake for useful logs in case of errors.
-        /// </summary>
-        /// <param name="host"></param>
-        /// <param name="bindingName"></param>
-        public void SetDebugInfo( MonoBehaviour host, String bindingName )
-        {
-            _debugHost        = host;
-            _debugBindingInfo = $"{DataType.Name} {host.name}.{bindingName}";
-            var sourceName = Source ? Source.name : "null";
-            var direction  = IsTwoWay ? "<->" : "->";
-            _debugSourceBindingInfo = $"{sourceName}.{Path} {direction} {_debugBindingInfo}";
-        }
 
         /// <summary>
         /// React to source property changes, either by subscribing to INotifyPropertyChanged or by checking changes periodically.
@@ -61,7 +48,7 @@ namespace UIBindings
             }
 
             _currentUpdateMode = Update.Mode;
-            _isLastValueInitialized = false;        //Source can change while we are not subscribed, so we need to re-read it
+            _isValueInitialized = false;        //Source can change while we are not subscribed, so we need to re-read it
 
             _isSubscribed = true;
         }
@@ -104,17 +91,21 @@ namespace UIBindings
         protected Boolean                _sourceChanged;
         protected bool                   _isValid;
         protected Boolean                _isSubscribed;
-        protected bool                   _isLastValueInitialized;
+        protected bool                   _isValueInitialized;
         private   EUpdateMode            _currentUpdateMode = EUpdateMode.Manual;
         protected float                  _lastUpdateTime;
-        protected MonoBehaviour          _debugHost;
-        protected String                 _debugBindingInfo = string.Empty;
-        protected string                 _debugSourceBindingInfo = string.Empty;
 
-
-        //Mostly debug
+        //Mostly debug for inspector
         public abstract Object GetDebugLastValue( );
         public abstract bool   IsRuntimeValid { get; }
+
+        public override void SetDebugInfo(MonoBehaviour host, String bindingName )
+        {
+            base.SetDebugInfo( host, bindingName );
+
+            var convertersCount = _converters.Converters.Length  > 0 ? $"[{_converters.Converters.Length}]" : string.Empty;
+            _debugDirectionStr     = IsTwoWay ? $"<-{convertersCount}->" : $"-{convertersCount}->";
+        }
 
         public static (Type valueType, Type templateType) GetBindingTypeInfo( Type bindingType )
         {
@@ -169,7 +160,7 @@ namespace UIBindings
         {
             if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
             {
-                Debug.Log( $"[{nameof(DataBinding)}] Source property '{propertyName}' changes detected in binding {_debugBindingInfo}", _debugHost );
+                Debug.Log( $"[{nameof(DataBinding)}] Source property '{propertyName}' changes detected in binding {_debugTargetBindingInfo}", _debugHost );
                 _sourceChanged = true;
             }
         }

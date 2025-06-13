@@ -31,26 +31,25 @@ namespace UIBindings
         private EAwaitableType _awaitType;
 
         private Boolean _isValid;
-        private String _hostName;
         private ParameterInfo[] _methodParams;
         private String _debugProfileMarkerName;
 
         protected static readonly ProfilerMarker CallMarker = new ( ProfilerCategory.Scripts,  $"{nameof(CallBinding)}.Call", MarkerFlags.Script );
 
-        public void Init( MonoBehaviour host )
+        public void Init(  )
         {
             if ( !Enabled )   
                 return;
 
             if ( !Source )
             {
-                Debug.LogError( $"[{nameof(BindingBase)}] Source is not assigned at {host.name}", host );
+                Debug.LogError( $"[{nameof(BindingBase)}] Source is not assigned at {_debugHost}", _debugHost );
                 return;
             }
 
             if ( String.IsNullOrEmpty( Path ) )
             {
-                Debug.LogError( $"[{nameof(BindingBase)}] Path is not assigned at {host.name}", host );
+                Debug.LogError( $"[{nameof(BindingBase)}] Path is not assigned at {_debugHost}", _debugHost );
                 return;
             }
 
@@ -59,11 +58,9 @@ namespace UIBindings
 
             if ( method == null )
             {
-                Debug.LogError( $"[{nameof(BindingBase)}] Method {Path} not found in {sourceType.Name}", host );
+                Debug.LogError( $"[{nameof(BindingBase)}] Method {Path} not found in {sourceType.Name}", _debugHost );
                 return;
             }
-
-            _hostName = host.name;
 
             var methodParams = method.GetParameters();
 
@@ -250,9 +247,9 @@ namespace UIBindings
                 }
             }
 
-            Assert.IsTrue( _paramsType != EParamsType.Unknown, $"[{nameof(CallBinding)}] Method {Path} has unsupported signature at {_hostName}" );
+            Assert.IsTrue( _paramsType != EParamsType.Unknown, $"[{nameof(CallBinding)}] Method {Path} has unsupported signature at {_debugHost}" );
            
-            _debugProfileMarkerName = $"{_hostName} -> {Source.name}.{Path}()";
+            _debugProfileMarkerName = $"{_debugSourceBindingInfo} {_debugDirectionStr} {_debugTargetBindingInfo}";
             _methodParams = methodParams;
             _isValid = true;
         }
@@ -311,6 +308,25 @@ namespace UIBindings
 
             CallMarker.End();
             return AwaitableUtility.CompletedAwaitable;
+        }
+
+        public override void SetDebugInfo( MonoBehaviour host, String bindingName )
+        {
+            base.SetDebugInfo( host, bindingName );
+
+            _debugTargetBindingInfo = $"Call {host.name}.{bindingName}";
+            _debugDirectionStr      = "<-";
+        }
+
+        public override String GetBindingState( )
+        {
+            if ( !Enabled )
+                return "Disabled";
+            if ( !_isValid )
+                return "Invalid";
+
+            var state = $"{_awaitType} {_paramsType} {_delegateCall.GetType().Name}";
+            return state;
         }
 
         // private AwaitableAction GetAwaitableWrapper( MethodInfo method )
@@ -504,6 +520,7 @@ namespace UIBindings
         }
 
 
+        /*
         public struct AwaitableAction
         {
             public Type AwaitableType;
@@ -515,6 +532,7 @@ namespace UIBindings
 
 
         }
+        */
     }
 }
 

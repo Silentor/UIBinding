@@ -37,5 +37,19 @@ namespace UIBindings.Runtime.Utils
             value = default;
             return false;
         }
+
+        public static bool Any<T>(this IReadOnlyList<T> list, Predicate<T> predicate)
+        {
+            if (list == null || predicate == null || list.Count == 0)
+                return false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (predicate(list[i]))
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

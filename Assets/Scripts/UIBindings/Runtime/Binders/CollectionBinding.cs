@@ -21,7 +21,9 @@ namespace UIBindings
 
         public Action<object, GameObject> BindViewItemMethod { get; private set; }
 
-        public override Type    DataType => typeof(ViewCollection);
+        public override Boolean IsCompatibleWith(Type type ) => typeof(IEnumerable).IsAssignableFrom( type ); 
+            
+
         public override Boolean IsTwoWay => false;
 
         public override    Object  GetDebugLastValue( )
@@ -36,8 +38,8 @@ namespace UIBindings
             if ( !Enabled )   
                 return;
 
-            AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugBindingInfo}", _debugHost );
-            AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugBindingInfo}", _debugHost );
+            AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
+            AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer(); 
 
@@ -115,7 +117,6 @@ namespace UIBindings
         private readonly         List<Object>               _processedList = new List<System.Object>();
         private readonly         List<Object>               _processedCopy = new List<System.Object>();
         private          INotifyPropertyChanged     _notifyPropertyChanged;
-        private          Boolean                    _isValueInitialized;
 
         //Source property access getters
         private          Func<ViewCollection>       _viewCollectionGetter;
@@ -303,6 +304,25 @@ namespace UIBindings
             //All other modifications consider as dramatic changes, no granular events
             CollectionChanged?.Invoke( this, newList );
         }
+
+        public override void SetDebugInfo( MonoBehaviour host, String bindingName )
+        {
+            base.SetDebugInfo( host, bindingName );
+
+            _debugTargetBindingInfo = $"Collection '{host.name}'.{bindingName}";
+        }
+
+        public override String GetBindingState( )
+        {
+            if( !Enabled )
+                return "Disabled";
+            if( !_isValid )
+                return "Invalid";
+            if( !_isValueInitialized )
+                return "Not initialized";
+            return $"Value: {_processedCopy.Count} view items";
+        }
+
     }
 
     public class ViewCollection: IReadOnlyList<object>

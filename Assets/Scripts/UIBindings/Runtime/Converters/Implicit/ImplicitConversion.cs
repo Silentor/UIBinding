@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UIBindings.Runtime;
+using UIBindings.Runtime.Utils;
 
 namespace UIBindings.Converters
 {
@@ -18,8 +19,7 @@ namespace UIBindings.Converters
             var sourceType = source.GetType();
             foreach ( var converterInfo in ConverterInfoCache )
             {
-                if( converterInfo.DataReaderType.IsAssignableFrom( sourceType ) && 
-                    converterInfo.OutputTypes.Contains( convertTo ) )
+                if( converterInfo.DataReaderType.IsAssignableFrom( sourceType ) && Array.IndexOf( converterInfo.OutputTypes, convertTo ) >= 0 )
                 {
                     return converterInfo.ConverterFactory( source );
                 }
@@ -28,12 +28,24 @@ namespace UIBindings.Converters
             return null;
         }
         
-        public static bool IsConversionSupported( Type sourceValueType, Type convertTo )
+        public static bool IsConversionSupported( Type sourceType, Type convertTo )
         {
             foreach ( var converterInfo in ConverterInfoCache )
             {
-                if( converterInfo.InputType == sourceValueType && 
-                     converterInfo.OutputTypes.Contains( convertTo ) )
+                if( converterInfo.InputType == sourceType && Array.IndexOf( converterInfo.OutputTypes, convertTo ) >= 0 )
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool IsConversionSupported( Type sourceType, Predicate<Type> isSupportedType )
+        {
+            foreach ( var converterInfo in ConverterInfoCache )
+            {
+                if( converterInfo.InputType == sourceType && Array.Exists( converterInfo.OutputTypes, isSupportedType ) )
                 {
                     return true;
                 }

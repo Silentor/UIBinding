@@ -43,12 +43,12 @@ namespace UIBindings
             CanExecuteBinding.SourceChanged += CanExecuteChanged;
             _canExecute = Button.interactable;
 
-            CallBinding.Init(this);
+            CallBinding.SetDebugInfo( this, nameof(CallBinding) );
+            CallBinding.Init();
 
             ButtonTextBinding.SetDebugInfo( this, nameof(ButtonTextBinding) );
             ButtonTextBinding.Init(  );
             ButtonTextBinding.SourceChanged += ProcessButtonText;
-
         }
 
         private void OnEnable()

@@ -23,9 +23,9 @@ namespace UIBindings
                 return;
             }
 
-            if ( !_isLastValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) )
+            if ( !_isValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) )
             {
-                _isLastValueInitialized = true;
+                _isValueInitialized = true;
                 _lastValue = value;
 
                 if( _lastConverterTargetToSource != null )

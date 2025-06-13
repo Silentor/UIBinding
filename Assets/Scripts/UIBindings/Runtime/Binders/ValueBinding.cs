@@ -16,17 +16,15 @@ namespace UIBindings
     {
         public override Boolean IsTwoWay => false;
 
-        public override Type DataType => typeof(T);
-
-        public override Boolean IsRuntimeValid => _isValid;
+        public override Boolean IsCompatibleWith(Type type ) => type == typeof(T);
 
         public void Init( bool forceOneWay = false )
         {
             if ( !Enabled )   
                 return;
 
-            AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugBindingInfo}", _debugHost );
-            AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugBindingInfo}", _debugHost );
+            AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
+            AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer(); 
 
@@ -123,13 +121,15 @@ namespace UIBindings
 
         public event Action<Object, T> SourceChanged;
 
+        public override Boolean IsRuntimeValid => _isValid;
+
         public override Object GetDebugLastValue( )
         {
             if( !Enabled )
                 return "not enabled";
             if( !_isValid )
                 return "not valid";
-            if( !_isLastValueInitialized )
+            if( !_isValueInitialized )
                 return "not initialized";
             return _lastValue;
         }
@@ -141,7 +141,7 @@ namespace UIBindings
         /// </summary>
         protected override void CheckChangesInternal( )
         {
-            if( _sourceNotify == null || _sourceChanged || !_isLastValueInitialized || _isTweened )
+            if( _sourceNotify == null || _sourceChanged || !_isValueInitialized || _isTweened )
             {
                 T   value;
                 var isChangedOnSource = true;
@@ -161,9 +161,9 @@ namespace UIBindings
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
 
-                if( isChangedOnSource && (!_isLastValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) ))
+                if( isChangedOnSource && (!_isValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) ))
                 {
-                    _isLastValueInitialized = true;
+                    _isValueInitialized = true;
                     _lastValue              = value;
 
                     UpdateTargetMarker.Begin( _debugSourceBindingInfo );
@@ -180,7 +180,23 @@ namespace UIBindings
         protected IDataReader<T> _lastReader;
         private   Boolean        _isTweened;
 
-        //Debug data, to make useful logs is something goes wrong
+        public override void SetDebugInfo( MonoBehaviour host, String bindingName )
+        {
+            base.SetDebugInfo( host, bindingName );
+
+            _debugTargetBindingInfo = $"{typeof(T).Name} '{host.name}'.{bindingName}";
+        }
+
+        public override String GetBindingState( )
+        {
+            if( !Enabled )
+                return "Disabled";
+            if( !_isValid )
+                return "Invalid";
+            if( !_isValueInitialized )
+                return "Not initialized";
+            return $"Value: {_lastValue} {(_isTweened ? "(tween)" : string.Empty)}";
+        }
     }
 
 }
