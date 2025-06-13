@@ -112,12 +112,11 @@ namespace UIBindings.Editor
         {
             EditorGUI.BeginChangeCheck();
 
-            position = EditorGUI.PrefixLabel( position, new GUIContent( "Source" ));
-            
-
             var sourceObjectProp = property.FindPropertyRelative( nameof(BindingBase.Source) );
             var sourceTypeStrProp = property.FindPropertyRelative( nameof(BindingBase.SourceType) );
             var bindTypeProp = property.FindPropertyRelative( nameof(BindingBase.BindToType) );
+
+            position = EditorGUI.PrefixLabel( position, new GUIContent( bindTypeProp.boolValue ? "Source type" : "Source reference" ));
 
             var rects = GUIUtils.GetHorizontalRects( position, 1, 0, 50 );
 
@@ -145,6 +144,21 @@ namespace UIBindings.Editor
                 if ( GUI.Button( rects.Item1, content, style ) )
                 {
                     //Show search service window to select type
+                    var provider2 = new TypeSearchProvider2( typeof(System.Object) );
+                    var context = SearchService.CreateContext(provider2, "type:");
+                    var state = new SearchViewState(context)
+                                {
+                                        title               = "Type",
+                                        queryBuilderEnabled = true,
+                                        hideTabs            = true,
+                                        selectHandler       = (a, b) => _currentSelectedTypeFromSearchWindow = ((Type)a.data).AssemblyQualifiedName,
+                                        flags = SearchViewFlags.TableView                |
+                                                SearchViewFlags.DisableBuilderModeToggle |
+                                                SearchViewFlags.DisableInspectorPreview
+                                };
+                    var view = SearchService.ShowPicker(state);
+
+                    /*
                     var typeSearchProvider = SearchService.GetProvider( TypeSearchProvider.Id );
                     var searchContext = SearchService.CreateContext(typeSearchProvider);
                     //var searchPosition  = EditorGUIUtility.GUIToScreenPoint( Event.current.mousePosition );
@@ -163,6 +177,7 @@ namespace UIBindings.Editor
                                             //position = new Rect( searchPosition, new Vector2( 300, 400 ) )
                                    };
                     _currentTypeSearchWindow = SearchService.ShowWindow(  viewArgs );
+                    */
                 }
             }
             else
