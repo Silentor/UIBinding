@@ -61,7 +61,7 @@ namespace UIBindings.Editor
                 string mainTextStr;
                 if ( Application.isPlaying )
                 {
-                    var propValue = sourceProperty != null ? sourceProperty.GetValue( binding.Source ).ToString() : "?";
+                    var propValue = (binding.SourceObject != null && sourceProperty != null) ? sourceProperty.GetValue( binding.SourceObject ).ToString() : "?";
                     mainTextStr = $"{binding.GetBindingSourceInfo()} <{propValue}> {binding.GetBindingDirection()} {binding.GetBindingTargetInfo()} <{binding.GetBindingState()}>";
                     isValid  = isValid && (binding.IsRuntimeValid || !binding.Enabled);
                 }
@@ -383,10 +383,29 @@ namespace UIBindings.Editor
         {
             report = String.Empty;
 
-            if ( !binding.Source )
+            if ( !binding.BindToType && !binding.Source )
             {
                 report = "Source is not set";
                 return false;
+            }
+
+            if ( binding.BindToType )
+            {
+                if ( String.IsNullOrEmpty( binding.SourceType ) )
+                {
+                    report = "Source type is not set";
+                    return false;
+                }
+                else if( Type.GetType( binding.SourceType, throwOnError: false ) == null )
+                {
+                    report = "Source type is not found.";
+                    return false;
+                } 
+                else if( Application.isPlaying && binding.SourceObject == null )
+                {
+                    report = "Source object is not set in runtime";
+                    return false;
+                } 
             }
 
             if ( sourceProperty == null )

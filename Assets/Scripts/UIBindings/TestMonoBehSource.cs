@@ -2,18 +2,22 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using UIBindings.Runtime;
 using UIBindings.Runtime.PlayerLoop;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
+using UnityEngine.Profiling;
 using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TestMonoBehSource : MonoBehaviour, INotifyPropertyChanged
+    public class TestMonoBehSource : MonoBehaviour//, INotifyPropertyChanged
     {
         public GameObject DelayedCanvas; //For testing delayed canvas creation
         public Sprite TestSprite; 
@@ -220,6 +224,16 @@ namespace UIBindings
         {
             Application.targetFrameRate = 30;
 
+            //EnumerateProfilerStats();
+
+            // Profiler.BeginSample( "test" );
+            // var systemMemoryRecorder = new ProfilerRecorder(ProfilerCategory.Memory, "System Used Memory", 0);
+            // var allocated = systemMemoryRecorder.CurrentValue;
+            // var obj = new Object();
+            // Profiler.EndSample();
+            // allocated = systemMemoryRecorder.CurrentValue - allocated;
+            // Debug.Log( allocated );
+
             // if ( DelayedCanvas )
             // {
             //     StartCoroutine( DelayedCanvasEnable() );
@@ -232,6 +246,49 @@ namespace UIBindings
             //UpdateManager.RegisterUpdate( TestUpdate );
             //UpdateManager.RegisterUpdate( TestUpdate2 );
             //UpdateManager.RegisterUpdate( TestUpdate3 );
+        }
+
+        struct StatInfo
+        {
+            public ProfilerCategory       Cat;
+            public string                 Name;
+            public ProfilerMarkerDataUnit Unit;
+        }
+
+        static void EnumerateProfilerStats()
+        {
+            var availableStatHandles = new List<ProfilerRecorderHandle>();
+            ProfilerRecorderHandle.GetAvailable(availableStatHandles);
+
+            var availableStats = new List<StatInfo>(availableStatHandles.Count);
+            foreach (var h in availableStatHandles)
+            {
+                var statDesc = ProfilerRecorderHandle.GetDescription(h);
+                var statInfo = new StatInfo()
+                               {
+                                       Cat  = statDesc.Category,
+                                       Name = statDesc.Name,
+                                       Unit = statDesc.UnitType
+                               };
+                availableStats.Add(statInfo);
+            }
+            availableStats.Sort((a, b) =>
+            {
+                var result = string.Compare(a.Cat.ToString(), b.Cat.ToString());
+                if (result != 0)
+                    return result;
+
+                return string.Compare(a.Name, b.Name);
+            });
+
+            var sb = new StringBuilder("Available stats:\n");
+            foreach (var s in availableStats)
+            {
+                //sb.AppendLine($"{s.Cat}\t\t - {s.Name}\t\t - {s.Unit}");
+                Debug.Log($"{s.Cat}\t\t - {s.Name}\t\t - {s.Unit}");
+            }
+
+            //Debug.Log(sb.ToString());
         }
 
         private void TestUpdate3( )

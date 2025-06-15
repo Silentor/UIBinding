@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using UnityEngine;
+using Object = System.Object;
 
 namespace UIBindings
 {
@@ -17,6 +18,8 @@ namespace UIBindings
         public        Boolean            BindToType;
         //Path to bindable property or method
         public        String                    Path;
+
+        public object SourceObject { get; protected set; } 
 
         //Debug stuff
 
@@ -74,6 +77,6 @@ namespace UIBindings
         protected string        _debugSourceBindingInfo = string.Empty;
         protected string        _debugTargetBindingInfo = string.Empty;
         protected string        _debugDirectionStr      = String.Empty;
-
+        
     }
 }

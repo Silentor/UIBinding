@@ -81,7 +81,7 @@ namespace UIBindings
     public record Quest
     {
         public QuestData Data;
-        public bool IsCompleted;
+        public bool IsCompleted { get; set; }
     }
 }
 

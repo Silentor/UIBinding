@@ -33,17 +33,36 @@ namespace UIBindings
 
         public override    Boolean IsRuntimeValid => _isValid;
 
-        public void Init( )
+        public void Init( object sourceObject = null )
         {
             if ( !Enabled )   
                 return;
 
-            AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
+            if ( BindToType )
+            {
+                AssertWithContext.IsNotNull( sourceObject, $"[{nameof(CollectionBinding)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the code. Assigned object must be {SourceType} type", _debugHost );
+                SourceObject = sourceObject;
+            }
+            else
+            {
+                AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the inspector", _debugHost );
+                SourceObject = Source;
+            }
+
+            InitInfrastructure( );
+        }
+
+        private void InitInfrastructure( )
+        {
+            if ( !Enabled )   
+                return;
+
+            AssertWithContext.IsNotNull( SourceObject, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
             AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer(); 
 
-            var sourceType = Source.GetType();
+            var sourceType = SourceObject.GetType();
             var property   = sourceType.GetProperty( Path );
 
             timer.AddMarker( "GetProperty" );
@@ -51,7 +70,7 @@ namespace UIBindings
             AssertWithContext.IsNotNull( property, $"Property {Path} not found in {sourceType.Name}", _debugHost );
             AssertWithContext.IsTrue( property.CanRead, $"Property {Path} in {sourceType.Name} must be readable for binding", _debugHost );
 
-            _sourceNotify = Source as INotifyPropertyChanged;
+            _sourceNotify = SourceObject as INotifyPropertyChanged;
             DataProvider lastConverter = null;
 
             //Check fast pass - direct getter
@@ -59,12 +78,12 @@ namespace UIBindings
             {
                 if ( property.PropertyType == typeof(ViewCollection) )
                 {
-                    _viewCollectionGetter = (Func<ViewCollection>)Delegate.CreateDelegate( typeof(Func<ViewCollection>), Source, property.GetGetMethod( true ) );
+                    _viewCollectionGetter = (Func<ViewCollection>)Delegate.CreateDelegate( typeof(Func<ViewCollection>), SourceObject, property.GetGetMethod( true ) );
                     timer.AddMarker( "ViewCollectionGetter" );
                 }
                 else if( typeof(IEnumerable).IsAssignableFrom( property.PropertyType ) )
                 {
-                    _enumerableGetter = (Func<IEnumerable>)Delegate.CreateDelegate( typeof(Func<IEnumerable>), Source, property.GetGetMethod( true ) );
+                    _enumerableGetter = (Func<IEnumerable>)Delegate.CreateDelegate( typeof(Func<IEnumerable>), SourceObject, property.GetGetMethod( true ) );
                     var bindingAttribute = property.GetCustomAttribute<CollectionBindingAttribute>();
                     if( bindingAttribute != null )
                     {
@@ -72,10 +91,10 @@ namespace UIBindings
                         {
                             var bindMethodInfo = sourceType.GetMethod( bindingAttribute.BindMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
                             if( bindMethodInfo != null )
-                                _bindMethod = (Action<object, GameObject>)Delegate.CreateDelegate( typeof(Action<object, GameObject>), Source, bindMethodInfo );
+                                _bindMethod = (Action<object, GameObject>)Delegate.CreateDelegate( typeof(Action<object, GameObject>), SourceObject, bindMethodInfo );
                             var processMethodInfo = sourceType.GetMethod( bindingAttribute.ProcessMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
                             if( processMethodInfo != null )
-                                _processMethod = (Action<List<Object>>)Delegate.CreateDelegate( typeof(Action<List<Object>>), Source, processMethodInfo );
+                                _processMethod = (Action<List<Object>>)Delegate.CreateDelegate( typeof(Action<List<Object>>), SourceObject, processMethodInfo );
                         }
                     }
                     timer.AddMarker( "IEnumerableGetter" );
