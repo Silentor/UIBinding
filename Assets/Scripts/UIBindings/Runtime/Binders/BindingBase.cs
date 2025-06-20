@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Reflection;
+using Cysharp.Threading.Tasks.Triggers;
+using UIBindings.Runtime.Utils;
 using UnityEngine;
 using Object = System.Object;
 
@@ -11,11 +13,11 @@ namespace UIBindings
         public        Boolean                   Enabled             = true;                        //Checked once on start!
 
         //Reference to Unity source object (if BindToType is false)
-        public        UnityEngine.Object Source;
+        public        UnityEngine.Object        Source;
         //Type of source object (if BindToType is true)
-        public        String             SourceType;
+        public        String                    SourceType;
         //If true, binding will need to be inited with instance of type SourceType
-        public        Boolean            BindToType;
+        public        Boolean                   BindToType;
         //Path to bindable property or method
         public        String                    Path;
 
@@ -30,53 +32,59 @@ namespace UIBindings
         /// <param name="bindingName"></param>
         public virtual void SetDebugInfo( MonoBehaviour host, String bindingName )
         {
-            //Prepare binding source info. Binding target info is set in derived classes
-            string sourceName = "?";
-            Type sourceType = null;
-            PropertyInfo sourceProperty = null;
-            string pathName = string.Empty;
-            string sourcePropType = string.Empty;
-            if ( BindToType )
+            _debugHost = host;
+            _debugBindingName = bindingName;
+        }
+
+        /// <summary>
+        /// Should return debug info about source. Looks like it common for all bindings
+        /// </summary>
+        /// <returns></returns>
+        public string GetBindingSourceInfo( )
+        {
+            if ( SourceObject.IsNotAssigned() )
             {
-                if ( !string.IsNullOrEmpty( SourceType ) )
-                {
-                    sourceType = Type.GetType( SourceType );
-                    if ( sourceType != null )
-                    {
-                        sourceName     = sourceType.Name;
-                        sourceProperty = sourceType.GetProperty( Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                    }
-                    else
-                        sourceName = SourceType;
-                } 
+                return "?";
             }
             else
             {
-                if ( Source )
+                var sourceType = SourceObject.GetType();
+                var sourceProp = sourceType.GetProperty( Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                var sourceObjectName = SourceObject is UnityEngine.Object unityObject ? $"'{unityObject.name}'" : SourceObject.GetType().ToString();
+                if( sourceProp != null )
                 {
-                    sourceType = Source.GetType();
-                    sourceName = $"'{Source.name}'({sourceType.Name})";
-                    sourceProperty = sourceType.GetProperty( Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                    return $"{sourceProp.PropertyType.Name} {sourceObjectName}.{Path}";
+                }
+                else
+                {
+                    return $"{sourceObjectName}.{Path}?";
                 }
             }
-
-            sourcePropType = sourceProperty != null ? sourceProperty.PropertyType.Name : "?";
-            pathName = string.IsNullOrEmpty( Path ) ? "?" : Path;
-
-            _debugHost = host;
-            _debugSourceBindingInfo = $"{sourcePropType} {sourceName}.{pathName}";
         }
 
-        public string GetBindingSourceInfo( ) => _debugSourceBindingInfo;
-        public string GetBindingTargetInfo( ) => _debugTargetBindingInfo;
-        public string GetBindingDirection( ) => _debugDirectionStr;
+        /// <summary>
+        /// Should return info about self
+        /// </summary>
+        /// <returns></returns>
+        public abstract string GetBindingTargetInfo( ) ;
+
+        /// <summary>
+        /// Should return direction of binding in form of arrows and converters count
+        /// </summary>
+        /// <returns></returns>
+        public abstract string GetBindingDirection( );
+
+        /// <summary>
+        /// Should return current state of binding (failed or valid) and last value if any
+        /// </summary>
+        /// <returns></returns>
         public abstract string GetBindingState( );
 
         //Debug, log, inspector stuff
-        protected MonoBehaviour _debugHost;        //Host of binder that contains this binding, for debug purposes
-        protected string        _debugSourceBindingInfo = string.Empty;
-        protected string        _debugTargetBindingInfo = string.Empty;
-        protected string        _debugDirectionStr      = String.Empty;
-        
+        protected MonoBehaviour _debugHost;                 //Host of binder that contains this binding, for debug purposes
+        protected string        _debugBindingName            ;  //Name of binding property, for debug purposes
+        protected string        _debugTargetBindingInfo;
+
+
     }
 }

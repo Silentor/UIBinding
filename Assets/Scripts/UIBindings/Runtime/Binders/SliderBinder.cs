@@ -6,7 +6,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class SliderBinder : MonoBehaviour
+    public class SliderBinder : BinderBase
     {
         public Slider Slider;
         public ValueBindingRW<float>     ValueBinding;
@@ -20,21 +20,23 @@ namespace UIBindings
             Assert.IsTrue( Slider );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( forceOneWay: !Slider.interactable );
+            ValueBinding.Init( GetParentSource(), forceOneWay: !Slider.interactable );
             ValueBinding.SourceChanged += UpdateValue;
+
             MinValueBinding.SetDebugInfo( this, nameof(MinValueBinding) );
-            MinValueBinding.Init( );
+            MinValueBinding.Init( GetParentSource() );
             MinValueBinding.SourceChanged += UpdateMinValue;
+
             MaxValueBinding.SetDebugInfo( this, nameof(MaxValueBinding) );
-            MaxValueBinding.Init(  );
+            MaxValueBinding.Init( GetParentSource() );
             MaxValueBinding.SourceChanged += UpdateMaxValue;
         }
 
         protected void OnEnable( )
         {
-            ValueBinding.Subscribe();
-            MinValueBinding.Subscribe();
-            MaxValueBinding.Subscribe();
+            ValueBinding.Subscribe( GetUpdateOrder() );
+            MinValueBinding.Subscribe( GetUpdateOrder() );
+            MaxValueBinding.Subscribe( GetUpdateOrder() );
             Slider.onValueChanged.AddListener( OnValueChange );
         }
 

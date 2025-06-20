@@ -4,7 +4,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TransformBinder : MonoBehaviour
+    public class TransformBinder : BinderBase
     {
         public Transform                     Transform;
         public ValueBinding<Vector3>         LocalPositionBinding;
@@ -18,15 +18,15 @@ namespace UIBindings
             Assert.IsTrue( Transform );
 
             LocalPositionBinding.SetDebugInfo( this, nameof(LocalPositionBinding) );
-            LocalPositionBinding.Init(  );
+            LocalPositionBinding.Init( GetParentSource() );
             LocalPositionBinding.SourceChanged += ProcessLocalPosition;
 
             LocalScaleBinding.SetDebugInfo( this, nameof(LocalScaleBinding) );
-            LocalScaleBinding.Init(  );
+            LocalScaleBinding.Init( GetParentSource() );
             LocalScaleBinding.SourceChanged += ProcessScale;
 
             LocalRotationBinding.SetDebugInfo( this, nameof(LocalRotationBinding) );
-            LocalRotationBinding.Init(  );
+            LocalRotationBinding.Init( GetParentSource() );
             LocalRotationBinding.SourceChanged += ProcessLocalRotation;
         }
 
@@ -47,9 +47,9 @@ namespace UIBindings
 
         private void OnEnable( )
         {
-            LocalPositionBinding.Subscribe();
-            LocalScaleBinding.Subscribe();
-            LocalRotationBinding.Subscribe();
+            LocalPositionBinding.Subscribe( GetUpdateOrder() );
+            LocalScaleBinding.Subscribe( GetUpdateOrder() );
+            LocalRotationBinding.Subscribe( GetUpdateOrder() );
         }
 
         private void OnDisable( )

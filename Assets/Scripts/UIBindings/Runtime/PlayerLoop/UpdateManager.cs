@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Unity.Profiling;
@@ -14,10 +15,6 @@ namespace UIBindings.Runtime.PlayerLoop
     /// </summary>
     public static class UpdateManager
     {
-        private static UpdateList _afterUpdateList = new ( new List<Action>() );
-        private static UpdateList _beforeLateUpdateList = new ( new List<Action>() );
-        private static UpdateList _afterLateUpdateList = new ( new List<Action>() );
-
         public static void Register([NotNull] IUpdate update)
         {
             RegisterUpdate( update.DoUpdate);
@@ -33,19 +30,19 @@ namespace UIBindings.Runtime.PlayerLoop
             RegisterUpdate( update.DoAfterLateUpdate);
         }
 
-        public static void RegisterUpdate([NotNull] Action update)
+        public static void RegisterUpdate([NotNull] Action update, int order = 0 )
         {
-            Register( ref _afterUpdateList, update );
+            Register( ref _afterUpdateList, update, order );
         }
 
-        public static void RegisterBeforeLateUpdate([NotNull] Action update)
+        public static void RegisterBeforeLateUpdate([NotNull] Action update, int order = 0 )
         {
-            Register( ref _beforeLateUpdateList, update );
+            Register( ref _beforeLateUpdateList, update, order );
         }
 
-        public static void RegisterAfterLateUpdate([NotNull] Action update)
+        public static void RegisterAfterLateUpdate([NotNull] Action update, int order = 0 )
         {
-            Register( ref _afterLateUpdateList, update );
+            Register( ref _afterLateUpdateList, update, order );
         }
 
         public static void Unregister([NotNull] IUpdate update)
@@ -77,6 +74,16 @@ namespace UIBindings.Runtime.PlayerLoop
         {
             Unregister( ref _beforeLateUpdateList, update );
         }
+
+        private static UpdateList _afterUpdateList      = new ( new List<UpdateItem>() );
+        private static UpdateList _beforeLateUpdateList = new ( new List<UpdateItem>() );
+        private static UpdateList _afterLateUpdateList  = new ( new List<UpdateItem>() );
+
+        private static List<UpdateItem> _tempListOfAddedItems = new ();
+
+        private static readonly ProfilerMarker AfterUpdateMarker      = new ( "UpdateManager.AfterUpdate" );
+        private static readonly ProfilerMarker BeforeLateUpdateMarker = new ( "UpdateManager.BeforeLateUpdate" );
+        private static readonly ProfilerMarker AfterLateUpdateMarker  = new ( "UpdateManager.AfterLateUpdate" );
 
         [RuntimeInitializeOnLoadMethod]
         private static void Init( )
@@ -212,25 +219,24 @@ namespace UIBindings.Runtime.PlayerLoop
             }
         }
 
-        private static void Register( ref UpdateList updateList, [NotNull] Action action )
+        private static void Register( ref UpdateList updateList, [NotNull] Action action, int order = 0 )
         {
             if ( action == null ) throw new ArgumentNullException( nameof(action) );
 
-            var list = updateList.Actions;
-            foreach ( var a in list )
+            var newItem = new UpdateItem( action, order );
+            if( updateList.Index >= 0 )
             {
-                if( a == action )
-                    return; //Already registered
+                _tempListOfAddedItems.Add( newItem );//Main list is processing now, do not interfere with it
             }
-
-            updateList.Actions.Add( action );
-        } 
+            else
+                AddSortedUpdatedItem( ref updateList, newItem );
+        }
 
         private static void Unregister( ref UpdateList updateList, [NotNull] Action action )
         {
             if ( action == null ) throw new ArgumentNullException( nameof(action) );
 
-            var indexOfExistingItem = updateList.Actions.IndexOf( action );
+            var indexOfExistingItem = updateList.Actions.FindIndex( ui => ui.Action == action );
             if( indexOfExistingItem < 0 )
                 return; 
 
@@ -246,8 +252,9 @@ namespace UIBindings.Runtime.PlayerLoop
         private static void OnUpdate( )
         {
             AfterUpdateMarker.Begin( _afterUpdateList.Actions.Count );
-            DoUpdate( ref _afterUpdateList );
+            DoUpdate( ref _afterLateUpdateList );
             AfterUpdateMarker.End();
+            PostprocessAddedItems( ref _afterLateUpdateList );
         }
 
         private static void OnBeforeLateUpdate( )
@@ -255,6 +262,7 @@ namespace UIBindings.Runtime.PlayerLoop
             BeforeLateUpdateMarker.Begin( _beforeLateUpdateList.Actions.Count );
             DoUpdate( ref _beforeLateUpdateList );
             BeforeLateUpdateMarker.End();
+            PostprocessAddedItems( ref _beforeLateUpdateList );
         }
 
         private static void OnAfterLateUpdate( )
@@ -262,33 +270,91 @@ namespace UIBindings.Runtime.PlayerLoop
             AfterLateUpdateMarker.Begin( _afterLateUpdateList.Actions.Count );
             DoUpdate( ref _afterLateUpdateList );
             AfterLateUpdateMarker.End();
+            PostprocessAddedItems( ref _afterLateUpdateList );
         }
-
-        private static readonly ProfilerMarker AfterUpdateMarker     = new ( "UpdateManager.AfterUpdate" );
-        private static readonly ProfilerMarker BeforeLateUpdateMarker    = new ( "UpdateManager.BeforeLateUpdate" );
-        private static readonly ProfilerMarker AfterLateUpdateMarker = new ( "UpdateManager.AfterLateUpdate" );
 
         private static void DoUpdate( ref UpdateList updates )
         {
             updates.Index = 0;
             while ( updates.Index < updates.Actions.Count )
             {
-                updates.Actions[ updates.Index ]();
+                updates.Actions[ updates.Index ].Action();
                 updates.Index++;
             }
 
             updates.Index = -1;
         }
 
+        private static void PostprocessAddedItems( ref UpdateList updates )
+        {
+            if ( _tempListOfAddedItems.Count == 0 )
+                return;
+
+            //Updated should be executed in order (but after all already registered items)
+            _tempListOfAddedItems.Sort();
+            foreach ( var newlyAddedItem in _tempListOfAddedItems )                
+                newlyAddedItem.Action();
+
+            //If count of newly added items are small, add one to one, instead add range and resort list
+            if ( _tempListOfAddedItems.Count < updates.Actions.Count / 2 )
+            {
+                foreach ( var newlyAddedItem in _tempListOfAddedItems )
+                {
+                    AddSortedUpdatedItem( ref updates, newlyAddedItem );
+                }
+            }
+            else
+            {
+                updates.Actions.AddRange( _tempListOfAddedItems );
+                updates.Actions.Sort();
+            }
+
+            _tempListOfAddedItems.Clear();
+        }
+
+        private static void AddSortedUpdatedItem( ref UpdateList updateList, UpdateItem newItem )
+        {
+            var indexToInsert = updateList.Actions.BinarySearch( newItem );
+            if( indexToInsert < 0 )                
+                indexToInsert = ~indexToInsert;
+            updateList.Actions.Insert( indexToInsert, newItem );
+        }
+
+
+        // private class OrderComparer : Comparer<UpdateItem>
+        // {
+        //     public override Int32 Compare(UpdateItem x, UpdateItem y )
+        //     {
+        //         return x.Order.CompareTo( y.Order );
+        //     }
+        // }
+
         private struct UpdateList
         {
-            public readonly List<Action> Actions;
+            public readonly List<UpdateItem> Actions;
             public int          Index;
 
-            public UpdateList( List<Action> actions )
+            public UpdateList( List<UpdateItem> actions )
             {
                 Actions = actions;
                 Index   = -1;
+            }
+        }
+
+        private struct UpdateItem: IComparable<UpdateItem>
+        {
+            public readonly Action  Action;
+            public readonly int     Order;
+
+            public UpdateItem( Action action, int order )
+            {
+                Action = action;
+                Order = order;
+            }
+
+            public int CompareTo(UpdateItem other)
+            {
+                return Order.CompareTo( other.Order );
             }
         }
 

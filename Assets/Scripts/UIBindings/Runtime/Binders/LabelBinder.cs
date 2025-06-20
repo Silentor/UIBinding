@@ -6,7 +6,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class LabelBinder : MonoBehaviour
+    public class LabelBinder : BinderBase
     {
         public TMP_Text                      Label;
         public ValueBinding<String>          TextBinding;
@@ -16,14 +16,19 @@ namespace UIBindings
         {
             if ( !Label )
                 Label = GetComponent<TextMeshProUGUI>();
-            Assert.IsTrue( Label );
+
+            if ( !Label )
+            {
+                Debug.LogError( "LabelBinder: Label component not found. Please add a TMP_Text component to the same GO or assign TMP_Text from another GO." );
+                return;
+            }
 
             TextBinding.SetDebugInfo( this, nameof(TextBinding) );
-            TextBinding.Init(  );
+            TextBinding.Init( GetParentSource() );
             TextBinding.SourceChanged += ProcessText;
 
             ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );
-            ColorBinding.Init(  );
+            ColorBinding.Init( GetParentSource() );
             ColorBinding.SourceChanged += ProcessColor;
         }
 
@@ -39,8 +44,8 @@ namespace UIBindings
 
         private void OnEnable( )
         {
-            TextBinding.Subscribe();
-            ColorBinding.Subscribe();
+            TextBinding.Subscribe( GetUpdateOrder() );
+            ColorBinding.Subscribe( GetUpdateOrder() );
         }
 
         private void OnDisable( )

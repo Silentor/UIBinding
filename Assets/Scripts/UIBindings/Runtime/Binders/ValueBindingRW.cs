@@ -11,10 +11,7 @@ namespace UIBindings
     [Serializable]
     public class ValueBindingRW<T> : ValueBinding<T>
     {
-        //Some binders can temporarily switch to one-way mode, for example, when they are not interactable.
-        public bool OverrideOneWayMode = false;
-
-        public override Boolean IsTwoWay => !OverrideOneWayMode;
+        public override Boolean IsTwoWay => !_forceOneWay;
 
         public void SetValue( T value )
         {
@@ -30,13 +27,13 @@ namespace UIBindings
 
                 if( _lastConverterTargetToSource != null )
                 {
-                    WriteConvertedValueMarker.Begin( _debugSourceBindingInfo );
+                    WriteConvertedValueMarker.Begin( ProfilerMarkerName );
                     _lastConverterTargetToSource.SetValue( value );
                     WriteConvertedValueMarker.End();
                 }
                 else
                 {
-                    WriteDirectValueMarker.Begin( _debugSourceBindingInfo );
+                    WriteDirectValueMarker.Begin( ProfilerMarkerName );
                     _directSetter( value );
                     WriteDirectValueMarker.End();
                 }
@@ -50,6 +47,7 @@ namespace UIBindings
             if( forceOneWay )
             {
                 //Do not init two-way binding if it is forced to be one-way.
+                _forceOneWay = true;
                 return;
             }
 
@@ -66,6 +64,7 @@ namespace UIBindings
         }
 
         private Action<T>           _directSetter;
-        private IDataReadWriter<T> _lastConverterTargetToSource;
+        private IDataReadWriter<T>  _lastConverterTargetToSource;
+        private Boolean             _forceOneWay;
     }
 }

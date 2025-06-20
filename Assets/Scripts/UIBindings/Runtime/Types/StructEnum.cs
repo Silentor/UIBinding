@@ -2,6 +2,9 @@
 
 namespace UIBindings.Runtime
 {
+    /// <summary>
+    /// To pass around any enums without boxing.
+    /// </summary>
     public readonly struct StructEnum : IEquatable<StructEnum>
     {
         public readonly int  Value;
@@ -26,7 +29,7 @@ namespace UIBindings.Runtime
 
         public bool Equals(StructEnum other)
         {
-            return Value == other.Value && EnumType.Equals( other.EnumType );
+            return Value == other.Value && EnumType == other.EnumType;
         }
 
         public override bool Equals(object obj)

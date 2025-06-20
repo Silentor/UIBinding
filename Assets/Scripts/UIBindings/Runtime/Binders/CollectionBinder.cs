@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class CollectionBinder : MonoBehaviour
+    public class CollectionBinder : BinderBase
     {
         public CollectionBinding     Collection;
         public GameObject            ItemViewPrefab;
@@ -18,7 +18,7 @@ namespace UIBindings
         private void Awake( )
         {
             Collection.SetDebugInfo( this, nameof(Collection) );
-            Collection.Init();
+            Collection.Init( GetParentSource() );
             Collection.CollectionChanged += OnCollectionModified;
             Collection.ItemAdded += OnItemAdded;
             Collection.ItemRemoved += OnItemRemoved;
@@ -28,7 +28,7 @@ namespace UIBindings
 
         private void OnEnable( )
         {
-            Collection.Subscribe();
+            Collection.Subscribe( GetUpdateOrder() );
         }
 
         private void OnDisable( )

@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using Sisus;
 using UIBindings.Runtime;
-using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using Unity.Profiling.LowLevel;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 using Object = System.Object;
 
@@ -32,9 +29,8 @@ namespace UIBindings
 
         private Boolean _isValid;
         private ParameterInfo[] _methodParams;
-        private String _debugProfileMarkerName;
 
-        protected static readonly ProfilerMarker CallMarker = new ( ProfilerCategory.Scripts,  $"{nameof(CallBinding)}.Call", MarkerFlags.Script );
+
 
         public void Init(  )
         {
@@ -249,7 +245,6 @@ namespace UIBindings
 
             Assert.IsTrue( _paramsType != EParamsType.Unknown, $"[{nameof(CallBinding)}] Method {Path} has unsupported signature at {_debugHost}" );
            
-            _debugProfileMarkerName = $"{_debugSourceBindingInfo} {_debugDirectionStr} {_debugTargetBindingInfo}";
             _methodParams = methodParams;
             _isValid = true;
         }
@@ -259,7 +254,7 @@ namespace UIBindings
             if( !Enabled || !_isValid )
                 return AwaitableUtility.CompletedAwaitable;
 
-            CallMarker.Begin( _debugProfileMarkerName );
+            CallMarker.Begin( ProfilerMarkerName );
 
             if ( _awaitType == EAwaitableType.Sync )
             {
@@ -310,24 +305,6 @@ namespace UIBindings
             return AwaitableUtility.CompletedAwaitable;
         }
 
-        public override void SetDebugInfo( MonoBehaviour host, String bindingName )
-        {
-            base.SetDebugInfo( host, bindingName );
-
-            _debugTargetBindingInfo = $"Call {host.name}.{bindingName}";
-            _debugDirectionStr      = "<-";
-        }
-
-        public override String GetBindingState( )
-        {
-            if ( !Enabled )
-                return "Disabled";
-            if ( !_isValid )
-                return "Invalid";
-
-            var state = $"{_awaitType} {_paramsType} {_delegateCall.GetType().Name}";
-            return state;
-        }
 
         // private AwaitableAction GetAwaitableWrapper( MethodInfo method )
         // {
@@ -499,6 +476,44 @@ namespace UIBindings
             return weak;
         }
 
+#region Debug stuff
+
+        protected static readonly ProfilerMarker CallMarker = new ( ProfilerCategory.Scripts,  $"{nameof(CallBinding)}.Call", MarkerFlags.Script );
+        protected string ProfilerMarkerName = String.Empty;
+
+        public override void SetDebugInfo( MonoBehaviour host, String bindingName )
+        {
+            base.SetDebugInfo( host, bindingName );
+
+            _debugTargetBindingInfo = $"Call {host.name}.{bindingName}({Params.Length})";
+            ProfilerMarkerName = GetBindingTargetInfo( );
+        }
+
+        public override String GetBindingTargetInfo( )
+        {
+            if( _debugTargetBindingInfo == null )
+                return $"Call binding ({Params.Length})";
+
+            return _debugTargetBindingInfo;
+        }
+
+        public override String GetBindingDirection( )
+        {
+            return "<--";
+        }
+
+        public override String GetBindingState( )
+        {
+            if ( !Enabled )
+                return "Disabled";
+            if ( !_isValid )
+                return "Invalid";
+
+            var state = $"{_awaitType} {_paramsType} {_delegateCall.GetType().Name}";
+            return state;
+        }
+
+#endregion
 
         public enum EParamsType
         {

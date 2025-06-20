@@ -8,7 +8,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class ButtonBinder : MonoBehaviour
+    public class ButtonBinder : BinderBase
     {
         public Button       Button;
         public TMP_Text     ButtonText;
@@ -39,22 +39,22 @@ namespace UIBindings
             }
 
             CanExecuteBinding.SetDebugInfo(this, nameof(CanExecuteBinding));
-            CanExecuteBinding.Init( );
+            CanExecuteBinding.Init( GetParentSource() );
             CanExecuteBinding.SourceChanged += CanExecuteChanged;
             _canExecute = Button.interactable;
 
             CallBinding.SetDebugInfo( this, nameof(CallBinding) );
-            CallBinding.Init();
+            CallBinding.Init(  );
 
             ButtonTextBinding.SetDebugInfo( this, nameof(ButtonTextBinding) );
-            ButtonTextBinding.Init(  );
+            ButtonTextBinding.Init( GetParentSource() );
             ButtonTextBinding.SourceChanged += ProcessButtonText;
         }
 
         private void OnEnable()
         {
-            CanExecuteBinding.Subscribe();
-            ButtonTextBinding.Subscribe();
+            CanExecuteBinding.Subscribe( GetUpdateOrder() );
+            ButtonTextBinding.Subscribe( GetUpdateOrder() );
             Button.onClick.AddListener(OnButtonClick);
         }
 

@@ -24,16 +24,30 @@ namespace UIBindings
         {
             if ( !Enabled )   
                 return;
-
+          
             if ( BindToType )
             {
-                AssertWithContext.IsNotNull( sourceObject, $"[{nameof(ValueBinding<T>)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the code. Assigned object must be {SourceType} type", _debugHost );
+                if ( sourceObject == null )
+                {
+                    Debug.LogError( $"[{nameof(ValueBinding<T>)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the code. Assigned object must be {SourceType} type", _debugHost );
+                    return;
+                }
                 SourceObject = sourceObject;
             }
             else
             {
-                AssertWithContext.IsNotNull( Source, $"[{nameof(ValueBinding<T>)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the inspector", _debugHost );
-                SourceObject = Source;
+                if ( !Source )
+                {
+                    var unityObjectSource = sourceObject as UnityEngine.Object;
+                    if( !unityObjectSource )
+                    {
+                        Debug.LogError( $"[{nameof(ValueBinding<T>)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the Inspector", _debugHost );
+                        return;
+                    }
+                    SourceObject = unityObjectSource;
+                }
+                else
+                    SourceObject = Source;
             }
 
             InitInfrastructure( forceOneWay );
@@ -44,22 +58,20 @@ namespace UIBindings
             if ( !Enabled )   
                 return;
             
-            AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
+            AssertWithContext.IsNotNull( Path, $"[{nameof(ValueBinding<T>)}] Path is not assigned at {GetBindingTargetInfo()}", _debugHost );
 
-            var timer = ProfileUtils.GetTraceTimer();
+            var timer = ProfileUtils.GetTraceTimer( );
 
             if ( BindToType )
             {
-                _sourceObjectType = Type.GetType( SourceType, throwOnError: false );
-                AssertWithContext.IsNotNull( _sourceObjectType, $"[{nameof(ValueBinding<T>)}] SourceType '{SourceType}' not found at {_debugTargetBindingInfo}", _debugHost );
-                AssertWithContext.IsNotNull( SourceObject, $"[{nameof(ValueBinding<T>)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
+                _sourceObjectType = SourceObject.GetType();
+                AssertWithContext.IsNotNull( _sourceObjectType, $"[{nameof(ValueBinding<T>)}] SourceType '{SourceType}' not found at {GetBindingTargetInfo()}", _debugHost );
                 AssertWithContext.IsTrue( _sourceObjectType.IsInstanceOfType( SourceObject ),
-                    $"[{nameof(ValueBinding<T>)}] Source object {SourceObject.GetType().Name}  is not compartible with declared source object type '{_sourceObjectType.Name}' at {_debugTargetBindingInfo}", _debugHost );
+                    $"[{nameof(ValueBinding<T>)}] Source object {SourceObject.GetType().Name}  is not compartible with declared source object type '{_sourceObjectType.Name}' at {GetBindingTargetInfo()}", _debugHost );
             }
             else
             {
-                AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
-                _sourceObjectType = Source.GetType();
+                _sourceObjectType = SourceObject.GetType();
             }
 
             var property   = _sourceObjectType.GetProperty( Path );
@@ -109,7 +121,7 @@ namespace UIBindings
                     var result = firstConverter.InitAttachToSource( propReader, IsTwoWay, !Update.ScaledTime );
                     if( !result )
                     {
-                        Debug.LogError( $"[{nameof(BindingBase)}] First converter {firstConverter} cannot be attached to source property adapter {propReader} at binding {_debugSourceBindingInfo}", _debugHost );
+                        Debug.LogError( $"[{nameof(BindingBase)}] First converter {firstConverter} cannot be attached to source property adapter {propReader} at binding {GetBindingTargetInfo()}", _debugHost );
                         return;
                     }
                     lastConverter = firstConverter;
@@ -124,7 +136,7 @@ namespace UIBindings
                         result = converters[i].InitAttachToSource( converters[ i - 1], IsTwoWay, !Update.ScaledTime );
                         if ( !result )
                         {
-                            Debug.LogError( $"[{nameof(BindingBase)}] Converter {currentConverter} cannot be attached to previous converter {prevConverter} at binding {_debugSourceBindingInfo}", _debugHost );
+                            Debug.LogError( $"[{nameof(BindingBase)}] Converter {currentConverter} cannot be attached to previous converter {prevConverter} at binding {GetBindingTargetInfo()}", _debugHost );
                             return;
                         }
                         lastConverter = converters[ i ];
@@ -142,7 +154,7 @@ namespace UIBindings
                     var lastConverterToBindingConverter = ImplicitConversion.GetConverter( lastConverter, typeof(T) );
                     if( lastConverterToBindingConverter == null )
                     {
-                        Debug.LogError( $"[{nameof(BindingBase)}] Cannot find implicit conversion from last converter {lastConverter} to {typeof(T)} at binding {_debugSourceBindingInfo}", _debugHost );
+                        Debug.LogError( $"[{nameof(BindingBase)}] Cannot find implicit conversion from last converter {lastConverter} to {typeof(T)} at binding {GetBindingTargetInfo()}", _debugHost );
                         return;
                     } 
                     _lastReader = ( IDataReader<T> )lastConverterToBindingConverter;
@@ -154,28 +166,17 @@ namespace UIBindings
             DoInitInfrastructure( SourceObject, property, lastConverter, forceOneWay, _debugHost );
 
             timer.AddMarker( "TwoWayAwake" );
-            var report = timer.GetReport();
+            var report = timer.StopAndGetReport();
 
             _isValueInitialized = false;
             _isValid = true;
             
-            Debug.Log( $"Awaked {timer.Elapsed.TotalMicroseconds()} mks, {_debugSourceBindingInfo}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}: {report}" );
+            Debug.Log( $"Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}. Profile {report}", _debugHost );
         }
 
         public event Action<Object, T> SourceChanged;
 
         public override Boolean IsRuntimeValid => _isValid;
-
-        public override Object GetDebugLastValue( )
-        {
-            if( !Enabled )
-                return "not enabled";
-            if( !_isValid )
-                return "not valid";
-            if( !_isValueInitialized )
-                return "not initialized";
-            return _lastValue;
-        }
 
         protected virtual void DoInitInfrastructure(  Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
 
@@ -191,17 +192,17 @@ namespace UIBindings
                 if ( _directGetter != null )
                 {
                     var timer = new Stopwatch();
-                    ReadDirectValueMarker.Begin( _debugSourceBindingInfo );
+                    ReadDirectValueMarker.Begin( ProfilerMarkerName );
                     timer.Start();
                     value = _directGetter( );
                     timer.Stop();
                     ReadDirectValueMarker.End();
 
-                    Debug.Log( timer.Elapsed.TotalMicroseconds() );
+                    //Debug.Log( timer.Elapsed.TotalMicroseconds() );
                 }
                 else
                 {
-                    ReadConvertedValueMarker.Begin( _debugSourceBindingInfo );
+                    ReadConvertedValueMarker.Begin( ProfilerMarkerName );
                     var changeStatus = _lastReader.TryGetValue( out value );
                     isChangedOnSource = changeStatus != EResult.NotChanged;
                     _isTweened        = changeStatus == EResult.Tweened;
@@ -214,7 +215,7 @@ namespace UIBindings
                     _isValueInitialized = true;
                     _lastValue              = value;
 
-                    UpdateTargetMarker.Begin( _debugSourceBindingInfo );
+                    UpdateTargetMarker.Begin( ProfilerMarkerName );
                     SourceChanged?.Invoke( SourceObject, value );
                     UpdateTargetMarker.End( );
                 }
@@ -242,6 +243,7 @@ namespace UIBindings
             base.SetDebugInfo( host, bindingName );
 
             _debugTargetBindingInfo = $"{typeof(T).Name} '{host.name}'.{bindingName}";
+            ProfilerMarkerName = GetBindingTargetInfo();
         }
 
         public override String GetBindingState( )
@@ -254,6 +256,13 @@ namespace UIBindings
                 return "Not initialized";
             return $"Value: {_lastValue} {(_isTweened ? "(tween)" : string.Empty)}";
         }
-    }
 
+        public override String GetBindingTargetInfo( )
+        {
+            if ( _debugTargetBindingInfo == null )
+                return $"{typeof(T).Name} value binding";
+
+            return _debugTargetBindingInfo;
+        }
+    }
 }

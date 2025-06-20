@@ -1,12 +1,11 @@
 ﻿using System;
-using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UI;
 using Object = System.Object;
 
 namespace UIBindings
 {
-    public class InteractableBinder : MonoBehaviour
+    public class InteractableBinder : BinderBase
     {
         public Selectable InteractionControl;
         public ValueBinding<Boolean> InteractableBinding;
@@ -18,13 +17,13 @@ namespace UIBindings
             Assert.IsTrue( InteractionControl );
 
             InteractableBinding.SetDebugInfo( this, nameof(InteractableBinding) );
-            InteractableBinding.Init( );
+            InteractableBinding.Init( GetParentSource() );
             InteractableBinding.SourceChanged += ProcessSourceToTarget;
         }
 
         private void OnEnable( )
         {
-            InteractableBinding.Subscribe();
+            InteractableBinding.Subscribe( GetUpdateOrder() );
         }
 
         private void OnDisable( )

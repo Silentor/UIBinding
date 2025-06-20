@@ -6,7 +6,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class ImageBinder : MonoBehaviour
+    public class ImageBinder : BinderBase
     {
         public Image Image;
         public ValueBinding<Sprite>      SourceImageBinding;
@@ -19,17 +19,18 @@ namespace UIBindings
             Assert.IsTrue( Image );
 
             SourceImageBinding.SetDebugInfo( this, nameof(SourceImageBinding) );
-            SourceImageBinding.Init(  );
+            SourceImageBinding.Init( GetParentSource() );
             SourceImageBinding.SourceChanged += UpdateSourceImage;
+
             ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );        
-            ColorBinding.Init( );
+            ColorBinding.Init( GetParentSource() );
             ColorBinding.SourceChanged += UpdateColor;
         }
 
         protected void OnEnable( )
         {
-            SourceImageBinding.Subscribe();
-            ColorBinding.Subscribe();
+            SourceImageBinding.Subscribe( GetUpdateOrder() );
+            ColorBinding.Subscribe( GetUpdateOrder() );
         }
 
         private void OnDisable( )

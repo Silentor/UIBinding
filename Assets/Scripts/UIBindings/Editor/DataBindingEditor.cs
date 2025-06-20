@@ -5,6 +5,9 @@ using System.Reflection;
 using UIBindings.Adapters;
 using UIBindings.Converters;
 using UIBindings.Editor.Utils;
+using UIBindings.Runtime;
+using UIBindings.Runtime.Utils;
+using Unity.Hierarchy;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
@@ -28,7 +31,7 @@ namespace UIBindings.Editor
             position.height = EditorGUIUtility.singleLineHeight;
             var labelRect = position;
 
-            //Draw property label
+            //Draw property label with foldout
             labelRect.width = EditorGUIUtility.labelWidth;
             property.isExpanded = EditorGUI.Foldout( labelRect, property.isExpanded, label, true );
 
@@ -46,30 +49,46 @@ namespace UIBindings.Editor
             {
                 //Draw main binding info label + folded content (if unfolded)
                 var binding           = (DataBinding)fieldInfo.GetValue( property.serializedObject.targetObject );
-                var (sourceType, sourceName)   = GetSourceType( binding );
-                var sourceProperty    = GetSourceProperty( binding );
+                var (sourceObjType, sourceObject)   = GetSourceTypeAndObject( property );
+                var sourceProperty    = GetSourceProperty( property );
                 var sourcePropType    = sourceProperty != null ? sourceProperty.PropertyType : null;
-                var sourceTypeName    = sourcePropType != null ? sourcePropType.Name : "null";
-                var sourcePropName    = binding.Path;
-                var sourceDisplayName = sourceType != null ? $"{sourceTypeName} {sourceName}.{sourcePropName}" : sourceName;
                 Predicate<Type> isTypeSupported        = binding.IsCompatibleWith;
                 var isTwoWayBinding   = binding.IsTwoWay;
                 var sourceAdapterType = PropertyAdapter.GetAdaptedType( sourcePropType );
                 var validationReport  = String.Empty;
-                var isValid           = !isEnabled || ( IsSourceValid( binding, sourceProperty, out validationReport ) && IsSourceTargetTypesCompatible( sourceAdapterType, isTypeSupported, isTwoWayBinding, binding.Converters, out validationReport ));
+                var isValid           = !isEnabled || ( IsSourceValid( sourceObject, sourceObjType, sourceProperty, property, out validationReport ) && IsSourceTargetTypesCompatible( sourceAdapterType, isTypeSupported, isTwoWayBinding, binding.Converters, out validationReport ));
 
                 string mainTextStr;
                 if ( Application.isPlaying )
                 {
-                    var propValue = (binding.SourceObject != null && sourceProperty != null) ? sourceProperty.GetValue( binding.SourceObject ).ToString() : "?";
-                    mainTextStr = $"{binding.GetBindingSourceInfo()} <{propValue}> {binding.GetBindingDirection()} {binding.GetBindingTargetInfo()} <{binding.GetBindingState()}>";
+                    var propValueString = "?";
+                    if ( binding.SourceObject != null && sourceProperty != null )
+                    {
+                        try
+                        {
+                            var propValue = sourceProperty.GetValue( binding.SourceObject );
+                            propValueString = propValue.ToString();
+                        }
+                        catch ( TargetInvocationException e )
+                        {
+                            propValueString = e.InnerException.GetType().Name;
+                        }
+                        catch ( Exception e )
+                        {
+                            propValueString = e.GetType().Name;
+                        }
+                    }
+                    mainTextStr = $"{binding.GetBindingSourceInfo()} <{propValueString}> {binding.GetBindingDirection()} {binding.GetBindingTargetInfo()} <{binding.GetBindingState()}>";
                     isValid  = isValid && (binding.IsRuntimeValid || !binding.Enabled);
                 }
                 else
                 {
+                    var sourcePropTypeName    = sourcePropType != null ? sourcePropType.Name : "?";
+                    var sourcePropPath    = !String.IsNullOrEmpty(binding.Path) ? binding.Path : "?";
+                    var sourceDisplayName = sourceObject ? $"{sourcePropTypeName} '{sourceObject.name}'.{sourcePropPath}" : sourceObjType != null ? $"{sourcePropTypeName} '{sourceObjType.Name}'.{sourcePropPath}" : "?";
                     var convertersCount = binding.Converters.Count > 0 ? $"[{binding.Converters.Count}]" : String.Empty;
                     var arrowStr        = isTwoWayBinding ? $"<-{convertersCount}->" : $"-{convertersCount}->";
-                    mainTextStr = $"{sourceDisplayName} {arrowStr} {fieldInfo.Name}";
+                    mainTextStr = $"{sourceDisplayName} {arrowStr} {fieldInfo.FieldType.GetPrettyName()} {fieldInfo.Name}";
                 }
 
                 //Draw main binding info label itself
@@ -88,9 +107,8 @@ namespace UIBindings.Editor
                         DrawSourceField( position, property );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var pathProp   = property.FindPropertyRelative( nameof(BindingBase.Path) );
                         //EditorGUI.PropertyField( position, pathProperty );
-                        DrawPathField( position, pathProp, binding );
+                        DrawPathField( position, property, binding );
 
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                         var updateProp = property.FindPropertyRelative( nameof(DataBinding.Update) );
@@ -99,49 +117,31 @@ namespace UIBindings.Editor
                         using ( new EditorGUI.DisabledScope( sourceProperty == null ) )
                         {
                             position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                            var convertersProp = property.FindPropertyRelative( DataBinding.ConvertersPropertyName );
                             //EditorGUI.PropertyField( position, convertersProperty );
-                            DrawConvertersField( position, convertersProp, binding, sourceAdapterType, isTypeSupported );
+                            DrawConvertersField( position, property, binding, sourceAdapterType, isTypeSupported );
                         }
                     }
                 }
             }
         }
 
-        private void DrawSourceField(  Rect position, SerializedProperty property )
+        private void DrawSourceField(  Rect position, SerializedProperty bindingProp )
         {
-            EditorGUI.BeginChangeCheck();
-
-            var sourceObjectProp = property.FindPropertyRelative( nameof(BindingBase.Source) );
-            var sourceTypeStrProp = property.FindPropertyRelative( nameof(BindingBase.SourceType) );
-            var bindTypeProp = property.FindPropertyRelative( nameof(BindingBase.BindToType) );
+            var sourceObjectProp = bindingProp.FindPropertyRelative( nameof(BindingBase.Source) );
+            var sourceTypeStrProp = bindingProp.FindPropertyRelative( nameof(BindingBase.SourceType) );
+            var bindTypeProp = bindingProp.FindPropertyRelative( nameof(BindingBase.BindToType) );
 
             position = EditorGUI.PrefixLabel( position, new GUIContent( bindTypeProp.boolValue ? "Source type" : "Source reference" ));
 
-            var rects = GUIUtils.GetHorizontalRects( position, 1, 0, 50 );
+            using var zeroIndentScope = new EditorGUIUtils.ZeroLevelScope(  ); //Indent mess with some fields without labels
 
-            //Button "object reference" or "type" for source
+            var (sourceFieldRect, sourceTypeBtnRect) = GUIUtils.GetHorizontalRects( position, 2, 0, 50 );
             var bindType = bindTypeProp.boolValue;
-            var nextModeLabel = bindType ? new GUIContent("Ref", "Click to switch to Unity object source mode") : new GUIContent("Type", "Click to switch to C# any type source mode");
-            if ( GUI.Button( rects.Item2, nextModeLabel ) )
-            {
-                bindType = !bindType;
-                bindTypeProp.boolValue = bindType;
-            }
-
-            if ( bindType )         //Type source
+            if ( bindType )         //Type source, use sourceTypeStrProp
             {
                 var currentType = sourceTypeStrProp.stringValue;
-                //hack around Search window
-                if( _currentSelectedTypeFromSearchWindow != null && currentType != _currentSelectedTypeFromSearchWindow )
-                {
-                    currentType = _currentSelectedTypeFromSearchWindow;
-                    sourceTypeStrProp.stringValue = currentType;
-                    _currentSelectedTypeFromSearchWindow = null; //Reset after use
-                    sourceTypeStrProp.serializedObject.ApplyModifiedProperties();
-                }
                 var (content, style) = GetSourceTypeFieldContent( currentType );
-                if ( GUI.Button( rects.Item1, content, style ) )
+                if ( GUI.Button( sourceFieldRect, content, style ) )
                 {
                     //Show search service window to select type
                     var provider2 = new TypeSearchProvider2( typeof(System.Object) );
@@ -151,7 +151,11 @@ namespace UIBindings.Editor
                                         title               = "Type",
                                         queryBuilderEnabled = true,
                                         hideTabs            = true,
-                                        selectHandler       = (a, b) => _currentSelectedTypeFromSearchWindow = ((Type)a.data).AssemblyQualifiedName,
+                                        selectHandler       = (a, b) =>
+                                        {
+                                            sourceTypeStrProp.stringValue = ((Type)a.data).AssemblyQualifiedName;
+                                            sourceTypeStrProp.serializedObject.ApplyModifiedProperties();
+                                        },
                                         flags = SearchViewFlags.TableView                |
                                                 SearchViewFlags.DisableBuilderModeToggle |
                                                 SearchViewFlags.DisableInspectorPreview
@@ -180,36 +184,72 @@ namespace UIBindings.Editor
                     */
                 }
             }
-            else
+            else                    //Reference source, use sourceObjectProp
             {
                 var oldSource = sourceObjectProp.objectReferenceValue;
-                var controlRect = rects.Item1;
-                controlRect.xMin -= EditorGUI.indentLevel * 15f;
-                EditorGUI.PropertyField( controlRect, sourceObjectProp, GUIContent.none );
-                if ( EditorGUI.EndChangeCheck() )
+                var parentSource = GetEffectiveSourceObject( bindingProp );
+                UnityEngine.Object newSource = null;
+                if ( !parentSource )    //No parent mode, only raw local source
                 {
-                    //Process some automatization for first time object selection
-                    if( !oldSource && sourceObjectProp.objectReferenceValue )
-                    {
-                        //Autosearch for monobeh components or components with INotifyPropertyChanged
-                        if( sourceObjectProp.objectReferenceValue is GameObject sourceGO )
-                        {
-                            var components = sourceGO.GetComponents<MonoBehaviour>();
-                            if( components.Length > 0 )
-                                sourceObjectProp.objectReferenceValue = components[0];
-                        
-                            foreach (var component in components)
-                                if ( component is INotifyPropertyChanged )
-                                {
-                                    sourceObjectProp.objectReferenceValue = component;
-                                    break;
-                                }
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.PropertyField( sourceFieldRect, sourceObjectProp, GUIContent.none );
+                    if ( EditorGUI.EndChangeCheck() )
+                        newSource = sourceObjectProp.objectReferenceValue;
+                }
+                else if ( !oldSource && parentSource )       //Source not overriden, use parent source
+                {
+                    var (inheritedSourceRect, sourceFieldRect2) = GUIUtils.GetHorizontalRects( sourceFieldRect, 2, 15, 0 );
+                    //Draw inherited source mark
+                    GUI.Label( inheritedSourceRect, new GUIContent( "↑", tooltip: $"Used parent object {parentSource.name} as a Source. Select another source object to override." ) );  
 
-                            sourceObjectProp.serializedObject.ApplyModifiedProperties();
-                        } 
+                    //Draw object field with parent source 
+                    EditorGUI.BeginChangeCheck();
+                    var @override = EditorGUI.ObjectField( sourceFieldRect2, parentSource, typeof(UnityEngine.Object), true );
+                    if ( EditorGUI.EndChangeCheck() )       //If changed, override parent source
+                    {
+                        newSource = @override;
                     }
                 }
+                else                //Source is overriden, draw object field with override mark, allow to clear override
+                {
+                    var (overridenSourceRect, sourceFieldRect2) = GUIUtils.GetHorizontalRects( sourceFieldRect, 2, 15, 0 );
+                    //Draw override source mark
+                    if ( GUI.Button( overridenSourceRect, new GUIContent("*", tooltip: $"Parent source overrided. Click to ping parent source object {parentSource.name}. Select None to remove source override and use parent source.") ) )  
+                        EditorGUIUtility.PingObject( parentSource );
+
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUI.PropertyField( sourceFieldRect2, sourceObjectProp, GUIContent.none );
+                    if ( EditorGUI.EndChangeCheck() )
+                        newSource = sourceObjectProp.objectReferenceValue;
+                }
+
+                //Some automation to select proper component from GO reference
+                if ( newSource is GameObject sourceGO )
+                {
+                    if ( sourceGO.TryGetComponent( out ViewModel vmComp ) )
+                        sourceObjectProp.objectReferenceValue = vmComp;
+                    else if ( sourceGO.TryGetComponent( out INotifyPropertyChanged inotifyPropertyChanged ) )
+                        sourceObjectProp.objectReferenceValue = (Component)inotifyPropertyChanged;
+                    else if ( sourceGO.TryGetComponent( out MonoBehaviour monoBehaviour ) )
+                        sourceObjectProp.objectReferenceValue = monoBehaviour;
+                    else if ( sourceGO.TryGetComponent( out Component justAnyComponent ) )
+                        sourceObjectProp.objectReferenceValue = justAnyComponent;
+                    else
+                        sourceObjectProp.objectReferenceValue = sourceGO;       //If GO without any component?? use it
+
+                    sourceObjectProp.serializedObject.ApplyModifiedProperties(); 
+                }
             }
+
+            //Button "object reference" or "type" for source
+            var nextModeLabel = bindType ? new GUIContent("Ref", "Click to switch to Unity object source mode") : new GUIContent("Type", "Click to switch to C# any type source mode");
+            if ( GUI.Button( sourceTypeBtnRect, nextModeLabel ) )
+            {
+                bindType               = !bindType;
+                bindTypeProp.boolValue = bindType;
+            }
+
+            return;
 
             (GUIContent, GUIStyle) GetSourceTypeFieldContent( String typeString )
             {
@@ -229,16 +269,19 @@ namespace UIBindings.Editor
                     return new (new GUIContent( $"Type '{typeString}' not found. Click to select correct type from Search window", tooltip: typeString ), Resources.ErrorTextField);
                 }  
             }
+
+            
         }
 
-        private void DrawPathField(  Rect position, SerializedProperty pathProp, BindingBase binding )
+        private void DrawPathField(  Rect position, SerializedProperty bindingProp, BindingBase binding )
         {
+            var pathProp = bindingProp.FindPropertyRelative( nameof(BindingBase.Path) );
             position = EditorGUI.PrefixLabel( position, new GUIContent( pathProp.displayName ) );
 
-            var (sourceType, _) = GetSourceType( binding );
+            var (sourceType, _) = GetSourceTypeAndObject( bindingProp );
             if ( sourceType != null )
             {
-                var propInfo = GetSourceProperty( binding );
+                var propInfo = GetSourceProperty( bindingProp );
 
                 //Draw select bindable property button
                 var isSelectPropertyPressed = false;
@@ -292,7 +335,7 @@ namespace UIBindings.Editor
         }
 
 
-        private void DrawConvertersField( Rect position, SerializedProperty convertersProp, DataBinding binding, Type sourceType, Predicate<Type> targetType )
+        private void DrawConvertersField( Rect position, SerializedProperty bindingProp, DataBinding binding, Type sourceType, Predicate<Type> targetType )
         {
             _convertersFieldHeight = 0;
             var labelRect = position;
@@ -300,7 +343,7 @@ namespace UIBindings.Editor
             var mainContentPosition = position;
             mainContentPosition.xMin += EditorGUIUtility.labelWidth;
 
-            convertersProp = convertersProp.FindPropertyRelative( nameof(DataBinding.ConvertersList.Converters) );
+            var convertersProp = bindingProp.FindPropertyRelative( DataBinding.ConvertersPropertyName );
             if ( convertersProp.isArray && convertersProp.arraySize > 0 )
             {
                 convertersProp.isExpanded = EditorGUI.Foldout( labelRect, convertersProp.isExpanded, convertersProp.displayName );
@@ -317,7 +360,7 @@ namespace UIBindings.Editor
                     {
                         for ( int i = 0; i < convertersProp.arraySize; i++ )
                         {
-                            var converterHeight = DrawConverterField( ref position, i, convertersProp, prevType, binding );
+                            var converterHeight = DrawConverterField( ref position, i, bindingProp, convertersProp, prevType, binding );
                             _convertersFieldHeight += converterHeight;
                             var converter = binding.Converters[ i ];
                             prevType = converter != null ? ConverterBase.GetConverterTypeInfo( converter ).output : null;
@@ -333,7 +376,7 @@ namespace UIBindings.Editor
                 var rects = GUIUtils.GetHorizontalRects( mainContentPosition, 2, 0, 20 );
                 GUI.Label( rects.Item1, "No converters" );
                 if ( GUI.Button( rects.Item2, Resources.AddButtonContent ) )
-                    AppendConverter( binding, convertersProp );
+                    AppendConverter( binding, bindingProp, convertersProp );
             }
         }
 
@@ -346,26 +389,57 @@ namespace UIBindings.Editor
                 return Resources.LineHeightWithMargin;
         }
 
-        private static (Type, String) GetSourceType(BindingBase binding )
+        private static (Type, UnityEngine.Object) GetSourceTypeAndObject( SerializedProperty bindingProp )
         {
-            if ( binding.BindToType )
+            if ( bindingProp.FindPropertyRelative( nameof(BindingBase.BindToType) ).boolValue )
             {
-                var bindType = Type.GetType( binding.SourceType, false );
-                return (bindType, bindType != null ? bindType.Name : "source type missed");
+                var sourceTypeString = bindingProp.FindPropertyRelative( nameof(BindingBase.SourceType) ).stringValue;
+                var bindType = Type.GetType( sourceTypeString, false );
+                return (bindType, null);
             }
-            else if ( binding.Source )
-                return (binding.Source.GetType(), $"{binding.Source.name}");
-
-            return (null, "source object missed");
+            else
+            {
+                var sourceObject = GetEffectiveSourceObject( bindingProp );
+                if( sourceObject )
+                    return (sourceObject.GetType(), sourceObject);
+                return (null, null);
+            } 
         }
 
-        public static PropertyInfo GetSourceProperty( BindingBase binding )
+        public static UnityEngine.Object GetEffectiveSourceObject( SerializedProperty bindingProp )
         {
-            var (sourceType, _) = GetSourceType( binding );
+            if ( bindingProp == null )
+                return null;
+
+            var sourceObject = bindingProp.FindPropertyRelative(nameof(BindingBase.Source)).objectReferenceValue;
+            if ( sourceObject )
+                return sourceObject;
+
+            var sourceObjectInParents = FindComponentInParents<ViewModel>( bindingProp.serializedObject.targetObject );
+            if ( sourceObjectInParents )
+                return sourceObjectInParents;
+
+            return null;
+
+            TComponent FindComponentInParents<TComponent>( UnityEngine.Object obj )
+            {
+                if ( obj is Component component )
+                {
+                    var componentInParent = component.GetComponentInParent<TComponent>();
+                    if( componentInParent != null )
+                        return componentInParent;
+                }
+                return default;
+            }
+        }
+
+        public static PropertyInfo GetSourceProperty( SerializedProperty bindingProp )
+        {
+            var (sourceType, _) = GetSourceTypeAndObject( bindingProp );
             if ( sourceType == null )
                 return null;
 
-            var propertyPath = binding.Path;
+            var propertyPath = bindingProp.FindPropertyRelative( nameof(BindingBase.Path) ).stringValue;
             if ( string.IsNullOrEmpty( propertyPath ) )
                 return null;
 
@@ -373,59 +447,55 @@ namespace UIBindings.Editor
             return sourceProperty;
         }
 
-        public static Type GetSourcePropertyType( BindingBase binding )
-        {
-            var sourceProperty = GetSourceProperty( binding );
-            return sourceProperty != null ? sourceProperty.PropertyType : null;
-        }
-
-        private static bool IsSourceValid( DataBinding binding, PropertyInfo sourceProperty, out string report )
+        private static bool IsSourceValid( UnityEngine.Object sourceObject, Type sourceType, PropertyInfo sourceProperty, SerializedProperty bindingProp, out string report )
         {
             report = String.Empty;
 
-            if ( !binding.BindToType && !binding.Source )
+            if ( bindingProp.FindPropertyRelative( nameof(BindingBase.BindToType) ).boolValue )
             {
-                report = "Source is not set";
-                return false;
-            }
-
-            if ( binding.BindToType )
-            {
-                if ( String.IsNullOrEmpty( binding.SourceType ) )
+                if( sourceType == null )
                 {
                     report = "Source type is not set";
                     return false;
                 }
-                else if( Type.GetType( binding.SourceType, throwOnError: false ) == null )
+            }
+            else
+            {
+                if ( !sourceObject )
                 {
-                    report = "Source type is not found.";
+                    report = "Source object is not set";
                     return false;
-                } 
-                else if( Application.isPlaying && binding.SourceObject == null )
-                {
-                    report = "Source object is not set in runtime";
-                    return false;
-                } 
+                }
             }
 
+            var propPath = bindingProp.FindPropertyRelative( nameof(BindingBase.Path) ).stringValue;
             if ( sourceProperty == null )
             {
-                report = $"Source property '{binding.Path}' is not found on {binding.Source.GetType().Name}";
-                return false;
+                if ( !String.IsNullOrEmpty( propPath ) )
+                {
+                    report = $"Property '{propPath}' is not found on source";
+                    return false;
+                }
+                else
+                {
+                    report = "Source property is not set";
+                    return false;
+                }
             }
-
-            if( !sourceProperty.CanWrite && binding.IsTwoWay )
+            else
             {
-                report = $"Source property '{binding.Path}' is read-only, but binding is two-way.";
-                return false;
+                if ( !sourceProperty.CanRead )
+                {
+                    report = $"Property '{propPath}' is not readable";
+                    return false;   
+                }
+                // if( !sourceProperty.CanWrite && binding.IsTwoWay )
+                // {
+                //     report = $"Property '{propPath}' is read-only, but binding is two-way";
+                //     return false;
+                // }
             }
-
-            if ( !sourceProperty.CanRead )
-            {
-                report = $"Write only source property '{binding.Path}' is not supported.";
-                return false;   
-            }
-
+            
             return true;
         }
 
@@ -508,9 +578,6 @@ namespace UIBindings.Editor
             return true;
         }
 
-        private ISearchView _currentTypeSearchWindow;
-        private String      _currentSelectedTypeFromSearchWindow;  //Store here because if stored from Search window callback, it cause ugly repaint of Search window
-
 #region Converters stuff
 
         private static readonly IReadOnlyList<ConverterTypeInfo> AllConverterTypes = PrepareTypeCache();
@@ -537,11 +604,11 @@ namespace UIBindings.Editor
             return result;
         }
 
-        private static Type GetConverterTypeToAppend( BindingBase binding, IReadOnlyList<ConverterBase> converters )
+        private static Type GetConverterTypeToAppend( SerializedProperty bindingProp, IReadOnlyList<ConverterBase> converters )
         {
             if ( converters.Count > 0 )
                 return GetLastConverterOutputType( converters );
-            return GetSourcePropertyType( binding );
+            return GetSourceProperty( bindingProp )?.PropertyType;
         }
 
         private static Type GetLastConverterOutputType( IReadOnlyList<ConverterBase> converters )
@@ -555,10 +622,10 @@ namespace UIBindings.Editor
             return null;
         }
 
-        private static void AppendConverter( DataBinding binding, SerializedProperty convertersProp )
+        private static void AppendConverter( DataBinding binding, SerializedProperty bindingProp, SerializedProperty convertersProp )
         {
             var converters = binding.Converters;
-            var convertFromType = GetConverterTypeToAppend( binding, converters );
+            var convertFromType = GetConverterTypeToAppend( bindingProp, converters );
             var compatibleTypes   = GetCompatibleConverters( convertFromType, binding.IsTwoWay );
 
             if( compatibleTypes.Count == 0 )
@@ -621,7 +688,7 @@ namespace UIBindings.Editor
             return result;
         }
 
-        private static Single DrawConverterField( ref Rect position, int index, SerializedProperty convertersProp, Type prevType, DataBinding binding) 
+        private static Single DrawConverterField( ref Rect position, int index, SerializedProperty bindingProp, SerializedProperty convertersProp, Type prevType, DataBinding binding) 
         {
             var isLastConverter = index == convertersProp.arraySize - 1;
             var converterProp = convertersProp.GetArrayElementAtIndex( index );
@@ -659,7 +726,7 @@ namespace UIBindings.Editor
             EditorGUI.LabelField( position, new GUIContent(title), info, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
             if( isLastConverter && GUI.Button( appendBtnRect, Resources.AddButtonContent ) )
             {
-                AppendConverter( binding, convertersProp );
+                AppendConverter( binding, bindingProp, convertersProp );
             }
 
             if ( GUI.Button( removeBtnRect, Resources.RemoveBtnContent ) )

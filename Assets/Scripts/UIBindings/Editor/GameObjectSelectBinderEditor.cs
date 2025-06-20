@@ -70,8 +70,7 @@ namespace UIBindings.Editor
 
         private Type GetSourcePropertyType( SerializedProperty bindingProperty )
         {
-            var bindingInstance = (DataBinding)bindingProperty.boxedValue;
-            var propertyInfo = DataBindingEditor.GetSourceProperty( bindingInstance );
+            var propertyInfo = DataBindingEditor.GetSourceProperty( bindingProperty );
             Type keyType;
             if ( propertyInfo != null )
             {

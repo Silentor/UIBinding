@@ -1,13 +1,11 @@
 using System;
 using TMPro;
-using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.UI;
 using Object = System.Object;
 
 namespace UIBindings
 {
-    public class InputFieldBinder : MonoBehaviour
+    public class InputFieldBinder : BinderBase
     {
         public TMP_InputField           InputField;
 
@@ -22,23 +20,23 @@ namespace UIBindings
             Assert.IsTrue( InputField );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( forceOneWay: !InputField.interactable );
+            ValueBinding.Init( GetParentSource(), forceOneWay: !InputField.interactable );
             ValueBinding.SourceChanged += ProcessValue;
 
             InteractableBinding.SetDebugInfo( this, nameof(InteractableBinding) );
-            InteractableBinding.Init( );
+            InteractableBinding.Init( GetParentSource() );
             InteractableBinding.SourceChanged += ProcessInteractable;
 
             ReadonlyBinding.SetDebugInfo( this, nameof(ReadonlyBinding) );
-            ReadonlyBinding.Init( );
+            ReadonlyBinding.Init( GetParentSource() );
             ReadonlyBinding.SourceChanged += ProcessReadonly;
         }
 
         private void OnEnable( )
         {
-            ValueBinding.Subscribe();
-            InteractableBinding.Subscribe();
-            ReadonlyBinding.Subscribe();
+            ValueBinding.Subscribe( GetUpdateOrder() );
+            InteractableBinding.Subscribe( GetUpdateOrder() );
+            ReadonlyBinding.Subscribe( GetUpdateOrder() );
             InputField.onValueChanged.AddListener( OnValueChanged );
         }
 

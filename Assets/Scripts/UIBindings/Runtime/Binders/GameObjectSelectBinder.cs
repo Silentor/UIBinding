@@ -4,7 +4,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class GameObjectSelectBinder : MonoBehaviour
+    public class GameObjectSelectBinder : BinderBase
     {
         public KeyValue<GameObject>[]        GameObjects;
         public ValueBinding<int>             SelectorBinding;
@@ -12,13 +12,13 @@ namespace UIBindings
         private void Awake( )
         {
             SelectorBinding.SetDebugInfo( this, nameof(SelectorBinding) );
-            SelectorBinding.Init(  );
+            SelectorBinding.Init( GetParentSource() );
             SelectorBinding.SourceChanged += OnSelectorValueChanged;
         }
 
         private void OnEnable( )
         {
-            SelectorBinding.Subscribe();
+            SelectorBinding.Subscribe( GetUpdateOrder() );
         }
 
         private void OnDisable( )

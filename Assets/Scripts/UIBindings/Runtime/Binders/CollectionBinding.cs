@@ -26,11 +26,6 @@ namespace UIBindings
 
         public override Boolean IsTwoWay => false;
 
-        public override    Object  GetDebugLastValue( )
-        {
-            return _sourceCopy;
-        }
-
         public override    Boolean IsRuntimeValid => _isValid;
 
         public void Init( object sourceObject = null )
@@ -110,11 +105,11 @@ namespace UIBindings
             }
 
             timer.AddMarker( "TwoWayAwake" );
-            var report = timer.GetReport();
+            var report = timer.StopAndGetReport();
              
             _isValid = true;
             
-            Debug.Log( $"[{nameof(CollectionBinding)}] Awaked {timer.Elapsed.TotalMicroseconds()} mks, {_debugSourceBindingInfo}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}: {report}" );
+            Debug.Log( $"[{nameof(CollectionBinding)}] Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}: {report}" );
         }
 
         public event Action<CollectionBinding, int, object>                            ItemAdded;
@@ -187,7 +182,7 @@ namespace UIBindings
                 //Read source collection
                 if ( _viewCollectionGetter != null )
                 {
-                    ReadViewCollectionMarker.Begin( _debugSourceBindingInfo );
+                    ReadViewCollectionMarker.Begin( ProfilerMarkerName );
                     var viewCollection = _viewCollectionGetter();
                     _processedList.AddRange( viewCollection );
                     processListAction = viewCollection.ProcessList;
@@ -196,7 +191,7 @@ namespace UIBindings
                 }
                 else
                 {
-                    ReadIEnumerableMarker.Begin( _debugSourceBindingInfo );
+                    ReadIEnumerableMarker.Begin( ProfilerMarkerName );
                     var enumerable = _enumerableGetter();
                     if ( enumerable != null )                        
                         _processedList.AddRange( enumerable.Cast<Object>() );
@@ -215,7 +210,7 @@ namespace UIBindings
                     processListAction?.Invoke( _processedList );
                     BindViewItemMethod = bindViewItemAction;
 
-                    UpdateTargetMarker.Begin( _debugSourceBindingInfo );
+                    UpdateTargetMarker.Begin( ProfilerMarkerName );
                     CompareAndFireEvents( _processedCopy, _processedList );
                     _processedCopy.Clear();
                     _processedCopy.AddRange( _processedList );
@@ -340,6 +335,14 @@ namespace UIBindings
             if( !_isValueInitialized )
                 return "Not initialized";
             return $"Value: {_processedCopy.Count} view items";
+        }
+
+        public override String GetBindingTargetInfo( )
+        {
+            if ( _debugTargetBindingInfo == null )
+                return "collection binding";
+
+            return _debugTargetBindingInfo;
         }
 
     }

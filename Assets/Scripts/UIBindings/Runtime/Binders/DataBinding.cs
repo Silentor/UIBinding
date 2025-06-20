@@ -21,7 +21,7 @@ namespace UIBindings
         [SerializeField]
         protected ConvertersList _converters = new (){Converters = Array.Empty<ConverterBase>()};
         public       IReadOnlyList<ConverterBase> Converters => _converters.Converters;
-        public const String                       ConvertersPropertyName = nameof(_converters);
+        public const String                       ConvertersPropertyName = nameof(_converters) + "." + nameof(ConvertersList.Converters);
 
         public abstract bool IsCompatibleWith( Type type );
 
@@ -30,8 +30,9 @@ namespace UIBindings
         /// <summary>
         /// React to source property changes, either by subscribing to INotifyPropertyChanged or by checking changes periodically.
         /// </summary>
+        /// <param name="host">Optional host component to autosort updates. Bindings on components higher at hierarchy will be updated first.</param>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public void Subscribe()
+        public void Subscribe( int updateOrder = 0 )
         {
             if( !Enabled || !_isValid || _isSubscribed ) return;
 
@@ -39,9 +40,9 @@ namespace UIBindings
                 _sourceNotify.PropertyChanged += OnSourcePropertyChanged;
             switch ( Update.Mode )
             {
-                case EUpdateMode.AfterLateUpdate:  UpdateManager.RegisterAfterLateUpdate( DoUpdate ); break;
-                case EUpdateMode.BeforeLateUpdate: UpdateManager.RegisterBeforeLateUpdate( DoUpdate ); break;
-                case EUpdateMode.AfterUpdate:      UpdateManager.RegisterUpdate( DoUpdate ); break;
+                case EUpdateMode.AfterLateUpdate:  UpdateManager.RegisterAfterLateUpdate( DoUpdate, updateOrder ); break;
+                case EUpdateMode.BeforeLateUpdate: UpdateManager.RegisterBeforeLateUpdate( DoUpdate, updateOrder ); break;
+                case EUpdateMode.AfterUpdate:      UpdateManager.RegisterUpdate( DoUpdate, updateOrder ); break;
                 case EUpdateMode.Manual:           break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -95,36 +96,6 @@ namespace UIBindings
         private   EUpdateMode            _currentUpdateMode = EUpdateMode.Manual;
         protected float                  _lastUpdateTime;
 
-        //Mostly debug for inspector
-        public abstract Object GetDebugLastValue( );
-        public abstract bool   IsRuntimeValid { get; }
-
-        public override void SetDebugInfo(MonoBehaviour host, String bindingName )
-        {
-            base.SetDebugInfo( host, bindingName );
-
-            var convertersCount = _converters.Converters.Length  > 0 ? $"[{_converters.Converters.Length}]" : string.Empty;
-            _debugDirectionStr     = IsTwoWay ? $"<-{convertersCount}->" : $"-{convertersCount}->";
-        }
-
-        public static (Type valueType, Type templateType) GetBindingTypeInfo( Type bindingType )
-        {
-            Assert.IsTrue( typeof(BindingBase).IsAssignableFrom( bindingType ) );
-
-            while (bindingType != null)
-            {
-                if (bindingType.IsGenericType 
-                 && ( bindingType.GetGenericTypeDefinition() == typeof(ValueBinding<>) || bindingType.GetGenericTypeDefinition() == typeof(ValueBindingRW<>) ) )
-                {
-                    var valueType = bindingType.GetGenericArguments()[0];
-                    var template  = bindingType.GetGenericTypeDefinition();
-                    return ( valueType, template );
-                }
-                bindingType = bindingType.BaseType;
-            }
-            throw new InvalidOperationException("Base type was not found");
-        }
-
         [Serializable]
         public class ConvertersList
         {
@@ -147,14 +118,6 @@ namespace UIBindings
             AfterLateUpdate,
             Manual
         }
-
-        protected static readonly ProfilerMarker ReadDirectValueMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.ReadDirectValue" );
-        protected static readonly ProfilerMarker WriteDirectValueMarker    = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.WriteDirectValue" );
-        protected static readonly ProfilerMarker ReadConvertedValueMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.ReadConvertedValue" );
-        protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.WriteConvertedValue" );
-        protected static readonly ProfilerMarker UpdateTargetMarker        = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.UpdateTarget" );
-
-
 
         private void OnSourcePropertyChanged(Object sender, String propertyName )
         {
@@ -190,7 +153,25 @@ namespace UIBindings
 
         protected abstract void CheckChangesInternal( );
 
+#region Debug stuff
 
+        protected static readonly ProfilerMarker ReadDirectValueMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.ReadDirectValue" );
+        protected static readonly ProfilerMarker WriteDirectValueMarker    = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.WriteDirectValue" );
+        protected static readonly ProfilerMarker ReadConvertedValueMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.ReadConvertedValue" );
+        protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.WriteConvertedValue" );
+        protected static readonly ProfilerMarker UpdateTargetMarker        = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.UpdateTarget" );
+
+        protected string ProfilerMarkerName = String.Empty;
+
+        public override String GetBindingDirection( )
+        {
+            var convertersCount = _converters.Converters.Length  > 0 ? $"[{_converters.Converters.Length}]" : string.Empty;
+            return IsTwoWay ? $"<-{convertersCount}->" : $"-{convertersCount}->";
+        }
+
+        public abstract bool   IsRuntimeValid { get; }
+
+#endregion
         
     }
 }

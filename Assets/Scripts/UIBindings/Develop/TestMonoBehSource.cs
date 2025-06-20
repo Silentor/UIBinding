@@ -226,14 +226,6 @@ namespace UIBindings
 
             //EnumerateProfilerStats();
 
-            // Profiler.BeginSample( "test" );
-            // var systemMemoryRecorder = new ProfilerRecorder(ProfilerCategory.Memory, "System Used Memory", 0);
-            // var allocated = systemMemoryRecorder.CurrentValue;
-            // var obj = new Object();
-            // Profiler.EndSample();
-            // allocated = systemMemoryRecorder.CurrentValue - allocated;
-            // Debug.Log( allocated );
-
             // if ( DelayedCanvas )
             // {
             //     StartCoroutine( DelayedCanvasEnable() );

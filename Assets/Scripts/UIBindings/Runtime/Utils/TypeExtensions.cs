@@ -17,5 +17,31 @@ namespace UIBindings.Runtime.Utils
 
             return type.IsSubclassOf( baseType );
         }
+
+        public static bool IsNotAssigned( this object plainOrUnityObject )
+        {
+            if ( plainOrUnityObject is UnityEngine.Object unityObject )
+                return !unityObject;
+
+            if ( ReferenceEquals( plainOrUnityObject, null ) )
+                return true;
+
+            return false;
+        }
+
+        public static string GetPrettyName( this Type type )
+        {
+            if ( type == null )
+                return "null";
+
+            if ( type.IsGenericType )
+            {
+                var genericTypeName = type.GetGenericTypeDefinition().Name[ ..^2 ];
+                var genericArgs = string.Join( ", ", Array.ConvertAll( type.GetGenericArguments(), t => t.GetPrettyName() ) );
+                return $"{genericTypeName}<{genericArgs}>";
+            }
+
+            return type.Name;
+        }
     }
 }

@@ -3,17 +3,15 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.UI;
 using Object = System.Object;
 
 namespace UIBindings
 {
-    public class DropdownBinder : MonoBehaviour
+    public class DropdownBinder : BinderBase
     {
         public TMP_Dropdown             Dropdown;
         public ValueBindingRW<int>      ValueBinding; 
         public CollectionBinding        OptionsBinding;
-
 
         protected void Awake( )
         {
@@ -22,11 +20,11 @@ namespace UIBindings
             Assert.IsTrue( Dropdown );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( forceOneWay: !Dropdown.interactable );
+            ValueBinding.Init( GetParentSource(), forceOneWay: !Dropdown.interactable );
             ValueBinding.SourceChanged += ProcessValue;
 
             OptionsBinding.SetDebugInfo( this, nameof(OptionsBinding) );
-            OptionsBinding.Init( );
+            OptionsBinding.Init( GetParentSource() );
             OptionsBinding.CollectionChanged += ProcessOptionsChanged;
         }
 
@@ -54,8 +52,8 @@ namespace UIBindings
 
         private void OnEnable( )
         {
-            ValueBinding.Subscribe();
-            OptionsBinding.Subscribe();
+            ValueBinding.Subscribe( GetUpdateOrder() );
+            OptionsBinding.Subscribe( GetUpdateOrder() );
             Dropdown.onValueChanged.AddListener( OnValueChanged );
         }
 

@@ -6,7 +6,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class ToggleBinder : MonoBehaviour
+    public class ToggleBinder : BinderBase
     {
         public Toggle Toggle;
         public ValueBindingRW<bool> ValueBinding; 
@@ -18,14 +18,13 @@ namespace UIBindings
             Assert.IsTrue( Toggle );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( forceOneWay: !Toggle.interactable );
+            ValueBinding.Init( GetParentSource(), forceOneWay: !Toggle.interactable );
             ValueBinding.SourceChanged += ProcessSourceToTarget;
-            
         }
 
         private void OnEnable( )
         {
-            ValueBinding.Subscribe();
+            ValueBinding.Subscribe( GetUpdateOrder() );
             Toggle.onValueChanged.AddListener( OnToggleValueChanged );
         }
 
