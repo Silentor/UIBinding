@@ -11,80 +11,9 @@ using Object = System.Object;
 namespace UIBindings.Editor
 {
     [CustomPropertyDrawer(typeof(CallBinding))]
-    public class CallBindingEditor : PropertyDrawer
+    public class CallBindingEditor : BindingBaseEditor
     {
         private Int32 _additionalLinesCount;
-
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-        {
-            using (  new EditorGUI.PropertyScope( position, label, property ) ) ;
-
-            _additionalLinesCount = 0;
-            position.height = EditorGUIUtility.singleLineHeight;
-            var labelRect = position;
-
-            //Draw label
-            labelRect.width     = EditorGUIUtility.labelWidth;
-            property.isExpanded = EditorGUI.Foldout( labelRect, property.isExpanded, label, true );
-
-            //Draw main content
-            var mainLineContentPosition = position;
-            mainLineContentPosition.xMin += EditorGUIUtility.labelWidth;
-            var rects       = GUIUtils.GetHorizontalRects( mainLineContentPosition, 2, 0, 20 );
-            var enabledProp = property.FindPropertyRelative( nameof(BindingBase.Enabled) );
-
-            var isEnabled         = enabledProp.boolValue;
-            var binding           = (CallBinding)property.boxedValue;
-            var sourceName        = binding.Source ? binding.Source.name : "null";
-            var sourceMethod      = GetSourceMethod( binding );
-            var sourceMethodName  = sourceMethod != null ? sourceMethod.Name : "null";
-            var isValid           = !isEnabled || (sourceMethod != null && IsProperMethod( sourceMethod ));
-            var paramsString = sourceMethod != null && sourceMethod.GetParameters().Length > 0
-                ? String.Concat("(", String.Join( ", ", sourceMethod.GetParameters().Select( p => p.ParameterType.Name ) ), ")")
-                : "()";
-            var isAwaitable = sourceMethod != null && sourceMethod.ReturnType.GetMethod( "GetAwaiter" ) != null;
-            var taskString = isAwaitable ? "task " : String.Empty;
-
-            //Draw Enabled toggle
-            EditorGUI.PropertyField( rects.Item2, enabledProp, GUIContent.none );
-
-            using ( new EditorGUI.DisabledGroupScope( !isEnabled ) )
-            {
-                var mainText = $"{taskString}{sourceName}.{sourceMethodName} {paramsString}";
-                GUI.Label( rects.Item1, mainText, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
-
-                //Draw expanded content
-                if ( property.isExpanded )
-                {
-                    using ( new EditorGUI.IndentLevelScope( 1 ) )
-                    {
-                        position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var sourceProperty = property.FindPropertyRelative( nameof(BindingBase.Source) );
-                        //EditorGUI.PropertyField( position, sourceProperty );
-                        DrawSourceField( position, sourceProperty );
-
-                        position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        var pathProperty   = property.FindPropertyRelative( nameof(BindingBase.Path) );
-                        //EditorGUI.PropertyField( position, pathProperty );
-                        var methodInfo = DrawPathField( position, pathProperty, binding );
-
-                        // position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        // var convertersProperty = property.FindPropertyRelative( Binding.ConvertersPropertyName );
-                        // //EditorGUI.PropertyField( position, convertersProperty );
-                        // DrawConvertersField( position, convertersProperty, binding, sourceType, targetType );
-
-                        if ( methodInfo != null )
-                        {
-                            position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                            var paramProperty = property.FindPropertyRelative(nameof(CallBinding.Params));
-                            DrawMethodParameter( position, paramProperty, methodInfo, binding );
-                        }
-
-                        //if(  )
-                    }
-                }
-            }
-        }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
@@ -92,20 +21,6 @@ namespace UIBindings.Editor
                 return Resources.LineHeightWithMargin * 3 + _additionalLinesCount * Resources.LineHeightWithMargin;
             else
                 return EditorGUIUtility.singleLineHeight;
-        }
-
-        private static MethodInfo GetSourceMethod(CallBinding binding)
-        {
-            if (!binding.Source || String.IsNullOrEmpty(binding.Path))
-                return null;
-
-            var sourceType = binding.Source.GetType();
-            var method = sourceType.GetMethod(binding.Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-            if (IsProperMethod( method ))
-                return method;
-
-            return null;
         }
 
         private static Boolean IsProperMethod(MethodInfo method)
@@ -147,67 +62,66 @@ namespace UIBindings.Editor
             return true;
         }
 
-        private void DrawSourceField(  Rect position, SerializedProperty sourceProp )
+        protected override BindingMainString GetMainString(SerializedProperty property )
         {
-            var oldSource = sourceProp.objectReferenceValue;
-            EditorGUI.BeginChangeCheck();
-            EditorGUI.PropertyField( position, sourceProp );
-            if ( EditorGUI.EndChangeCheck() )
-            {
-                if( !oldSource && sourceProp.objectReferenceValue )
-                {
-                    //Autosearch for components with methods todo implement
-                    if( sourceProp.objectReferenceValue is GameObject sourceGO )
-                    {
-                        var components = sourceGO.GetComponents<MonoBehaviour>();
-                        if( components.Length > 0 )
-                            sourceProp.objectReferenceValue = components[0];
-                        
-                        // foreach (var component in components)
-                        //     if ( component is INotifyPropertyChanged )
-                        //     {
-                        //         sourceProp.objectReferenceValue = component;
-                        //         break;
-                        //     }
+            var validationReport = String.Empty;
+            var (sourceType, sourceObject) = GetSourceTypeAndObject( property );
+            var sourceName       = sourceObject ? $"{sourceObject.GetType().Name} {sourceObject.name}" : sourceType?.Name ?? "null";
+            var sourceMethod     = GetSourceMethod( property );
+            var sourceMethodName = sourceMethod != null ? sourceMethod.Name : "null";
+            var isValid          = sourceMethod != null && IsProperMethod( sourceMethod );
+            var paramsString = sourceMethod != null && sourceMethod.GetParameters().Length > 0
+                    ? String.Concat("(", String.Join( ", ", sourceMethod.GetParameters().Select( p => p.ParameterType.Name ) ), ")")
+                    : "()";
+            var isAwaitable = sourceMethod != null && sourceMethod.ReturnType.GetMethod( "GetAwaiter" ) != null;
+            var taskString  = isAwaitable ? "task " : String.Empty;
 
-                        sourceProp.serializedObject.ApplyModifiedProperties();
-                    } 
+            var mainText = $"{taskString}{sourceName}.{sourceMethodName} {paramsString}";
+
+            if ( Application.isPlaying  )
+            {
+                var callBindingObject = GetBindingObject<CallBinding>( property );
+                if ( !callBindingObject.IsRuntimeValid )
+                {
+                    isValid = false;
+                    validationReport += "CallBinding initialization failed.";
                 }
             }
+
+            return new BindingMainString()
+            {
+                MainText = mainText,
+                IsValid = isValid,
+                ValidationReport = validationReport 
+            };
         }
 
-        private MethodInfo DrawPathField(  Rect position, SerializedProperty pathProp, BindingBase binding )
+        protected override void DrawPathField(Rect position, SerializedProperty property )
         {
+            var pathProp = property.FindPropertyRelative( nameof(BindingBase.Path) );
+            var pathName = pathProp.stringValue;
             position = EditorGUI.PrefixLabel( position, new GUIContent( pathProp.displayName ) );
 
-            var sourceObject = binding.Source;
-            if ( sourceObject )
+            var (sourceType, _) = GetSourceTypeAndObject( property ); 
+            if ( sourceType != null )
             {
-                var sourceType = sourceObject.GetType();
-                var compatibleMethods = sourceType.GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
-                                                        .Where( IsProperMethod )
-                                                        .ToArray();
-                MethodInfo methodInfo = null;
-                var methodName = pathProp.stringValue;
-                if ( !String.IsNullOrEmpty( methodName ) )
-                {
-                    methodInfo = compatibleMethods.FirstOrDefault( mi => mi.Name == methodName );
-                }
+                var compatibleMethods = GetCompartibleMethods( sourceType );
+                var methodInfo = compatibleMethods.FirstOrDefault( mi => mi.Name == pathProp.stringValue );
 
                 //Draw select method button
                 var isSelectPropertyPressed = false;
                 String selectedProperty;
                 if ( methodInfo != null )
                 {
-                    var displayName = $"{methodName}()";
+                    var displayName = GetPrettyMethodName( methodInfo );
                     isSelectPropertyPressed = GUI.Button( position, displayName, Resources.TextField );
-                    selectedProperty = methodName;
+                    selectedProperty = pathName;
                 }
                 else
                 {
-                    var displayName = methodName == String.Empty 
-                            ? $"(method not set)"
-                            : $"(missed method {methodName} on Source)";
+                    var displayName = pathName == String.Empty 
+                            ? "(method not set)"
+                            : $"(missed method {pathName} on Source)";
                     //using ( GUIUtils.ChangeContentColor( Color.red ) )
                     {
                         isSelectPropertyPressed = GUI.Button( position, displayName, Resources.ErrorTextField );
@@ -232,22 +146,81 @@ namespace UIBindings.Editor
                     }
                     menu.DropDown(position);
                 }
-
-                return methodInfo;
             }
             else
             {
                 using ( new EditorGUI.DisabledScope() )
                 {
-                    GUI.TextField( position, "(Source not set)", Resources.DisabledTextField );
+                    GUI.TextField( position, $"{pathName} (Source not set)", Resources.DisabledTextField );
                 }
-
-                return null;
             }
         }
 
-        private void DrawMethodParameter(Rect position, SerializedProperty paramsProp, MethodInfo method, CallBinding binding )
+        protected override void DrawAdditionalFields(Rect position, SerializedProperty property )
         {
+            base.DrawAdditionalFields( position, property );
+
+            var methodInfo = GetSourceMethod( property );
+            if ( methodInfo != null )
+            {
+                position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
+                var paramProperty = property.FindPropertyRelative(nameof(CallBinding.Params));
+                DrawMethodParameter( position, paramProperty, methodInfo );
+            }
+        }
+
+        private static MethodInfo[] GetCompartibleMethods(Type sourceType )
+        {
+            return sourceType.GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
+                             .Where( mi => mi.DeclaringType != typeof(Object) )
+                             .GroupBy( mi => mi.Name )
+                             .Where( g => g.Count() == 1 ) //Don't want to bother with overloaded methods bc I want to store only method name without signature
+                             .SelectMany( g => g )
+                             .Where( IsProperMethod )
+                             .ToArray();
+        }
+
+        private static MethodInfo GetSourceMethod( SerializedProperty property )
+        {
+            var (sourceType, _) = GetSourceTypeAndObject( property );
+            if ( sourceType != null )
+            {
+                var methods = GetCompartibleMethods( sourceType );
+                var methodName = property.FindPropertyRelative( nameof(BindingBase.Path) ).stringValue;
+                var method = methods.FirstOrDefault( mi => mi.Name == methodName );
+                return method;
+            }
+
+            return null;
+        }
+
+        private static string GetPrettyMethodName(MethodInfo method)
+        {
+            if (method == null)
+                return "(null)";
+
+            var name = method.Name;
+            // if (method.ReturnType != typeof(void))
+            // {
+            //     name += " -> " + method.ReturnType.Name;
+            // }
+
+            var paramz = method.GetParameters();
+            if (paramz.Length > 0)
+            {
+                name += "(" + String.Join( ", ", paramz.Select( p => $"{p.ParameterType.Name}" ) ) + ")";
+            }
+            else
+            {
+                name += "()";
+            }
+
+            return name;
+        }
+
+        private void DrawMethodParameter(Rect position, SerializedProperty paramsProp, MethodInfo method )
+        {
+            _additionalLinesCount = 0;
             var isChanged = false;
 
             var paramz = method.GetParameters();
@@ -337,34 +310,6 @@ namespace UIBindings.Editor
 
             if ( isChanged )
                 paramsProp.serializedObject.ApplyModifiedProperties();
-        }
-
-        private static class Resources
-        {
-            public static readonly GUIStyle DefaultLabel = new GUIStyle( GUI.skin.label );
-            public static readonly GUIStyle ErrorLabel = new GUIStyle( DefaultLabel )
-                                                         {
-                                                                 normal  = { textColor  = Color.red },
-                                                                 hover   = { textColor  = Color.red },
-                                                                 focused =  { textColor = Color.red }
-                                                         };
-            public static GUIStyle TextField => new GUIStyle( GUI.skin.textField );
-
-            public static GUIStyle DisabledTextField => new GUIStyle( TextField )
-                                                        {
-                                                                normal = { textColor = Color.gray },
-                                                        };
-            public static GUIStyle ErrorTextField => new GUIStyle( TextField )
-                                                     {
-                                                             normal  = { textColor = Color.red },
-                                                             hover   = { textColor = Color.red },
-                                                             focused = { textColor = Color.red }
-                                                     };
-
-            public static readonly float LineHeightWithMargin = EditorGUIUtility.singleLineHeight + 2;
-
-            public static readonly GUIContent AddButtonContent = new GUIContent( "+", "Add compatible converter" );
-            public static readonly GUIContent RemoveBtnContent = new GUIContent( "-", "Remove converter" );
         }
     }
 }

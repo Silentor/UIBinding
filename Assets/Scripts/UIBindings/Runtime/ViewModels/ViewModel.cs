@@ -23,7 +23,7 @@ namespace UIBindings.Runtime
         /// <summary>
         /// The data source for this ViewModel.
         /// </summary>
-        public T DataSource { get; private set; }
+        public T Source { get; private set; }
 
         private void Awake( )
         {
@@ -44,7 +44,7 @@ namespace UIBindings.Runtime
 
         private void OnDataSourceChanged(Object sender, T value )
         {
-            DataSource = value;
+            Source = value;
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace UIBindings.Runtime
         /// <param name="dataSource">The data source to use.</param>
         public void Initialize(T dataSource)
         {
-            DataSource = dataSource;
+            Source = dataSource;
         }
     }
 }

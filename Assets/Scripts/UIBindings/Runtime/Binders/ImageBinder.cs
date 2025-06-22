@@ -11,6 +11,7 @@ namespace UIBindings
         public Image Image;
         public ValueBinding<Sprite>      SourceImageBinding;
         public ValueBinding<Color>       ColorBinding;                      //Optional
+        public ValueBinding<Boolean>     EnabledBinding;                    //Optional
 
         protected void Awake( )
         {
@@ -25,23 +26,30 @@ namespace UIBindings
             ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );        
             ColorBinding.Init( GetParentSource() );
             ColorBinding.SourceChanged += UpdateColor;
+
+            EnabledBinding.SetDebugInfo( this, nameof(ColorBinding) );        
+            EnabledBinding.Init( GetParentSource() );
+            EnabledBinding.SourceChanged += UpdateEnabled;
         }
 
         protected void OnEnable( )
         {
             SourceImageBinding.Subscribe( GetUpdateOrder() );
             ColorBinding.Subscribe( GetUpdateOrder() );
+            EnabledBinding.Subscribe( GetUpdateOrder() );
         }
 
         private void OnDisable( )
         {
             SourceImageBinding.Unsubscribe();
             ColorBinding.Unsubscribe();
+            EnabledBinding.Unsubscribe();
         }
 #if UNITY_EDITOR
         private void Reset( )
         {
             ColorBinding.Enabled = false;
+            EnabledBinding.Enabled = false;
         }
 #endif
 
@@ -54,5 +62,11 @@ namespace UIBindings
         {
             Image.color = color;
         }
+
+        private void UpdateEnabled(Object sender, Boolean isEnabled )
+        {
+            Image.enabled = isEnabled;
+        }
+
     }
 }

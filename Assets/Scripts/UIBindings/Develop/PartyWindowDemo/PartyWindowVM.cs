@@ -25,6 +25,11 @@ namespace UIBindings.Develop
             }
         }
 
+        public void Close( )
+        {
+            gameObject.SetActive( false );
+        }
+
         private Hero _selectedHero;
 
         private void Awake( )

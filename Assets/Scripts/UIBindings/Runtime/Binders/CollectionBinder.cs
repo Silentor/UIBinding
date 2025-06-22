@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UIBindings.Runtime;
 using UIBindings.Runtime.Utils;
 using UnityEngine;
 
@@ -53,6 +54,8 @@ namespace UIBindings
                 viewItem.transform.SetSiblingIndex( i );
                 //viewItem.name = item.ToString();
                 _visibleViews.Add( viewItem );
+
+                TryToInjectViewModel( viewItem, item );
                 if ( sender.BindViewItemMethod != null )
                     sender.BindViewItemMethod( item, viewItem );
             }
@@ -116,6 +119,14 @@ namespace UIBindings
             else
             {
                 Destroy( itemView );
+            }
+        }
+
+        private void TryToInjectViewModel( GameObject viewItem, System.Object item )
+        {
+            if( viewItem.TryGetComponent( out CollectionItemViewModel collectionVM ) )
+            {
+                collectionVM.Initialize( item );
             }
         }
         

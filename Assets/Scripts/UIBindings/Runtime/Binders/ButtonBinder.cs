@@ -44,7 +44,7 @@ namespace UIBindings
             _canExecute = Button.interactable;
 
             CallBinding.SetDebugInfo( this, nameof(CallBinding) );
-            CallBinding.Init(  );
+            CallBinding.Init( GetParentSource() );
 
             ButtonTextBinding.SetDebugInfo( this, nameof(ButtonTextBinding) );
             ButtonTextBinding.Init( GetParentSource() );

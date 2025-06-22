@@ -278,7 +278,14 @@ namespace UIBindings.Runtime.PlayerLoop
             updates.Index = 0;
             while ( updates.Index < updates.Actions.Count )
             {
-                updates.Actions[ updates.Index ].Action();
+                try
+                {
+                    updates.Actions[ updates.Index ].Action();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError( $"[{nameof(UpdateManager)}]-[{nameof(DoUpdate)}] Exception in update item: {updates.Actions[ updates.Index ].Action.Method.Name} with order {updates.Actions[ updates.Index ].Order}. Exception: {e.Message}" );
+                }
                 updates.Index++;
             }
 
@@ -292,8 +299,17 @@ namespace UIBindings.Runtime.PlayerLoop
 
             //Updated should be executed in order (but after all already registered items)
             _tempListOfAddedItems.Sort();
-            foreach ( var newlyAddedItem in _tempListOfAddedItems )                
-                newlyAddedItem.Action();
+            foreach ( var newlyAddedItem in _tempListOfAddedItems )
+            {
+                try
+                {
+                    newlyAddedItem.Action();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError( $"[{nameof(UpdateManager)}]-[{nameof(PostprocessAddedItems)}] Exception in newly added update item: {newlyAddedItem.Action.Method.Name} with order {newlyAddedItem.Order}. Exception: {e.Message}" );
+                }
+            }
 
             //If count of newly added items are small, add one to one, instead add range and resort list
             if ( _tempListOfAddedItems.Count < updates.Actions.Count / 2 )

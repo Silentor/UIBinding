@@ -6,8 +6,12 @@ namespace UIBindings.Develop
 {
     public class HeroStatsVM : ViewModel<Hero>
     {
-        public string Name => DataSource.Name;
+        public string Name => Source.Name;
 
-        public bool EnableGO => !String.IsNullOrEmpty( Name );
+        public int Level => Source.Level;
+
+        public ERace Race => Source.Race;
+
+        public EClass Class => Source.Class;
     }
 }

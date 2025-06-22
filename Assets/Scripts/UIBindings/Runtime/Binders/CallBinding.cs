@@ -21,6 +21,8 @@ namespace UIBindings
     {
         public SerializableParam[] Params; 
 
+        public bool IsRuntimeValid => _isValid;
+
         //All call delegates lives here
         private Delegate _delegateCall;
 
@@ -32,12 +34,42 @@ namespace UIBindings
 
 
 
-        public void Init(  )
+        public void Init( object sourceObject = null )
         {
             if ( !Enabled )   
                 return;
 
-            if ( !Source )
+            if ( BindToType )
+            {
+                if ( sourceObject == null )
+                {
+                    Debug.LogError( $"[{nameof(CallBinding)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the code. Assigned object must be {SourceType} type", _debugHost );
+                    return;
+                }
+                SourceObject = sourceObject;
+            }
+            else
+            {
+                if ( !Source )
+                {
+                    var unityObjectSource = sourceObject as UnityEngine.Object;
+                    if( !unityObjectSource )
+                    {
+                        Debug.LogError( $"[{nameof(CallBinding)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the Inspector", _debugHost );
+                        return;
+                    }
+                    SourceObject = unityObjectSource;
+                }
+                else
+                    SourceObject = Source;
+            }
+
+            InitInfrastructure();
+        }
+
+        private void InitInfrastructure( )
+        {
+            if ( SourceObject == null )
             {
                 Debug.LogError( $"[{nameof(BindingBase)}] Source is not assigned at {_debugHost}", _debugHost );
                 return;
@@ -49,8 +81,8 @@ namespace UIBindings
                 return;
             }
 
-            var sourceType = Source.GetType();
-            var method   = sourceType.GetMethod( Path );
+            var sourceType = SourceObject.GetType();
+            var method     = sourceType.GetMethod( Path );
 
             if ( method == null )
             {
@@ -65,8 +97,8 @@ namespace UIBindings
                 //Optimized
                 if ( methodParams.Length == 0 )
                 {
-                    _delegateCall = (Action)Delegate.CreateDelegate( typeof(Action), Source, method );
-                    _paramsType = EParamsType.Void;
+                    _delegateCall = (Action)Delegate.CreateDelegate( typeof(Action), SourceObject, method );
+                    _paramsType   = EParamsType.Void;
                 }
                 else if ( methodParams.Length == 1 )
                 {
@@ -74,22 +106,22 @@ namespace UIBindings
                     if ( methodParams[ 0 ].ParameterType == typeof(int) )
                     {
                         //var timer = Stopwatch.StartNew();
-                        _delegateCall = (Action<int>)Delegate.CreateDelegate( typeof(Action<int>), Source, method );
+                        _delegateCall = (Action<int>)Delegate.CreateDelegate( typeof(Action<int>), SourceObject, method );
                         //timer.Stop();
                         //Debug.Log($"Create delegate {timer.Elapsed.TotalMicroseconds()} mks");
                         _paramsType  = EParamsType.Int;
                     }
                     else       //Not optimized
                     {
-                        _delegateCall = ConstructAction1( Source, method );
-                        _paramsType     = EParamsType.Boxed1Param;
+                        _delegateCall = ConstructAction1( SourceObject, method );
+                        _paramsType   = EParamsType.Boxed1Param;
                     }
                 }
                 else if( methodParams.Length == 2 )      //Not optimized              
                 {
                     //Construct 2 params delegate with boxing, see https://codeblog.jonskeet.uk/2008/08/09/making-reflection-fly-and-exploring-delegates/
                     //var timer = Stopwatch.StartNew();
-                    _delegateCall = ConstructAction2( Source, method );
+                    _delegateCall = ConstructAction2( SourceObject, method );
                     //timer.Stop();
                     //Debug.Log($"Construct generic method {timer.Elapsed.TotalMicroseconds()} mks");
 
@@ -102,34 +134,34 @@ namespace UIBindings
                 {
                     if ( method.ReturnType == typeof(Awaitable) )
                     {
-                        _delegateCall = (Func<Awaitable>)Delegate.CreateDelegate( typeof(Func<Awaitable>), Source, method );
-                        _paramsType      = EParamsType.Void;
-                        _awaitType = EAwaitableType.Awaitable;
+                        _delegateCall = (Func<Awaitable>)Delegate.CreateDelegate( typeof(Func<Awaitable>), SourceObject, method );
+                        _paramsType   = EParamsType.Void;
+                        _awaitType    = EAwaitableType.Awaitable;
                     }
                     else if ( method.ReturnType == typeof(Task) )
                     {
-                        _delegateCall = (Func<Task>)Delegate.CreateDelegate( typeof(Func<Task>), Source, method );
-                        _paramsType = EParamsType.Void;
-                        _awaitType = EAwaitableType.Task;
+                        _delegateCall = (Func<Task>)Delegate.CreateDelegate( typeof(Func<Task>), SourceObject, method );
+                        _paramsType   = EParamsType.Void;
+                        _awaitType    = EAwaitableType.Task;
                     }
                     else if ( method.ReturnType == typeof(ValueTask) )
                     {
-                        _delegateCall = (Func<ValueTask>)Delegate.CreateDelegate( typeof(Func<ValueTask>), Source, method );
-                        _paramsType      = EParamsType.Void;
-                        _awaitType = EAwaitableType.ValueTask;
+                        _delegateCall = (Func<ValueTask>)Delegate.CreateDelegate( typeof(Func<ValueTask>), SourceObject, method );
+                        _paramsType   = EParamsType.Void;
+                        _awaitType    = EAwaitableType.ValueTask;
                     }
 #if UIBINDINGS_UNITASK_SUPPORT
                     else if( method.ReturnType == typeof(UniTask) )
                     {
-                        _delegateCall = (Func<UniTask>)Delegate.CreateDelegate( typeof(Func<UniTask>), Source, method );
-                        _paramsType    = EParamsType.Void;
-                        _awaitType = EAwaitableType.UniTask;
+                        _delegateCall = (Func<UniTask>)Delegate.CreateDelegate( typeof(Func<UniTask>), SourceObject, method );
+                        _paramsType   = EParamsType.Void;
+                        _awaitType    = EAwaitableType.UniTask;
                     }
                     else if( method.ReturnType == typeof(UniTaskVoid) )
                     {
-                        _delegateCall = (Func<UniTaskVoid>)Delegate.CreateDelegate( typeof(Func<UniTaskVoid>), Source, method );
-                        _paramsType        = EParamsType.Void;
-                        _awaitType = EAwaitableType.UniTaskVoid;
+                        _delegateCall = (Func<UniTaskVoid>)Delegate.CreateDelegate( typeof(Func<UniTaskVoid>), SourceObject, method );
+                        _paramsType   = EParamsType.Void;
+                        _awaitType    = EAwaitableType.UniTaskVoid;
                     }
 #endif
                 }
@@ -139,32 +171,32 @@ namespace UIBindings
                     {
                         if ( method.ReturnType == typeof(Awaitable) )
                         {
-                            _delegateCall = (Func<int, Awaitable>)Delegate.CreateDelegate( typeof(Func<int, Awaitable>), Source, method );
+                            _delegateCall = (Func<int, Awaitable>)Delegate.CreateDelegate( typeof(Func<int, Awaitable>), SourceObject, method );
                             _paramsType   = EParamsType.Int;
                             _awaitType    = EAwaitableType.Awaitable;
                         }
                         else if ( method.ReturnType == typeof(Task) )
                         {
-                            _delegateCall = (Func<int, Task>)Delegate.CreateDelegate( typeof(Func<int, Task>), Source, method );
+                            _delegateCall = (Func<int, Task>)Delegate.CreateDelegate( typeof(Func<int, Task>), SourceObject, method );
                             _paramsType   = EParamsType.Int;
                             _awaitType    = EAwaitableType.Task;
                         }
                         else if ( method.ReturnType == typeof(ValueTask) )
                         {
-                            _delegateCall = (Func<int, ValueTask>)Delegate.CreateDelegate( typeof(Func<int, ValueTask>), Source, method );
+                            _delegateCall = (Func<int, ValueTask>)Delegate.CreateDelegate( typeof(Func<int, ValueTask>), SourceObject, method );
                             _paramsType   = EParamsType.Int;
                             _awaitType    = EAwaitableType.ValueTask;
                         }
 #if UIBINDINGS_UNITASK_SUPPORT
                         else if( method.ReturnType == typeof(UniTask) )
                         {
-                            _delegateCall = (Func<int, UniTask>)Delegate.CreateDelegate( typeof(Func<int, UniTask>), Source, method );
+                            _delegateCall = (Func<int, UniTask>)Delegate.CreateDelegate( typeof(Func<int, UniTask>), SourceObject, method );
                             _paramsType   = EParamsType.Int;
                             _awaitType    = EAwaitableType.UniTask;
                         }
                         else if( method.ReturnType == typeof(UniTaskVoid) )
                         {
-                            _delegateCall = (Func<int, UniTaskVoid>)Delegate.CreateDelegate( typeof(Func<int, UniTaskVoid>), Source, method );
+                            _delegateCall = (Func<int, UniTaskVoid>)Delegate.CreateDelegate( typeof(Func<int, UniTaskVoid>), SourceObject, method );
                             _paramsType   = EParamsType.Int;
                             _awaitType    = EAwaitableType.UniTaskVoid;
                         }
@@ -174,32 +206,32 @@ namespace UIBindings
                     {
                         if ( method.ReturnType == typeof(Awaitable) )
                         {
-                            _delegateCall = ConstructFunc1<Awaitable>( Source, method );
+                            _delegateCall = ConstructFunc1<Awaitable>( SourceObject, method );
                             _paramsType   = EParamsType.Boxed1Param;
                             _awaitType    = EAwaitableType.Awaitable;
                         }
                         else if ( method.ReturnType == typeof(Task) )
                         {
-                            _delegateCall = ConstructFunc1<Task>( Source, method );
+                            _delegateCall = ConstructFunc1<Task>( SourceObject, method );
                             _paramsType   = EParamsType.Boxed1Param;
                             _awaitType    = EAwaitableType.Task;
                         }
                         else if ( method.ReturnType == typeof(ValueTask) )
                         {
-                            _delegateCall = ConstructFunc1<ValueTask>( Source, method );
+                            _delegateCall = ConstructFunc1<ValueTask>( SourceObject, method );
                             _paramsType   = EParamsType.Boxed1Param;
                             _awaitType    = EAwaitableType.ValueTask;
                         }
 #if UIBINDINGS_UNITASK_SUPPORT
                         else if( method.ReturnType == typeof(UniTask) )
                         {
-                            _delegateCall = ConstructFunc1<UniTask>( Source, method );
+                            _delegateCall = ConstructFunc1<UniTask>( SourceObject, method );
                             _paramsType   = EParamsType.Boxed1Param;
                             _awaitType    = EAwaitableType.UniTask;
                         }
                         else if( method.ReturnType == typeof(UniTaskVoid) )
                         {
-                            _delegateCall = ConstructFunc1<UniTaskVoid>( Source, method );
+                            _delegateCall = ConstructFunc1<UniTaskVoid>( SourceObject, method );
                             _paramsType   = EParamsType.Boxed1Param;
                             _awaitType    = EAwaitableType.UniTaskVoid;
                         }
@@ -210,32 +242,32 @@ namespace UIBindings
                 {
                     if ( method.ReturnType == typeof(Awaitable) )
                     {
-                        _delegateCall = ConstructFunc2<Awaitable>( Source, method );
+                        _delegateCall = ConstructFunc2<Awaitable>( SourceObject, method );
                         _paramsType   = EParamsType.Boxed2Params;
                         _awaitType    = EAwaitableType.Awaitable;
                     }
                     else if ( method.ReturnType == typeof(Task) )
                     {
-                        _delegateCall = ConstructFunc2<Task>( Source, method );
+                        _delegateCall = ConstructFunc2<Task>( SourceObject, method );
                         _paramsType   = EParamsType.Boxed2Params;
                         _awaitType    = EAwaitableType.Task;
                     }
                     else if ( method.ReturnType == typeof(ValueTask) )
                     {
-                        _delegateCall = ConstructFunc2<ValueTask>( Source, method );
+                        _delegateCall = ConstructFunc2<ValueTask>( SourceObject, method );
                         _paramsType   = EParamsType.Boxed2Params;
                         _awaitType    = EAwaitableType.ValueTask;
                     }
 #if UIBINDINGS_UNITASK_SUPPORT
                     else if( method.ReturnType == typeof(UniTask) )
                     {
-                        _delegateCall = ConstructFunc2<UniTask>( Source, method );
+                        _delegateCall = ConstructFunc2<UniTask>( SourceObject, method );
                         _paramsType   = EParamsType.Boxed2Params;
                         _awaitType    = EAwaitableType.UniTask;
                     }
                     else if( method.ReturnType == typeof(UniTaskVoid) )
                     {
-                        _delegateCall = ConstructFunc2<UniTaskVoid>( Source, method );
+                        _delegateCall = ConstructFunc2<UniTaskVoid>( SourceObject, method );
                         _paramsType   = EParamsType.Boxed2Params;
                         _awaitType    = EAwaitableType.UniTaskVoid;
                     }
@@ -243,10 +275,14 @@ namespace UIBindings
                 }
             }
 
-            Assert.IsTrue( _paramsType != EParamsType.Unknown, $"[{nameof(CallBinding)}] Method {Path} has unsupported signature at {_debugHost}" );
+            if (_paramsType == EParamsType.Unknown)
+            {
+                Debug.LogError($"[{nameof(CallBinding)}] Method {Path} has unsupported signature at {_debugHost}", _debugHost);
+                return;
+            }
            
             _methodParams = methodParams;
-            _isValid = true;
+            _isValid      = true;
         }
 
         public Awaitable Call( )
