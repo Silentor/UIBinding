@@ -20,15 +20,15 @@ namespace UIBindings
             Assert.IsTrue( Slider );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( GetParentSource(), forceOneWay: !Slider.interactable );
+            ValueBinding.Init( GetSource(ValueBinding), forceOneWay: !Slider.interactable );
             ValueBinding.SourceChanged += UpdateValue;
 
             MinValueBinding.SetDebugInfo( this, nameof(MinValueBinding) );
-            MinValueBinding.Init( GetParentSource() );
+            MinValueBinding.Init( GetSource(MinValueBinding) );
             MinValueBinding.SourceChanged += UpdateMinValue;
 
             MaxValueBinding.SetDebugInfo( this, nameof(MaxValueBinding) );
-            MaxValueBinding.Init( GetParentSource() );
+            MaxValueBinding.Init( GetSource(MaxValueBinding) );
             MaxValueBinding.SourceChanged += UpdateMaxValue;
         }
 

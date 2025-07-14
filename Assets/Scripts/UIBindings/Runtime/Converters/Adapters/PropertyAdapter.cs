@@ -52,8 +52,18 @@ namespace UIBindings.Adapters
             }
 
             ReadPropertyMarker.End();
-            value = default;
+            value = propValue;
             return EResult.NotChanged;
+        }
+
+        /// <summary>
+        /// For debugging, ignore boxing
+        /// </summary>
+        public override EResult TryGetValue(out Object value )
+        {
+            var result = TryGetValue( out T typedValue );
+            value = typedValue;
+            return result;
         }
 
         public void SetValue(T value )
@@ -111,7 +121,14 @@ namespace UIBindings.Adapters
             //Slow way for all other types
             var adapterType = typeof(PropertyAdapter<>).MakeGenericType( type );
             return (PropertyAdapter)Activator.CreateInstance( adapterType, source, propertyInfo, isTwoWayBinding );
-        } 
+        }
+
+        /// <summary>
+        /// For debugging, ignore boxing
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public abstract EResult TryGetValue(out object value );
 
         protected static readonly ProfilerMarker ReadPropertyMarker = new ( ProfilerCategory.Scripts,  $"{nameof(PropertyAdapter)}.ReadProperty" );
         protected static readonly ProfilerMarker WritePropertyMarker = new ( ProfilerCategory.Scripts,  $"{nameof(PropertyAdapter)}.WriteProperty" );

@@ -1,4 +1,5 @@
 ﻿using System;
+using UIBindings.Editor.Utils;
 using UIBindings.Runtime.Types;
 using UnityEditor;
 using UnityEngine;
@@ -70,11 +71,12 @@ namespace UIBindings.Editor
 
         private Type GetSourcePropertyType( SerializedProperty bindingProperty )
         {
-            var propertyInfo = DataBindingEditor.GetSourceProperty( bindingProperty );
+            var (binding, host) = BindingEditorUtils.GetBindingObject<DataBinding>( bindingProperty );
+            var sourceProperty = BindingEditorUtils.GetSourceProperty( binding, host );
             Type keyType;
-            if ( propertyInfo != null )
+            if ( sourceProperty != null )
             {
-                keyType = propertyInfo.PropertyType;
+                keyType = sourceProperty.PropertyType;
             }
             else
             {

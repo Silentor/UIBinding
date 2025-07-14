@@ -39,15 +39,15 @@ namespace UIBindings
             }
 
             CanExecuteBinding.SetDebugInfo(this, nameof(CanExecuteBinding));
-            CanExecuteBinding.Init( GetParentSource() );
+            CanExecuteBinding.Init( GetSource( CanExecuteBinding ) );
             CanExecuteBinding.SourceChanged += CanExecuteChanged;
             _canExecute = Button.interactable;
 
             CallBinding.SetDebugInfo( this, nameof(CallBinding) );
-            CallBinding.Init( GetParentSource() );
+            CallBinding.Init( GetSource( CallBinding ) );
 
             ButtonTextBinding.SetDebugInfo( this, nameof(ButtonTextBinding) );
-            ButtonTextBinding.Init( GetParentSource() );
+            ButtonTextBinding.Init( GetSource( ButtonTextBinding ) );
             ButtonTextBinding.SourceChanged += ProcessButtonText;
         }
 

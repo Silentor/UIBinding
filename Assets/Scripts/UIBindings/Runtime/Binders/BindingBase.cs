@@ -21,9 +21,9 @@ namespace UIBindings
         //Path to bindable property or method
         public        String                    Path;
 
-        public object SourceObject { get; protected set; } 
+        public object  SourceObject { get; protected set; } 
 
-        //Debug stuff
+#region Runtime debug stuff
 
         /// <summary>
         /// Can be called before Init for useful logs in case of errors.
@@ -37,30 +37,10 @@ namespace UIBindings
         }
 
         /// <summary>
-        /// Should return debug info about source. Looks like it common for all bindings
+        /// Should return runtime debug info about source. Looks like it common for all bindings
         /// </summary>
         /// <returns></returns>
-        public string GetBindingSourceInfo( )
-        {
-            if ( SourceObject.IsNotAssigned() )
-            {
-                return "?";
-            }
-            else
-            {
-                var sourceType = SourceObject.GetType();
-                var sourceProp = sourceType.GetProperty( Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                var sourceObjectName = SourceObject is UnityEngine.Object unityObject ? $"'{unityObject.name}'" : SourceObject.GetType().ToString();
-                if( sourceProp != null )
-                {
-                    return $"{sourceProp.PropertyType.Name} {sourceObjectName}.{Path}";
-                }
-                else
-                {
-                    return $"{sourceObjectName}.{Path}?";
-                }
-            }
-        }
+        public abstract string GetBindingSourceInfo( );
 
         /// <summary>
         /// Should return info about self
@@ -80,11 +60,28 @@ namespace UIBindings
         /// <returns></returns>
         public abstract string GetBindingState( );
 
+        /// <summary>
+        /// Should return current state of source object, like value of source property
+        /// </summary>
+        /// <returns></returns>
+        public abstract string GetSourceState( );
+
+        /// <summary>
+        /// Gets full runtime info about binding, including source, target, direction and state.
+        /// </summary>
+        /// <returns></returns>
+        public abstract string GetFullRuntimeInfo( );
+
         //Debug, log, inspector stuff
         protected MonoBehaviour _debugHost;                 //Host of binder that contains this binding, for debug purposes
         protected string        _debugBindingName            ;  //Name of binding property, for debug purposes
         protected string        _debugTargetBindingInfo;
 
+        public override String ToString( )
+        {
+            return $"{GetBindingSourceInfo()} {GetBindingDirection()} {GetBindingTargetInfo()}";
+        }
 
+#endregion
     }
 }

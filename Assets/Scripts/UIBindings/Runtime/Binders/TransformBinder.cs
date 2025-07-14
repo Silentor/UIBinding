@@ -18,15 +18,15 @@ namespace UIBindings
             Assert.IsTrue( Transform );
 
             LocalPositionBinding.SetDebugInfo( this, nameof(LocalPositionBinding) );
-            LocalPositionBinding.Init( GetParentSource() );
+            LocalPositionBinding.Init( GetSource(LocalPositionBinding) );
             LocalPositionBinding.SourceChanged += ProcessLocalPosition;
 
             LocalScaleBinding.SetDebugInfo( this, nameof(LocalScaleBinding) );
-            LocalScaleBinding.Init( GetParentSource() );
+            LocalScaleBinding.Init( GetSource(LocalScaleBinding) );
             LocalScaleBinding.SourceChanged += ProcessScale;
 
             LocalRotationBinding.SetDebugInfo( this, nameof(LocalRotationBinding) );
-            LocalRotationBinding.Init( GetParentSource() );
+            LocalRotationBinding.Init( GetSource(LocalRotationBinding) );
             LocalRotationBinding.SourceChanged += ProcessLocalRotation;
         }
 

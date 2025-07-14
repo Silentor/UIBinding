@@ -1843,13 +1843,22 @@ MonoBehaviour:
     Source: {fileID: 0}
     SourceType: 
     BindToType: 0
-    Path: Close
-    Params: []
+    Path: Close2
+    Params:
+    - Primitive: 0
+      String: 
+      Object: {fileID: 0}
+      ValueType: 0
+    - Primitive: 0
+      String: 
+      Object: {fileID: 0}
+      ValueType: 0
   CanExecuteBinding:
     Enabled: 0
     Source: {fileID: 0}
-    SourceType: 
-    BindToType: 0
+    SourceType: UIBindings.QuestVM, UIBindings.Develop, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    BindToType: 1
     Path: 
     Update:
       Mode: 2
@@ -5769,7 +5778,7 @@ MonoBehaviour:
     _converters:
       Converters: []
   ItemViewPrefab: {fileID: 5534317846290802235, guid: 48b224f4db7a40e40ad435c4abe7187c, type: 3}
-  ItemViewsParent: {fileID: 1585752831}
+  CollectionParent: {fileID: 1585752831}
   PoolItemViews: 1
   references:
     version: 2
@@ -6011,6 +6020,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34a9491de0b4cdc4f8dfdfd37ca35fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  pixelArtTexture: {fileID: -7997457369567893724, guid: 0000000000000000d000000000000000, type: 0}
   DelayedCanvas: {fileID: 2095982995}
   TestSprite: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
 --- !u!4 &1625701091
@@ -6234,7 +6244,7 @@ MonoBehaviour:
     _converters:
       Converters: []
   ItemViewPrefab: {fileID: 1421903754043648241, guid: fe9e3484a48af8f41b3ef1d295fef63b, type: 3}
-  ItemViewsParent: {fileID: 445098215}
+  CollectionParent: {fileID: 445098215}
   PoolItemViews: 1
   references:
     version: 2
@@ -7139,7 +7149,7 @@ MonoBehaviour:
     _converters:
       Converters: []
   ItemViewPrefab: {fileID: 5534317846290802235, guid: 48b224f4db7a40e40ad435c4abe7187c, type: 3}
-  ItemViewsParent: {fileID: 1117716649}
+  CollectionParent: {fileID: 1117716649}
   PoolItemViews: 1
   references:
     version: 2
@@ -8009,7 +8019,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2098577698
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8035,10 +8045,10 @@ MonoBehaviour:
     _converters:
       Converters: []
   FloatBinding:
-    Enabled: 0
+    Enabled: 1
     Source: {fileID: 1625701090}
-    SourceType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
+    SourceType: UnityEngine.Device.Screen, UnityEngine.CoreModule, Version=0.0.0.0,
+      Culture=neutral, PublicKeyToken=null
     BindToType: 1
     Path: normalized
     Update:

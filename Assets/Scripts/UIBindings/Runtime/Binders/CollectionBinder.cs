@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UIBindings.Runtime;
 using UIBindings.Runtime.Utils;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UIBindings
 {
@@ -10,7 +11,7 @@ namespace UIBindings
     {
         public CollectionBinding     Collection;
         public GameObject            ItemViewPrefab;
-        public Transform             ItemViewsParent;
+        [FormerlySerializedAs( "ItemViewsParent" )] public Transform             CollectionParent;
         public bool                  PoolItemViews = true;
 
         private readonly Stack<GameObject> _pooledViews = new ();
@@ -19,7 +20,7 @@ namespace UIBindings
         private void Awake( )
         {
             Collection.SetDebugInfo( this, nameof(Collection) );
-            Collection.Init( GetParentSource() );
+            Collection.Init( GetSource( Collection ) );
             Collection.CollectionChanged += OnCollectionModified;
             Collection.ItemAdded += OnItemAdded;
             Collection.ItemRemoved += OnItemRemoved;
@@ -103,7 +104,7 @@ namespace UIBindings
                 return view;
             }
 
-            var newViewItem = Instantiate( ItemViewPrefab, ItemViewsParent );
+            var newViewItem = Instantiate( ItemViewPrefab, CollectionParent );
             return newViewItem;
         }
 

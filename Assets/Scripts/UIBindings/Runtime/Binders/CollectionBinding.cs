@@ -323,7 +323,7 @@ namespace UIBindings
         {
             base.SetDebugInfo( host, bindingName );
 
-            _debugTargetBindingInfo = $"Collection '{host.name}'.{bindingName}";
+            _debugTargetBindingInfo = $"'{host.name}'({host.GetType().Name}).{bindingName}";
         }
 
         public override String GetBindingState( )
@@ -334,7 +334,7 @@ namespace UIBindings
                 return "Invalid";
             if( !_isValueInitialized )
                 return "Not initialized";
-            return $"Value: {_processedCopy.Count} view items";
+            return $"{_processedCopy.Count} view items";
         }
 
         public override String GetBindingTargetInfo( )
@@ -343,6 +343,24 @@ namespace UIBindings
                 return "collection binding";
 
             return _debugTargetBindingInfo;
+        }
+
+        public override String GetSourceState( )
+        {
+            if ( SourceObject == null )
+                return "Source not assigned";
+            else if ( _viewCollectionGetter != null )
+            {
+                var sourceCollection = _viewCollectionGetter();
+                return $"{sourceCollection.Count} data items";
+            }
+            else if ( _enumerableGetter != null )
+            {
+                var sourceCollection = _enumerableGetter().Cast<object>();
+                return $"{sourceCollection.Count()} data items";
+            }
+        
+            return "?";
         }
 
     }

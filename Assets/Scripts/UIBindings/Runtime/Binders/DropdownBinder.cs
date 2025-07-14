@@ -20,11 +20,11 @@ namespace UIBindings
             Assert.IsTrue( Dropdown );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( GetParentSource(), forceOneWay: !Dropdown.interactable );
+            ValueBinding.Init( GetSource(ValueBinding), forceOneWay: !Dropdown.interactable );
             ValueBinding.SourceChanged += ProcessValue;
 
             OptionsBinding.SetDebugInfo( this, nameof(OptionsBinding) );
-            OptionsBinding.Init( GetParentSource() );
+            OptionsBinding.Init( GetSource(OptionsBinding) );
             OptionsBinding.CollectionChanged += ProcessOptionsChanged;
         }
 

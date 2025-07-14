@@ -102,8 +102,8 @@ namespace UIBindings
             else        //Need adapter/converters/etc
             {
                 //First prepare property reader
-                var propReader = PropertyAdapter.GetPropertyAdapter( SourceObject, property, IsTwoWay );
-                lastConverter = propReader;
+                _propReader = PropertyAdapter.GetPropertyAdapter( SourceObject, property, IsTwoWay );
+                lastConverter = _propReader;
 
                 timer.AddMarker( "CreateAdapter" );
 
@@ -118,10 +118,10 @@ namespace UIBindings
 
                     //Connect first converter to source property
                     var firstConverter                = converters[0];
-                    var result = firstConverter.InitAttachToSource( propReader, IsTwoWay, !Update.ScaledTime );
+                    var result = firstConverter.InitAttachToSource( _propReader, IsTwoWay, !Update.ScaledTime );
                     if( !result )
                     {
-                        Debug.LogError( $"[{nameof(BindingBase)}] First converter {firstConverter} cannot be attached to source property adapter {propReader} at binding {GetBindingTargetInfo()}", _debugHost );
+                        Debug.LogError( $"[{nameof(BindingBase)}] First converter {firstConverter} cannot be attached to source property adapter {_propReader} at binding {GetBindingTargetInfo()}", _debugHost );
                         return;
                     }
                     lastConverter = firstConverter;
@@ -225,6 +225,7 @@ namespace UIBindings
         }
 
         protected Func<T>        _directGetter;
+        private   PropertyAdapter _propReader;
         protected T              _lastValue;
         protected IDataReader<T> _lastReader;
         private   Boolean        _isTweened;
@@ -242,7 +243,7 @@ namespace UIBindings
         {
             base.SetDebugInfo( host, bindingName );
 
-            _debugTargetBindingInfo = $"{typeof(T).Name} '{host.name}'.{bindingName}";
+            _debugTargetBindingInfo = $"{typeof(T).Name} '{host.name}'({host.GetType().Name}).{bindingName}";
             ProfilerMarkerName = GetBindingTargetInfo();
         }
 
@@ -254,7 +255,7 @@ namespace UIBindings
                 return "Invalid";
             if( !_isValueInitialized )
                 return "Not initialized";
-            return $"Value: {_lastValue} {(_isTweened ? "(tween)" : string.Empty)}";
+            return $"{_lastValue}{(_isTweened ? " (tween)" : string.Empty)}";
         }
 
         public override String GetBindingTargetInfo( )
@@ -263,6 +264,23 @@ namespace UIBindings
                 return $"{typeof(T).Name} value binding";
 
             return _debugTargetBindingInfo;
+        }
+
+        public override String GetSourceState( )
+        {
+            if ( SourceObject == null )
+                return "Source not assigned";
+            else if ( _directGetter != null )
+            {
+                return _directGetter()?.ToString() ?? "null";
+            }
+            else if ( _propReader != null )
+            {
+                _propReader.TryGetValue( out var propValue );
+                return propValue?.ToString() ?? "null";
+            }
+        
+            return "?";
         }
     }
 }

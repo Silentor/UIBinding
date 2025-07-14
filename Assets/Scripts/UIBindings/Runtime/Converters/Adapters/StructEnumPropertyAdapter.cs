@@ -109,6 +109,13 @@ namespace UIBindings.Adapters
             return EResult.NotChanged;
         }
 
+        public override EResult TryGetValue(out Object value )
+        {
+            var result = TryGetValue( out StructEnum typedValue );
+            value = typedValue;
+            return result;
+        }
+
         public void SetValue(StructEnum value )
         {
             Assert.IsTrue( IsTwoWay, "Cannot set value on one-way binding" );

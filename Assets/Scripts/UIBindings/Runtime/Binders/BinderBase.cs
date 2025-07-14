@@ -1,5 +1,6 @@
 ﻿using System;
 using UIBindings.Runtime;
+using UIBindings.Runtime.Utils;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -7,12 +8,15 @@ namespace UIBindings
 {
     public class BinderBase : MonoBehaviour
     {
-        protected  Object GetParentSource( )
+        protected  Object GetSource( BindingBase binding )
         {
+            if ( binding.Source )
+                return binding.Source;
+
             if ( !_isParentSourceChecked )
             {
                 _isParentSourceChecked = true;
-                _parentSource = transform.GetComponentInParent<ViewModel>();
+                _parentSource = BindingUtils.GetParentSource( this );
             }
 
             return _parentSource;

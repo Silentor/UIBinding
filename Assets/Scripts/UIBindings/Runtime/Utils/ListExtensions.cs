@@ -5,7 +5,7 @@ namespace UIBindings.Runtime.Utils
 {
     public static class ListExtensions
     {
-        public static bool TryFirst<T>(this IList<T> list, out T value)
+        public static bool TryFirst<T>(this IReadOnlyList<T> list, out T value)
         {
             if (list == null || list.Count == 0)
             {
@@ -17,7 +17,7 @@ namespace UIBindings.Runtime.Utils
             return true;
         }
 
-        public static bool TryFirst<T>(this IList<T> list, Predicate<T> predicate, out T value)
+        public static bool TryFirst<T>(this IReadOnlyList<T> list, Predicate<T> predicate, out T value)
         {
             if( list == null || predicate == null || list.Count == 0 )
             {
@@ -50,6 +50,26 @@ namespace UIBindings.Runtime.Utils
             }
 
             return false;
+        }
+
+        public static string JoinToString<T>(this IReadOnlyList<T> list, string separator = ", ", int maxValuesToShow = -1)
+        {
+            if (list == null || list.Count == 0)
+                return string.Empty;
+
+            var result = new System.Text.StringBuilder();
+            int count = maxValuesToShow > 0 && maxValuesToShow < list.Count ? maxValuesToShow : list.Count;
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0)
+                    result.Append(separator);
+                result.Append(list[i]);
+            }
+
+            if (maxValuesToShow > 0 && maxValuesToShow < list.Count)
+                result.Append($"... ({list.Count - maxValuesToShow} more)");
+
+            return result.ToString();
         }
     }
 }

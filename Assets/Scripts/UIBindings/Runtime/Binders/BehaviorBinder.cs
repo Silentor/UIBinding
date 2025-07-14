@@ -18,7 +18,7 @@ namespace UIBindings
             Assert.IsTrue( Behavior );
 
             EnabledBinding.SetDebugInfo( this, nameof(EnabledBinding) );
-            EnabledBinding.Init( GetParentSource() );
+            EnabledBinding.Init( GetSource( EnabledBinding ) );
             EnabledBinding.SourceChanged += ProcessSourceToTarget;
         }
 

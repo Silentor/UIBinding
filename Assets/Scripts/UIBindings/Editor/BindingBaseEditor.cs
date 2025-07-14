@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using UIBindings.Runtime;
 using UIBindings.Runtime.Utils;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.Search;
+using Object = UnityEngine.Object;
 
 namespace UIBindings.Editor.Utils
 {
@@ -44,9 +46,10 @@ namespace UIBindings.Editor.Utils
             using ( new EditorGUI.DisabledGroupScope( !isEnabled ) )
             {
                 //Draw main binding info label itself
+                var (bindingObject, bindingHost) = BindingEditorUtils.GetBindingObject<BindingBase>( property );
                 var mainStr = GetMainString( property );
-                var isValid = mainStr.IsValid || !isEnabled;  //Do not report errors if binding is disabled
-                GUI.Label( rects.Item1, new GUIContent( mainStr.MainText, tooltip: mainStr.ValidationReport ),
+                var isValid = isEnabled ? BindingEditorUtils.IsBindingValid( bindingObject, bindingHost ) : ValidationResult.Valid;
+                GUI.Label( rects.Item1, new GUIContent( mainStr, tooltip: isValid.ErrorMessage ),
                         isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
 
                 //Draw binding fields and additional controls
@@ -56,16 +59,16 @@ namespace UIBindings.Editor.Utils
                     {
                         //SourcePropertyType = sourcePropType; //Hack, set static property for embedded drawers
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) ); 
-                        DrawSourceField( position, property );
+                        DrawSourceField( position, property, bindingObject, bindingHost );
                         position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-                        DrawPathField( position, property );
-                        DrawAdditionalFields( position, property );
+                        DrawPathField( position, property, bindingObject, bindingHost );
+                        DrawAdditionalFields( position, property, bindingObject, bindingHost );
                     }
                 }
             }
         }
 
-        private void DrawSourceField(  Rect position, SerializedProperty bindingProp )
+        private void DrawSourceField(  Rect position, SerializedProperty bindingProp, BindingBase binding, Object host )
         {
             var sourceObjectProp = bindingProp.FindPropertyRelative( nameof(BindingBase.Source) );
             var sourceTypeStrProp = bindingProp.FindPropertyRelative( nameof(BindingBase.SourceType) );
@@ -91,9 +94,10 @@ namespace UIBindings.Editor.Utils
                                         title               = "Type",
                                         queryBuilderEnabled = true,
                                         hideTabs            = true,
-                                        selectHandler       = (a, b) =>
+                                        selectHandler       = (si, isCancelled) =>
                                         {
-                                            sourceTypeStrProp.stringValue = ((Type)a.data).AssemblyQualifiedName;
+                                            if( isCancelled ) return;
+                                            sourceTypeStrProp.stringValue = ((Type)si.data).AssemblyQualifiedName;
                                             sourceTypeStrProp.serializedObject.ApplyModifiedProperties();
                                         },
                                         flags = SearchViewFlags.TableView                |
@@ -127,7 +131,7 @@ namespace UIBindings.Editor.Utils
             else                    //Reference source, use sourceObjectProp
             {
                 var oldSource = sourceObjectProp.objectReferenceValue;
-                var parentSource = GetEffectiveSourceObject( bindingProp );
+                var parentSource = BindingUtils.GetEffectiveSource( binding, host );
                 UnityEngine.Object newSource = null;
                 if ( !parentSource )    //No parent mode, only raw local source
                 {
@@ -210,70 +214,12 @@ namespace UIBindings.Editor.Utils
                 }  
             }
         }
-      
 
-        public static UnityEngine.Object GetEffectiveSourceObject( SerializedProperty bindingProp )
-        {
-            if ( bindingProp == null )
-                return null;
+        protected abstract string GetMainString( SerializedProperty property );
 
-            var sourceObject = bindingProp.FindPropertyRelative(nameof(BindingBase.Source)).objectReferenceValue;
-            if ( sourceObject )
-                return sourceObject;
+        protected abstract void DrawPathField(   Rect position, SerializedProperty property, BindingBase binding, Object host );
 
-            var sourceObjectInParents = FindComponentInParents<ViewModel>( bindingProp.serializedObject.targetObject );
-            if ( sourceObjectInParents )
-                return sourceObjectInParents;
-
-            return null;
-
-            TComponent FindComponentInParents<TComponent>( UnityEngine.Object obj )
-            {
-                if ( obj is Component component )
-                {
-                    var componentInParent = component.GetComponentInParent<TComponent>();
-                    if( componentInParent != null )
-                        return componentInParent;
-                }
-                return default;
-            }
-        }
-
-        protected static (Type, UnityEngine.Object) GetSourceTypeAndObject( SerializedProperty bindingProp )
-        {
-            if ( bindingProp.FindPropertyRelative( nameof(BindingBase.BindToType) ).boolValue )
-            {
-                var sourceTypeString = bindingProp.FindPropertyRelative( nameof(BindingBase.SourceType) ).stringValue;
-                var bindType         = Type.GetType( sourceTypeString, false );
-                return (bindType, null);
-            }
-            else
-            {
-                var sourceObject = GetEffectiveSourceObject( bindingProp );
-                if( sourceObject )
-                    return (sourceObject.GetType(), sourceObject);
-                return (null, null);
-            } 
-        }
-
-        protected T GetBindingObject<T>(SerializedProperty property ) where T : BindingBase
-        {
-            return (T)fieldInfo.GetValue( property.serializedObject.targetObject );
-        }
-
-        protected abstract BindingMainString GetMainString( SerializedProperty property );
-
-        protected abstract void DrawPathField(  Rect position, SerializedProperty property );
-
-        protected virtual void DrawAdditionalFields(  Rect position, SerializedProperty property ) { } 
-        
-
-        protected struct BindingMainString
-        {
-            public string MainText;
-            public bool IsValid;
-            public string ValidationReport;
-        }
+        protected virtual void DrawAdditionalFields(   Rect position, SerializedProperty property, BindingBase binding, Object host ) { }
 
         protected static class Resources
         {

@@ -24,11 +24,11 @@ namespace UIBindings
             }
 
             TextBinding.SetDebugInfo( this, nameof(TextBinding) );
-            TextBinding.Init( GetParentSource() );
+            TextBinding.Init( GetSource(TextBinding) );
             TextBinding.SourceChanged += ProcessText;
 
             ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );
-            ColorBinding.Init( GetParentSource() );
+            ColorBinding.Init( GetSource(ColorBinding) );
             ColorBinding.SourceChanged += ProcessColor;
         }
 

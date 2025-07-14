@@ -28,7 +28,7 @@ namespace UIBindings.Runtime
         private void Awake( )
         {
             DataSourceBinding.SetDebugInfo( this, nameof(DataSourceBinding) );
-            DataSourceBinding.Init( GetParentSource() );
+            DataSourceBinding.Init( GetSource( DataSourceBinding ) );
             DataSourceBinding.SourceChanged += OnDataSourceChanged;
         }
 

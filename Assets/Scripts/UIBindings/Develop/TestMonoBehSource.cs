@@ -13,12 +13,18 @@ using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
 using UnityEngine.Profiling;
+using UnityEngine.Search;
 using Object = System.Object;
 
 namespace UIBindings
 {
     public class TestMonoBehSource : MonoBehaviour//, INotifyPropertyChanged
     {
+        // You can specify an initial query, a search provider and some SearchViewFlags
+        //[SearchContext("t:texture filtermode=0", "asset", SearchViewFlags.OpenInBuilderMode | SearchViewFlags.GridView)]
+        [SearchContext("t:texture", "adb", SearchViewFlags.OpenInBuilderMode | SearchViewFlags.GridView)]
+        public Texture pixelArtTexture;
+
         public GameObject DelayedCanvas; //For testing delayed canvas creation
         public Sprite TestSprite; 
 

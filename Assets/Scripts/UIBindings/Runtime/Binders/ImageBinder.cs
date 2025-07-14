@@ -20,15 +20,15 @@ namespace UIBindings
             Assert.IsTrue( Image );
 
             SourceImageBinding.SetDebugInfo( this, nameof(SourceImageBinding) );
-            SourceImageBinding.Init( GetParentSource() );
+            SourceImageBinding.Init( GetSource(SourceImageBinding) );
             SourceImageBinding.SourceChanged += UpdateSourceImage;
 
             ColorBinding.SetDebugInfo( this, nameof(ColorBinding) );        
-            ColorBinding.Init( GetParentSource() );
+            ColorBinding.Init( GetSource(ColorBinding) );
             ColorBinding.SourceChanged += UpdateColor;
 
             EnabledBinding.SetDebugInfo( this, nameof(ColorBinding) );        
-            EnabledBinding.Init( GetParentSource() );
+            EnabledBinding.Init( GetSource(EnabledBinding) );
             EnabledBinding.SourceChanged += UpdateEnabled;
         }
 

@@ -20,15 +20,15 @@ namespace UIBindings
             Assert.IsTrue( InputField );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( GetParentSource(), forceOneWay: !InputField.interactable );
+            ValueBinding.Init( GetSource(ValueBinding), forceOneWay: !InputField.interactable );
             ValueBinding.SourceChanged += ProcessValue;
 
             InteractableBinding.SetDebugInfo( this, nameof(InteractableBinding) );
-            InteractableBinding.Init( GetParentSource() );
+            InteractableBinding.Init( GetSource(InteractableBinding) );
             InteractableBinding.SourceChanged += ProcessInteractable;
 
             ReadonlyBinding.SetDebugInfo( this, nameof(ReadonlyBinding) );
-            ReadonlyBinding.Init( GetParentSource() );
+            ReadonlyBinding.Init( GetSource(ReadonlyBinding) );
             ReadonlyBinding.SourceChanged += ProcessReadonly;
         }
 

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using UIBindings.Editor.Utils;
 using UIBindings.Runtime;
+using UIBindings.Runtime.Utils;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEditor;
 using UnityEngine;
@@ -23,7 +24,7 @@ namespace UIBindings.Editor
                 return EditorGUIUtility.singleLineHeight;
         }
 
-        private static Boolean IsProperMethod(MethodInfo method)
+        public static Boolean IsProperMethod(MethodInfo method)
         {
             if (method == null)
                 return false;
@@ -62,47 +63,34 @@ namespace UIBindings.Editor
             return true;
         }
 
-        protected override BindingMainString GetMainString(SerializedProperty property )
+        protected override string GetMainString(SerializedProperty property )
         {
-            var validationReport = String.Empty;
-            var (sourceType, sourceObject) = GetSourceTypeAndObject( property );
-            var sourceName       = sourceObject ? $"{sourceObject.GetType().Name} {sourceObject.name}" : sourceType?.Name ?? "null";
-            var sourceMethod     = GetSourceMethod( property );
-            var sourceMethodName = sourceMethod != null ? sourceMethod.Name : "null";
-            var isValid          = sourceMethod != null && IsProperMethod( sourceMethod );
-            var paramsString = sourceMethod != null && sourceMethod.GetParameters().Length > 0
-                    ? String.Concat("(", String.Join( ", ", sourceMethod.GetParameters().Select( p => p.ParameterType.Name ) ), ")")
-                    : "()";
-            var isAwaitable = sourceMethod != null && sourceMethod.ReturnType.GetMethod( "GetAwaiter" ) != null;
-            var taskString  = isAwaitable ? "task " : String.Empty;
-
-            var mainText = $"{taskString}{sourceName}.{sourceMethodName} {paramsString}";
-
+            String mainText = null;
             if ( Application.isPlaying  )
             {
-                var callBindingObject = GetBindingObject<CallBinding>( property );
-                if ( !callBindingObject.IsRuntimeValid )
-                {
-                    isValid = false;
-                    validationReport += "CallBinding initialization failed.";
-                }
+                var (binding, _) = BindingEditorUtils.GetBindingObject<CallBinding>( property );
+                mainText = binding.GetFullRuntimeInfo();
+                return mainText;
             }
-
-            return new BindingMainString()
+            else
             {
-                MainText = mainText,
-                IsValid = isValid,
-                ValidationReport = validationReport 
-            };
+                var (binding, bindingHost) = BindingEditorUtils.GetBindingObject<CallBinding>( property );
+                var bindingSourceInfo = BindingEditorUtils.GetBindingSourceInfo( binding, bindingHost );
+                var bindingDirection = BindingEditorUtils.GetBindingDirection( binding );
+                var bindingTargetInfo = BindingEditorUtils.GetBindingTargetInfo( binding, fieldInfo, bindingHost, false );
+                var resultString = $"{bindingSourceInfo} {bindingDirection} {bindingTargetInfo}";
+                return resultString;
+            }
         }
 
-        protected override void DrawPathField(Rect position, SerializedProperty property )
+
+        protected override void DrawPathField( Rect position, SerializedProperty property, BindingBase binding, UnityEngine.Object host )
         {
             var pathProp = property.FindPropertyRelative( nameof(BindingBase.Path) );
             var pathName = pathProp.stringValue;
             position = EditorGUI.PrefixLabel( position, new GUIContent( pathProp.displayName ) );
 
-            var (sourceType, _) = GetSourceTypeAndObject( property ); 
+            var (sourceType, _) = BindingUtils.GetSourceTypeAndObject( binding, host ); 
             if ( sourceType != null )
             {
                 var compatibleMethods = GetCompartibleMethods( sourceType );
@@ -111,7 +99,7 @@ namespace UIBindings.Editor
                 //Draw select method button
                 var isSelectPropertyPressed = false;
                 String selectedProperty;
-                if ( methodInfo != null )
+                if ( methodInfo != null && IsProperMethod( methodInfo ) )
                 {
                     var displayName = GetPrettyMethodName( methodInfo );
                     isSelectPropertyPressed = GUI.Button( position, displayName, Resources.TextField );
@@ -121,7 +109,10 @@ namespace UIBindings.Editor
                 {
                     var displayName = pathName == String.Empty 
                             ? "(method not set)"
-                            : $"(missed method {pathName} on Source)";
+                            :
+                                methodInfo == null 
+                                    ? $"(missed method {pathName} on Source)"
+                                    : $"(unsupported method {pathName})";
                     //using ( GUIUtils.ChangeContentColor( Color.red ) )
                     {
                         isSelectPropertyPressed = GUI.Button( position, displayName, Resources.ErrorTextField );
@@ -156,16 +147,16 @@ namespace UIBindings.Editor
             }
         }
 
-        protected override void DrawAdditionalFields(Rect position, SerializedProperty property )
+        protected override void DrawAdditionalFields( Rect position, SerializedProperty property, BindingBase binding, UnityEngine.Object host )
         {
-            base.DrawAdditionalFields( position, property );
+            base.DrawAdditionalFields( position, property, binding, host );
 
-            var methodInfo = GetSourceMethod( property );
+            var methodInfo = GetSourceMethod( binding, host );
             if ( methodInfo != null )
             {
                 position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
                 var paramProperty = property.FindPropertyRelative(nameof(CallBinding.Params));
-                DrawMethodParameter( position, paramProperty, methodInfo );
+                DrawMethodParameters( position, paramProperty, methodInfo );
             }
         }
 
@@ -180,13 +171,13 @@ namespace UIBindings.Editor
                              .ToArray();
         }
 
-        private static MethodInfo GetSourceMethod( SerializedProperty property )
+        private static MethodInfo GetSourceMethod( BindingBase binding, UnityEngine.Object host )
         {
-            var (sourceType, _) = GetSourceTypeAndObject( property );
+            var (sourceType, _) = BindingUtils.GetSourceTypeAndObject( binding, host );
             if ( sourceType != null )
             {
                 var methods = GetCompartibleMethods( sourceType );
-                var methodName = property.FindPropertyRelative( nameof(BindingBase.Path) ).stringValue;
+                var methodName = binding.Path;
                 var method = methods.FirstOrDefault( mi => mi.Name == methodName );
                 return method;
             }
@@ -218,7 +209,7 @@ namespace UIBindings.Editor
             return name;
         }
 
-        private void DrawMethodParameter(Rect position, SerializedProperty paramsProp, MethodInfo method )
+        private void DrawMethodParameters(Rect position, SerializedProperty paramsProp, MethodInfo method )
         {
             _additionalLinesCount = 0;
             var isChanged = false;

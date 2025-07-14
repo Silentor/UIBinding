@@ -19,7 +19,7 @@ namespace UIBindings.Editor
             var keyProp = property.FindPropertyRelative( nameof(KeyValue<bool>.Key) );
             var goProp  = property.FindPropertyRelative( nameof(KeyValue<bool>.Value) );
 
-            var keyType = DataBindingEditor.SourcePropertyType ?? typeof(int);
+            var keyType = GetSourceKeyType( property );
             var isWide = !keyType.IsPrimitive ;
             var rects  = GUIUtils.GetHorizontalRects( position, 5, isWide ? 0 : 100, 0 );
 
@@ -45,6 +45,13 @@ namespace UIBindings.Editor
             EditorGUI.PropertyField( rects.Item2, goProp, GUIContent.none);
 
             EditorGUI.EndProperty();
+        }
+
+        private Type GetSourceKeyType( SerializedProperty property )
+        {
+            var dataBinding = DataBindingEditor.DataBinding;
+            var sourceProp = BindingEditorUtils.GetSourceProperty( dataBinding, property.serializedObject.targetObject );
+            return sourceProp?.PropertyType ?? typeof(int);
         }
     }
 }

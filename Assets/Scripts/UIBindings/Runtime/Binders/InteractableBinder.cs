@@ -17,7 +17,7 @@ namespace UIBindings
             Assert.IsTrue( InteractionControl );
 
             InteractableBinding.SetDebugInfo( this, nameof(InteractableBinding) );
-            InteractableBinding.Init( GetParentSource() );
+            InteractableBinding.Init( GetSource(InteractableBinding) );
             InteractableBinding.SourceChanged += ProcessSourceToTarget;
         }
 

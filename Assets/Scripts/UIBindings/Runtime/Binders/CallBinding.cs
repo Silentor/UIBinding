@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Sisus;
 using UIBindings.Runtime;
+using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using Unity.Profiling.LowLevel;
 using UnityEngine;
@@ -521,16 +523,38 @@ namespace UIBindings
         {
             base.SetDebugInfo( host, bindingName );
 
-            _debugTargetBindingInfo = $"Call {host.name}.{bindingName}({Params.Length})";
+            _debugTargetBindingInfo = $"'{host.name}'({host.GetType().Name}).{bindingName}";
             ProfilerMarkerName = GetBindingTargetInfo( );
+        }
+
+        public override string GetBindingSourceInfo( )
+        {
+            if ( SourceObject.IsNotAssigned() )
+            {
+                return "?";
+            }
+            else
+            {
+                var sourceType       = SourceObject.GetType();
+                var sourceMethod     = sourceType.GetMethod( Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                var sourceObjectName = SourceObject is UnityEngine.Object unityObject ? $"'{unityObject.name}'" : SourceObject.GetType().ToString();
+                if( sourceMethod != null )
+                {
+                    var paramsInfo = sourceMethod.GetParameters().Select( p => p.ParameterType.Name ).ToArray().JoinToString(  );
+                    return $"{sourceMethod.ReturnType.Name} {sourceObjectName}.{sourceMethod.Name}({paramsInfo})";
+                }
+                else
+                {
+                    return $"{sourceObjectName}.{Path}?";
+                }
+            }
         }
 
         public override String GetBindingTargetInfo( )
         {
-            if( _debugTargetBindingInfo == null )
-                return $"Call binding ({Params.Length})";
-
-            return _debugTargetBindingInfo;
+            if( _debugTargetBindingInfo != null )
+                return _debugTargetBindingInfo;
+            return $"Call binding";
         }
 
         public override String GetBindingDirection( )
@@ -547,6 +571,28 @@ namespace UIBindings
 
             var state = $"{_awaitType} {_paramsType} {_delegateCall.GetType().Name}";
             return state;
+        }
+
+        public override String GetSourceState( )
+        {
+            if ( SourceObject == null )
+                return "Source not assigned";
+        
+            return string.Empty;
+        }
+
+        public override String GetFullRuntimeInfo( )
+        {
+            var sourceInfo  = GetBindingSourceInfo();
+            var targetInfo  = GetBindingTargetInfo();
+            var direction   = GetBindingDirection();
+            var targetState = GetBindingState();
+            var sourceState = GetSourceState();
+
+            if( !string.IsNullOrEmpty( sourceState ) )                
+                sourceState = $" <{sourceState}>";
+
+            return $"{sourceInfo}{sourceState} {direction} {targetInfo} <{targetState}>";
         }
 
 #endregion

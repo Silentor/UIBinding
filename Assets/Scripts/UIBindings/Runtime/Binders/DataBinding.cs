@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UIBindings.Runtime.PlayerLoop;
+using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -169,7 +171,40 @@ namespace UIBindings
             return IsTwoWay ? $"<-{convertersCount}->" : $"-{convertersCount}->";
         }
 
+        public override string GetBindingSourceInfo( )
+        {
+            if ( SourceObject.IsNotAssigned() )
+            {
+                return "?";
+            }
+            else
+            {
+                var sourceType       = SourceObject.GetType();
+                var sourceProp       = sourceType.GetProperty( Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                var sourceObjectName = SourceObject is UnityEngine.Object unityObject ? $"'{unityObject.name}'({unityObject.GetType().Name})" : SourceObject.GetType().ToString();
+                if( sourceProp != null )
+                {
+                    return $"{sourceProp.PropertyType.GetPrettyName()} {sourceObjectName}.{sourceProp.Name}";
+                }
+                else
+                {
+                    return $"{sourceObjectName}.{Path}?";
+                }
+            }
+        }
+
         public abstract bool   IsRuntimeValid { get; }
+
+        public override String GetFullRuntimeInfo( )
+        {
+            var sourceInfo = GetBindingSourceInfo();
+            var targetInfo = GetBindingTargetInfo();
+            var direction  = GetBindingDirection();
+            var targetState = GetBindingState();
+            var sourceState = GetSourceState();
+
+            return $"{sourceInfo} <{sourceState}> {direction} {targetInfo} <{targetState}>";
+        }
 
 #endregion
         
