@@ -105,7 +105,7 @@ namespace UIBindings.Adapters
                 return EResult.Changed;
             }
 
-            value = default;
+            value = propValue;
             return EResult.NotChanged;
         }
 

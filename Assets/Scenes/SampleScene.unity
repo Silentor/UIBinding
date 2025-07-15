@@ -1843,7 +1843,7 @@ MonoBehaviour:
     Source: {fileID: 0}
     SourceType: 
     BindToType: 0
-    Path: Close2
+    Path: Close
     Params:
     - Primitive: 0
       String: 

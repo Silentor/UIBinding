@@ -523,7 +523,7 @@ namespace UIBindings
         {
             base.SetDebugInfo( host, bindingName );
 
-            _debugTargetBindingInfo = $"'{host.name}'({host.GetType().Name}).{bindingName}";
+            _debugTargetBindingInfo = $"CallBinding '{host.name}'({host.GetType().Name}).{bindingName}";
             ProfilerMarkerName = GetBindingTargetInfo( );
         }
 
@@ -537,7 +537,7 @@ namespace UIBindings
             {
                 var sourceType       = SourceObject.GetType();
                 var sourceMethod     = sourceType.GetMethod( Path, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                var sourceObjectName = SourceObject is UnityEngine.Object unityObject ? $"'{unityObject.name}'" : SourceObject.GetType().ToString();
+                var sourceObjectName = SourceObject is UnityEngine.Object unityObject ? $"'{unityObject.name}'({sourceType.Name})" : $"({sourceType.Name})";
                 if( sourceMethod != null )
                 {
                     var paramsInfo = sourceMethod.GetParameters().Select( p => p.ParameterType.Name ).ToArray().JoinToString(  );
@@ -545,7 +545,7 @@ namespace UIBindings
                 }
                 else
                 {
-                    return $"{sourceObjectName}.{Path}?";
+                    return $"{sourceObjectName}.{Path}()?";
                 }
             }
         }
