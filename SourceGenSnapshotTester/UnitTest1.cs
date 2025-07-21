@@ -21,15 +21,18 @@ public class UnitTest1
         var source = """
             using UIBindings;
 
-            namespace MyNamespace
+            namespace MyNamespace.NS2
             {
-                public class TestClass
+                pubic class ExternalClass<T>
                 {
-                    [ObservableProperty]
-                    private int _observableField;
+                    public class TestClass
+                    {
+                        [ObservableProperty]
+                        private int _observableField;
 
-                    [ObservableProperty]
-                    private System.String _obs2, _obs3;
+                        [ObservableProperty]
+                        private System.String _obs2, _obs3;
+                    }
                 }
             }
             """;

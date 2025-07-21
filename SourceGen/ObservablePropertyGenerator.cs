@@ -45,47 +45,38 @@ public class UIBindingsGenerator : IIncrementalGenerator
 
     private static AnnotatedField? GetAnnotatedField( SemanticModel semanticModel, SyntaxNode variableDeclarator, ISymbol symbol )
     {
-        //return new AnnotatedField() { Name = fieldDeclaration.Kind().ToString() };
-
         //Must be when marker attribute is applied to a field
         if (variableDeclarator is not VariableDeclaratorSyntax varDeclarator )
             return null;
 
-        var varDeclaration = (VariableDeclarationSyntax)varDeclarator.Parent;
-        var fieldDeclaration = (FieldDeclarationSyntax)varDeclaration.Parent;
-        var classDeclaration = (ClassDeclarationSyntax)fieldDeclaration.Parent;
-        var namespaceDeclaration = (NamespaceDeclarationSyntax)classDeclaration.Parent;
+        //var varDeclaration = (VariableDeclarationSyntax)varDeclarator.Parent;
+        //var fieldDeclaration = (FieldDeclarationSyntax)varDeclaration.Parent;
+        //var classDeclaration = (ClassDeclarationSyntax)fieldDeclaration.Parent;
+        //var namespaceDeclaration = (NamespaceDeclarationSyntax)classDeclaration.Parent;
 
         var fieldSymbol = (IFieldSymbol)symbol;
+        var fieldName = fieldSymbol.Name;
         var fieldType = fieldSymbol.Type.ToDisplayString(  );
-        var declaredType = (ITypeSymbol)fieldSymbol.ContainingType;
-        var classFullName = declaredType.ToDisplayString();
+        var declaredType = fieldSymbol.ContainingType;
+        var className = declaredType.ToDisplayString();
+        var classFullName = declaredType.ToDisplayString( SymbolDisplayFormat.FullyQualifiedFormat );
+        var namespaceNameOnly = declaredType.ContainingNamespace.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         //var namespaceName = declaredType.ContainingNamespace.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         return new AnnotatedField()
                {
-                       Name = varDeclarator.Identifier.Text,
+                       Name = fieldName,
                        Type  = fieldType,
-                       ClassName  = classFullName,
-                       //ClassNameSpace = namespaceName,
+                       ClassFullName = classFullName,
+                       FieldSymbol = fieldSymbol,
                };
-
-        //var fieldSymbol = semanticModel.GetDeclaredSymbol(fieldSyntax.Declaration.Variables.FirstOrDefault());
-        //if (fieldSymbol is null /*|| !fieldSymbol.HasAttribute("UIBindings.ObservablePropertyAttribute") */)
-            //return default;
-
-        // return new AnnotatedField
-        // {
-        //     Name = varDeclarator.Declaration.Variables.FirstOrDefault()?.Identifier.Text,
-        //     //Type = fieldSymbol.Type.ToDisplayString()
-        // };
     }
 
     private static IEnumerable<ClassWithFields> GroupFieldsByClass(ImmutableArray<AnnotatedField?> fields, CancellationToken token )
     {
         // Perform the grouping operation on the collected ImmutableArray
-        return fields.GroupBy( f => f.ClassName )
-                     .Select( group => new ClassWithFields( group.Key, group.ToImmutableArray() ) );
+        return fields.GroupBy( f => f.ClassFullName )
+                     .Select( group => new ClassWithFields( group.Key, group.First().FieldSymbol.ContainingType, group.ToImmutableArray() ) );
     }
 
     private static void Execute(ClassWithFields source, SourceProductionContext spc )
@@ -93,7 +84,7 @@ public class UIBindingsGenerator : IIncrementalGenerator
         var sb = new StringBuilder();
 
         GenerateNamespace( sb, source );
-        spc.AddSource( $"{source.ClassFullName}.g.cs", sb.ToString() );
+        spc.AddSource( $"{source.SourceFilePartName}.g.cs", sb.ToString() );
 
         //
         //
@@ -127,53 +118,75 @@ public class UIBindingsGenerator : IIncrementalGenerator
 
     private static void GenerateClass( StringBuilder sb, ClassWithFields source )
     {
-        AppendLine( sb, $"""[System.CodeDom.Compiler.GeneratedCode("UIBindings.SourceGen", "{Assembly.GetExecutingAssembly().GetName().Version}")]""", indent: 1 );
-        AppendLine( sb, $"partial class {source.ClassName} : UIBindings.INotifyPropertyChanged", indent: 1 );
-        AppendLine( sb, "{", indent: 1 );
-        GenerateProperties( sb, source );
+        var indent = 1;
+        if( source.ContainingTypes != null && source.ContainingTypes.Count > 0 )
+        {
+            foreach ( var containingType in source.ContainingTypes )
+            {
+                AppendLine( sb, $"partial class {containingType}", indent );
+                AppendLine( sb, "{", indent );
+                indent++;
+            }
+        }
 
-        GenerateNotiFyEvent( sb, source );
+        AppendLine( sb, $"""[System.CodeDom.Compiler.GeneratedCode("UIBindings.SourceGen", "{Assembly.GetExecutingAssembly().GetName().Version}")]""", indent );
+        AppendLine( sb, $"partial class {source.ClassName} : UIBindings.INotifyPropertyChanged", indent );
+        AppendLine( sb, "{", indent );
+        GenerateProperties( sb, source, indent + 1 );
 
-        AppendLine( sb, "}", indent: 1 );
+        GenerateNotiFyEvent( sb, source, indent + 1 );
+
+        AppendLine( sb, "}", indent );
+
+        if( source.ContainingTypes != null && source.ContainingTypes.Count > 0 )
+        {
+            foreach ( var _ in source.ContainingTypes )
+            {
+                indent--;
+                AppendLine( sb, "}", indent );
+                
+            }
+        }
     }
 
-    private static void GenerateNotiFyEvent(StringBuilder sb, ClassWithFields source )
+    private static void GenerateNotiFyEvent(StringBuilder sb, ClassWithFields source, int indent )
     {
-        AppendLine( sb, "public event Action<System.Object, System.String> PropertyChanged;", 2 );
-        AppendLine( sb, "", 2 );
-        AppendLine( sb, "protected virtual void OnPropertyChanged( [System.Runtime.CompilerServices.CallerMemberName] string propertyName = null )", 2 );
-        AppendLine( sb, "{", 2 );
-        AppendLine( sb, "if ( PropertyChanged != null )", 3 );
-        AppendLine( sb, "{", 3 );
-        AppendLine( sb, "PropertyChanged.Invoke(this, propertyName );", 4 );
-        AppendLine( sb, "}", 3 );
-        AppendLine( sb, "}", 2 );
+        // Generate the event and OnPropertyChanged method
+        AppendLine( sb, "public event Action<System.Object, System.String> PropertyChanged;", indent );
+        AppendLine( sb, "", indent );
+        AppendLine( sb, "protected virtual void OnPropertyChanged( [System.Runtime.CompilerServices.CallerMemberName] string propertyName = null )", indent );
+        AppendLine( sb, "{", indent );
+        AppendLine( sb, "if ( PropertyChanged != null )", indent + 1 );
+        AppendLine( sb, "{", indent + 1 );
+        AppendLine( sb, "PropertyChanged.Invoke(this, propertyName );", indent + 2 );
+        AppendLine( sb, "}", indent + 1 );
+        AppendLine( sb, "}", indent );
     }
 
-    private static void GenerateProperties( StringBuilder sb, ClassWithFields source )
+    private static void GenerateProperties( StringBuilder sb, ClassWithFields source, int indent )
     {
         foreach ( var annotatedField in source.Fields )
         {
             var propName = ConvertFieldNameToPropertyName( annotatedField.Name );
-            AppendLine( sb, $"public {annotatedField.Type} {propName}", 2 );   
-            AppendLine( sb, "{", 2 );   
-            AppendLine( sb, $"get => {annotatedField.Name};", 3 );   
-            AppendLine( sb, "set", 3 );   
-            AppendLine( sb, "{", 3 );
-            AppendLine( sb, $"if (!EqualityComparer<{annotatedField.Type}?>.Default.Equals({annotatedField.Name}, value))", 4 );
-            AppendLine( sb, "{", 4 );
-            AppendLine( sb, $"var oldValue = {annotatedField.Name};", 5 );
-            AppendLine( sb, $"On{propName}Changing( oldValue, value );", 5 );
-            AppendLine( sb, $"{annotatedField.Name} = value;", 5 );
-            AppendLine( sb, $"On{propName}Changed( oldValue, value );", 5 );
-            AppendLine( sb, "OnPropertyChanged( );", 5 );
-            AppendLine( sb, "}", 4 );
-            AppendLine( sb, "}", 3 );   
-            AppendLine( sb, "}", 2 );   
+            AppendLine( sb, $"public {annotatedField.Type} {propName}", indent );   
+            AppendLine( sb, "{", indent );   
+            AppendLine( sb, $"get => {annotatedField.Name};", indent + 1 );   
+            AppendLine( sb, "set", indent + 1 );   
+            AppendLine( sb, "{", indent + 1 );
+            AppendLine( sb, $"if (!EqualityComparer<{annotatedField.Type}>.Default.Equals({annotatedField.Name}, value))", indent + 2 );
+            AppendLine( sb, "{", indent + 2 );
+            AppendLine( sb, $"var oldValue = {annotatedField.Name};", indent + 3 );
+            AppendLine( sb, $"On{propName}Changing( oldValue, value );", indent + 3 );
+            AppendLine( sb, $"{annotatedField.Name} = value;", indent + 3 );
+            AppendLine( sb, $"On{propName}Changed( oldValue, value );", indent + 3 );
+            AppendLine( sb, "OnPropertyChanged( );", indent + 3 );
+            AppendLine( sb, "}", indent + 2 );
+            AppendLine( sb, "}", indent + 1 );   
+            AppendLine( sb, "}", indent );   
 
-            AppendLine( sb, $"partial void On{propName}Changing( {annotatedField.Type} oldValue, {annotatedField.Type} newValue );", 2 );
-            AppendLine( sb, $"partial void On{propName}Changed( {annotatedField.Type} oldValue, {annotatedField.Type} newValue );", 2 );
-            AppendLine( sb, "", 2 );
+            AppendLine( sb, $"partial void On{propName}Changing( {annotatedField.Type} oldValue, {annotatedField.Type} newValue );", indent );
+            AppendLine( sb, $"partial void On{propName}Changed( {annotatedField.Type} oldValue, {annotatedField.Type} newValue );", indent );
+            AppendLine( sb, "", indent );
         }
     }
 
@@ -187,33 +200,111 @@ public class UIBindingsGenerator : IIncrementalGenerator
 
     private static string ConvertFieldNameToPropertyName( string fieldName )
     {
-        // Convert field name to property name by removing the leading underscore
+        // Process prefix "m_" field name
+        if( fieldName.StartsWith( "m_" ) )
+            return $"{fieldName[2].ToString().ToUpper()}{fieldName.Substring( 3 )}";
+
+        // Process prefix underscore field name
         if (fieldName.StartsWith( "_" ))
             return $"{fieldName[1].ToString().ToUpper()}{fieldName.Substring( 2 )}";
+
+        //Process begins with lowercase letter field name
+        if( fieldName[0].ToString().ToLower() == fieldName[0].ToString() )
+            return $"{fieldName[0].ToString().ToUpper()}{fieldName.Substring( 1 )}";
 
         return fieldName;
     }
 
-    private record AnnotatedField
+    private class AnnotatedField : IEquatable<AnnotatedField>
     {
         public string Name;
         public string Type;
-        public string ClassNameSpace;
-        public string ClassName;
-        public IFieldSymbol FieldSymbol;
+        public string ClassFullName;
+        public IFieldSymbol FieldSymbol;    //Stored for future processing, exclude from equality check
+
+        public bool Equals(AnnotatedField other)
+        {
+            return Name == other.Name && Type == other.Type && ClassFullName == other.ClassFullName;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is AnnotatedField other && Equals( other );
+        }
+
+        public override int GetHashCode( )
+        {
+            unchecked
+            {
+                var hashCode = Name.GetHashCode();
+                hashCode = (hashCode * 397) ^ Type.GetHashCode();
+                hashCode = (hashCode * 397) ^ ClassFullName.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        public static bool operator ==(AnnotatedField left, AnnotatedField right)
+        {
+            return left.Equals( right );
+        }
+
+        public static bool operator !=(AnnotatedField left, AnnotatedField right)
+        {
+            return !left.Equals( right );
+        }
     }
 
     private record ClassWithFields
     {
-        public string ClassFullName;
-        public string ClassNamespace => ClassFullName.Substring( 0, ClassFullName.LastIndexOf( '.' ) );
-        public string ClassName => ClassFullName.Substring( ClassFullName.LastIndexOf( '.' ) + 1 );
+        public readonly string          ClassFullName;
+
+        public readonly string          ClassNamespace;
+        public readonly string          ClassName;
+        public readonly string          SourceFilePartName;
+        public readonly List<String>?   ContainingTypes;
+
         public ImmutableArray<AnnotatedField> Fields;
 
-        public ClassWithFields(String classFullName, ImmutableArray<AnnotatedField> fields )
+        private INamedTypeSymbol ClassSymbol;
+
+        public ClassWithFields(String classFullName, INamedTypeSymbol classSymbol, ImmutableArray<AnnotatedField> fields )
         {
             ClassFullName = classFullName;
-            Fields = fields;
+            Fields        = fields;
+            ClassSymbol   = classSymbol;
+            ClassName     = classSymbol.Name;
+            SourceFilePartName = classSymbol.ToDisplayString( new SymbolDisplayFormat( globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
+                    genericsOptions: SymbolDisplayGenericsOptions.None,
+                    typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces ) );
+
+            //Make namespace string
+            var ns = classSymbol.ContainingNamespace;
+            if ( ns != null && !ns.IsGlobalNamespace )
+                ClassNamespace = ns.ToDisplayString( );
+            else
+                ClassNamespace = string.Empty;
+
+            //make list of containing types (if any)
+            var currentType = classSymbol;
+            if ( currentType.ContainingType != null )
+            {
+                var typeStack   = new Stack<string>(); // Use a stack to get outer types first
+                while ( currentType.ContainingType != null )
+                {
+                    typeStack.Push( currentType.ContainingType.ToDisplayString( SymbolDisplayFormat.MinimallyQualifiedFormat ) ); // Just the name of the containing type
+                    currentType = currentType.ContainingType;
+                }
+
+                if ( typeStack.Count > 0 )
+                {
+                    ContainingTypes = new List<String>( typeStack.Count );
+                    while ( typeStack.Count > 0 )
+                    {
+                        ContainingTypes.Add( typeStack.Pop() );
+                    }
+                }
+            }
+
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿
 using System.CodeDom.Compiler;
 using System.Runtime.CompilerServices;
+using MyNamespace.AnotherNS;
 using UIBindings;
 
 namespace MyNamespace
@@ -10,12 +11,12 @@ namespace MyNamespace
         static void Main( )
         {
             Console.WriteLine( "finish" );
-            var test = new TestClass();
+            var test = new ExternalClass<int>.TestClassDeriv();
             test.PropertyChanged += (sender, propertyName) =>
             {
                 Console.WriteLine($"Property {propertyName} changed on {sender} from event");
             };
-            test.Obs3 = "test";
+            test.CamelNoUnderscore = "test";
 
         }
     }
@@ -23,20 +24,27 @@ namespace MyNamespace
     public partial class TestClass
     {
         [ObservableProperty]
-        private int _observableField;
+        private int _camelField;
 
         [ObservableProperty]
-        private System.String _obs2, _obs3 = "bla";
+        private System.String camelNoUnderscore, m_theMPrefixField = "bla";
 
         [ObservableProperty]
         private CustomType _customTypeProp;
+    }
 
-        partial void OnObs3Changed(String oldValue, [CallerMemberName]String newValue )
+    namespace AnotherNS
+    {
+        public partial class ExternalClass<T>
         {
-            Console.WriteLine( $"changed from {oldValue} to {newValue}" );
+
+            public partial class TestClassDeriv : TestClass
+            {
+                [ObservableProperty]
+                private float _observableFloat;
+            }
         }
 
-        
     }
 
     public class CustomType
