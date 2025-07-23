@@ -30,6 +30,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\SourceGen\SourceGen.csproj" />
+      <ProjectReference Include="..\UIBinding\UIBindings.csproj" />
     </ItemGroup>
 
 </Project>

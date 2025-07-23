@@ -25,7 +25,7 @@ public class UnitTest1
             {
                 pubic class ExternalClass<T>
                 {
-                    public class TestClass
+                    public class TestClass : ObservableObject
                     {
                         [ObservableProperty]
                         private int _observableField;
@@ -45,7 +45,9 @@ public class UnitTest1
         SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
         IEnumerable<PortableExecutableReference> references = new[]
                                                               {
-                                                                      MetadataReference.CreateFromFile(typeof(object).Assembly.Location)
+                                                                      MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                                                                      MetadataReference.CreateFromFile(typeof(UIBindings.ObservableObject).Assembly.Location),
+
                                                               };
         CSharpCompilation compilation = CSharpCompilation.Create(
                 assemblyName: "Tests",

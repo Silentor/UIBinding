@@ -10,7 +10,6 @@ namespace MyNamespace
     {
         static void Main( )
         {
-            Console.WriteLine( "finish" );
             var test = new ExternalClass<int>.TestClassDeriv();
             test.PropertyChanged += (sender, propertyName) =>
             {
@@ -21,7 +20,7 @@ namespace MyNamespace
         }
     }
 
-    public partial class TestClass
+    public partial class TestClass : ObservableObject
     {
         [ObservableProperty]
         private int _camelField;
@@ -41,7 +40,7 @@ namespace MyNamespace
             public partial class TestClassDeriv : TestClass
             {
                 [ObservableProperty]
-                private float _observableFloat;
+                private float  _observableFloat;
             }
         }
 

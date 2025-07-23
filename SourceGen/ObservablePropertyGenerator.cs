@@ -17,6 +17,10 @@ namespace UIBindings.SourceGen;
 [Generator]
 public class UIBindingsGenerator : IIncrementalGenerator
 {
+    private const String ObservablePropertyFullyQualifiedName = "UIBindings.ObservablePropertyAttribute";
+    private const String INotifyPropertyChangedFullyQualifiedName = "UIBindings.INotifyPropertyChanged";
+    private const String INotifyPropertyChangingFullyQualifiedName = "UIBindings.INotifyPropertyChanging";
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Add the marker attribute
@@ -26,18 +30,18 @@ public class UIBindingsGenerator : IIncrementalGenerator
         //Find all fields with the ObservablePropertyAttribute
         IncrementalValuesProvider<AnnotatedField?> observableFields = context.SyntaxProvider
                                                                              .ForAttributeWithMetadataName(
-                                                                                      "UIBindings.ObservablePropertyAttribute",
+                                                                                      ObservablePropertyFullyQualifiedName,
                                                                                       predicate: static (s, _) => true,
                                                                                       transform: static (ctx, _) => GetAnnotatedField( ctx.SemanticModel, ctx.TargetNode, ctx.TargetSymbol ) )
                                                                              .Where( static m => m is not null );
 
         IncrementalValueProvider<ImmutableArray<AnnotatedField?>> observableFieldsCollection = observableFields.Collect();
 
-        var grouped = observableFieldsCollection.SelectMany( GroupFieldsByClass );
+        var classesWithFields = observableFieldsCollection.SelectMany( GetClassWithObservableProperties );
 
         // Generate source code for each enum found
-        context.RegisterSourceOutput(grouped,
-                static (spc, source) => Execute(source!, spc));
+        context.RegisterSourceOutput(classesWithFields,
+                static (spc, source) => GenerateObservablePropertyCode(source!, spc));
     }
 
 
@@ -54,6 +58,8 @@ public class UIBindingsGenerator : IIncrementalGenerator
         //var classDeclaration = (ClassDeclarationSyntax)fieldDeclaration.Parent;
         //var namespaceDeclaration = (NamespaceDeclarationSyntax)classDeclaration.Parent;
 
+        //todo just syntax queries should be faster than semantic symbol queries, so replace this with syntax queries
+        //Profile!
         var fieldSymbol = (IFieldSymbol)symbol;
         var fieldName = fieldSymbol.Name;
         var fieldType = fieldSymbol.Type.ToDisplayString(  );
@@ -72,36 +78,19 @@ public class UIBindingsGenerator : IIncrementalGenerator
                };
     }
 
-    private static IEnumerable<ClassWithFields> GroupFieldsByClass(ImmutableArray<AnnotatedField?> fields, CancellationToken token )
+    private static IEnumerable<ClassWithFields> GetClassWithObservableProperties(ImmutableArray<AnnotatedField?> fields, CancellationToken token )
     {
         // Perform the grouping operation on the collected ImmutableArray
         return fields.GroupBy( f => f.ClassFullName )
                      .Select( group => new ClassWithFields( group.Key, group.First().FieldSymbol.ContainingType, group.ToImmutableArray() ) );
     }
 
-    private static void Execute(ClassWithFields source, SourceProductionContext spc )
+    private static void GenerateObservablePropertyCode(ClassWithFields source, SourceProductionContext spc )
     {
         var sb = new StringBuilder();
 
         GenerateNamespace( sb, source );
         spc.AddSource( $"{source.SourceFilePartName}.g.cs", sb.ToString() );
-
-        //
-        //
-        // sb.AppendLine( $"//namespace {source.ClassNamespace}" );
-        // sb.AppendLine( $"//partial class {source.ClassName}" );
-        // foreach ( var annotatedField in source.Fields )
-        // {
-        //     sb.Append( "//" );
-        //     sb.Append( annotatedField.Type );
-        //     sb.Append( " " );
-        //     var propName = ConvertFieldNameToPropertyName( annotatedField.Name );
-        //     sb.Append( propName );
-        //     sb.AppendLine();
-        //     //sb.AppendLine( annotatedField.SymbolType );
-        // }
-        
-        
     }
 
     private static void GenerateNamespace( StringBuilder sb, ClassWithFields source )
@@ -118,6 +107,7 @@ public class UIBindingsGenerator : IIncrementalGenerator
 
     private static void GenerateClass( StringBuilder sb, ClassWithFields source )
     {
+        //Generate containing types if any
         var indent = 1;
         if( source.ContainingTypes != null && source.ContainingTypes.Count > 0 )
         {
@@ -130,12 +120,9 @@ public class UIBindingsGenerator : IIncrementalGenerator
         }
 
         AppendLine( sb, $"""[System.CodeDom.Compiler.GeneratedCode("UIBindings.SourceGen", "{Assembly.GetExecutingAssembly().GetName().Version}")]""", indent );
-        AppendLine( sb, $"partial class {source.ClassName} : UIBindings.INotifyPropertyChanged", indent );
+        AppendLine( sb, $"partial class {source.ClassName}", indent );
         AppendLine( sb, "{", indent );
         GenerateProperties( sb, source, indent + 1 );
-
-        GenerateNotiFyEvent( sb, source, indent + 1 );
-
         AppendLine( sb, "}", indent );
 
         if( source.ContainingTypes != null && source.ContainingTypes.Count > 0 )
@@ -149,7 +136,7 @@ public class UIBindingsGenerator : IIncrementalGenerator
         }
     }
 
-    private static void GenerateNotiFyEvent(StringBuilder sb, ClassWithFields source, int indent )
+    private static void GenerateNotiFyEventInfrastructure(StringBuilder sb, ClassWithFields source, int indent )
     {
         // Generate the event and OnPropertyChanged method
         AppendLine( sb, "public event Action<System.Object, System.String> PropertyChanged;", indent );
@@ -177,6 +164,8 @@ public class UIBindingsGenerator : IIncrementalGenerator
             AppendLine( sb, "{", indent + 2 );
             AppendLine( sb, $"var oldValue = {annotatedField.Name};", indent + 3 );
             AppendLine( sb, $"On{propName}Changing( oldValue, value );", indent + 3 );
+            if( source.IsImplementsNotifyChanging )
+                AppendLine( sb, "OnPropertyChanging( );", indent + 3 );
             AppendLine( sb, $"{annotatedField.Name} = value;", indent + 3 );
             AppendLine( sb, $"On{propName}Changed( oldValue, value );", indent + 3 );
             AppendLine( sb, "OnPropertyChanged( );", indent + 3 );
@@ -188,6 +177,14 @@ public class UIBindingsGenerator : IIncrementalGenerator
             AppendLine( sb, $"partial void On{propName}Changed( {annotatedField.Type} oldValue, {annotatedField.Type} newValue );", indent );
             AppendLine( sb, "", indent );
         }
+    }
+
+    private static void Append( StringBuilder sb, string text, int indent = 0 )
+    {
+        if ( indent > 0 )
+            sb.Append( new string( ' ', indent * 4 ) ); 
+
+        sb.Append( text );
     }
 
     private static void AppendLine( StringBuilder sb, string text, int indent = 0 )
@@ -254,18 +251,18 @@ public class UIBindingsGenerator : IIncrementalGenerator
         }
     }
 
-    private record ClassWithFields
+    private class ClassWithFields : IEquatable<ClassWithFields>
     {
         public readonly string          ClassFullName;
+        public readonly ImmutableArray<AnnotatedField> Fields;
 
         public readonly string          ClassNamespace;
         public readonly string          ClassName;
-        public readonly string          SourceFilePartName;
+        public readonly string          SourceFilePartName;         //Namespace + type names without file name incorrect symbols
         public readonly List<String>?   ContainingTypes;
 
-        public ImmutableArray<AnnotatedField> Fields;
-
-        private INamedTypeSymbol ClassSymbol;
+        public Boolean IsImplementsNotifyChanging; 
+        public readonly INamedTypeSymbol ClassSymbol;
 
         public ClassWithFields(String classFullName, INamedTypeSymbol classSymbol, ImmutableArray<AnnotatedField> fields )
         {
@@ -276,6 +273,7 @@ public class UIBindingsGenerator : IIncrementalGenerator
             SourceFilePartName = classSymbol.ToDisplayString( new SymbolDisplayFormat( globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
                     genericsOptions: SymbolDisplayGenericsOptions.None,
                     typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces ) );
+            IsImplementsNotifyChanging = classSymbol.AllInterfaces.Any( i => i.ToDisplayString( ) == INotifyPropertyChangingFullyQualifiedName );
 
             //Make namespace string
             var ns = classSymbol.ContainingNamespace;
@@ -305,6 +303,39 @@ public class UIBindingsGenerator : IIncrementalGenerator
                 }
             }
 
+        }
+
+        public bool Equals(ClassWithFields? other)
+        {
+            if ( other is null ) return false;
+            if ( ReferenceEquals( this, other ) ) return true;
+            return ClassFullName == other.ClassFullName && Fields.Equals( other.Fields );
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if ( obj is null ) return false;
+            if ( ReferenceEquals( this, obj ) ) return true;
+            if ( obj.GetType() != GetType() ) return false;
+            return Equals( (ClassWithFields) obj );
+        }
+
+        public override int GetHashCode( )
+        {
+            unchecked
+            {
+                return (ClassFullName.GetHashCode() * 397) ^ Fields.GetHashCode();
+            }
+        }
+
+        public static bool operator ==(ClassWithFields? left, ClassWithFields? right)
+        {
+            return Equals( left, right );
+        }
+
+        public static bool operator !=(ClassWithFields? left, ClassWithFields? right)
+        {
+            return !Equals( left, right );
         }
     }
 }
