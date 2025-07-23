@@ -15,17 +15,19 @@ namespace MyNamespace
                 Console.WriteLine($"Property {propertyName} changed on {sender} from event");
             };
             test.CamelNoUnderscore = "test";
+            test.CamelField = 1;
 
         }
     }
 
     public partial class TestClass : ObservableObject
     {
-        [property: JsonRequired]
+        [property: Obsolete("This field is obsolete", false)]
         [NotifyPropertyChangedFor(nameof(CustomTypeProp))]
         [ObservableProperty]
         private int _camelField;
 
+        [property: JsonRequired]
         [ObservableProperty]
         private System.String camelNoUnderscore, m_theMPrefixField = "bla";
 

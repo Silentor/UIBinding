@@ -33,7 +33,7 @@ public class UIBindingsGenerator : IIncrementalGenerator
                                                                              .ForAttributeWithMetadataName(
                                                                                       ObservablePropertyFullyQualifiedName,
                                                                                       predicate: static (s, _) => true,
-                                                                                      transform: static (ctx, _) => GetAnnotatedField( ctx.SemanticModel, ctx.TargetNode, ctx.TargetSymbol, ctx.Attributes ) )
+                                                                                      transform: static (ctx, cancel) => GetAnnotatedField( ctx.SemanticModel, ctx.TargetNode, ctx.TargetSymbol, ctx.Attributes, cancel ) )
                                                                              .Where( static m => m is not null );
 
         IncrementalValueProvider<ImmutableArray<AnnotatedField?>> observableFieldsCollection = observableFields.Collect();
@@ -49,7 +49,7 @@ public class UIBindingsGenerator : IIncrementalGenerator
     
 
     private static AnnotatedField? GetAnnotatedField(   SemanticModel semanticModel, SyntaxNode variableDeclarator, ISymbol symbol,
-                                                        ImmutableArray<AttributeData> attributes )
+                                                        ImmutableArray<AttributeData> attributes, CancellationToken cancel )
     {
         //Must be when marker attribute is applied to a field
         if (variableDeclarator is not VariableDeclaratorSyntax varDeclarator )
@@ -57,6 +57,25 @@ public class UIBindingsGenerator : IIncrementalGenerator
 
         var varDeclaration = (VariableDeclarationSyntax)varDeclarator.Parent;
         var fieldDeclaration = (FieldDeclarationSyntax)varDeclaration.Parent;
+        var attributeList = fieldDeclaration.AttributeLists;
+        var allAttributesSyntaxStr = fieldDeclaration.AttributeLists.Select( al => al.ToString() ).ToImmutableArray();
+        var attributesToTransfer = new List<String>();
+        foreach ( var attributeListSyntax in attributeList )
+        {
+            if ( attributeListSyntax.Target?.Identifier.Text == "property" ) //This attribute should be transferred to the property
+            {
+                foreach ( var attributeSyntax in attributeListSyntax.Attributes )
+                {
+                    var attributeConstructor = semanticModel.GetSymbolInfo( attributeSyntax, cancellationToken: cancel ).Symbol as IMethodSymbol;
+                    if( attributeConstructor == null )
+                        continue;
+                    var attributeFulName = attributeConstructor.ContainingType.ToDisplayString( SymbolDisplayFormat.FullyQualifiedFormat );
+                    var attributeArgs = attributeSyntax.ArgumentList?.ToString() ?? string.Empty;
+                    attributesToTransfer.Add( $"[{attributeFulName}{attributeArgs}]" );
+                }
+                
+            }
+        }
         //var classDeclaration = (ClassDeclarationSyntax)fieldDeclaration.Parent;
         //var namespaceDeclaration = (NamespaceDeclarationSyntax)classDeclaration.Parent;
 
@@ -84,7 +103,9 @@ public class UIBindingsGenerator : IIncrementalGenerator
                        Name = fieldName,
                        Type  = fieldType,
                        ClassFullName = classFullName,
+                       Attributes = allAttributesSyntaxStr,
                        AlsoNotifyProperties = alsoNotifyProperties,
+                       AttributesForProperty = attributesToTransfer,
                        FieldSymbol = fieldSymbol,
                };
     }
@@ -166,6 +187,8 @@ public class UIBindingsGenerator : IIncrementalGenerator
         foreach ( var annotatedField in source.Fields )
         {
             var propName = ConvertFieldNameToPropertyName( annotatedField.Name );
+            foreach ( var attrForGeneratedProp in annotatedField.AttributesForProperty )                
+                AppendLine( sb, attrForGeneratedProp, indent );
             AppendLine( sb, $"public {annotatedField.Type} {propName}", indent );   
             AppendLine( sb, "{", indent );   
             AppendLine( sb, $"get => {annotatedField.Name};", indent + 1 );   
@@ -237,15 +260,20 @@ public class UIBindingsGenerator : IIncrementalGenerator
 
     private class AnnotatedField : IEquatable<AnnotatedField>
     {
+        //Main data, used for equality check
         public string Name;
         public string Type;
         public string ClassFullName;
+        public ImmutableArray<string> Attributes = ImmutableArray<String>.Empty;//All attributes as a strings, just to detect any changes in attributes
+
+        //Not for equality check
         public string[] AlsoNotifyProperties;
+        public IReadOnlyList<string> AttributesForProperty = Array.Empty<String>();
         public IFieldSymbol FieldSymbol;    //Stored for future processing, exclude from equality check
 
         public bool Equals(AnnotatedField other)
         {
-            return Name == other.Name && Type == other.Type && ClassFullName == other.ClassFullName;
+            return Name == other.Name && Type == other.Type && ClassFullName == other.ClassFullName && Attributes.SequenceEqual( other.Attributes );
         }
 
         public override bool Equals(object? obj)
@@ -257,10 +285,27 @@ public class UIBindingsGenerator : IIncrementalGenerator
         {
             unchecked
             {
-                var hashCode = Name.GetHashCode();
-                hashCode = (hashCode * 397) ^ Type.GetHashCode();
-                hashCode = (hashCode * 397) ^ ClassFullName.GetHashCode();
+                var hashCode = GetSimpleDeterministicHash( Name );
+                hashCode = (hashCode * 397) ^ GetSimpleDeterministicHash( Type );
+                hashCode = (hashCode * 397) ^ GetSimpleDeterministicHash( ClassFullName );
+                foreach ( var attribute in Attributes )
+                {
+                    hashCode = (hashCode * 397) ^ GetSimpleDeterministicHash( attribute );
+                }
                 return hashCode;
+            }
+        }
+
+        private static int GetSimpleDeterministicHash(string s)
+        {
+            unchecked // Allow overflow, which is fine for hashing
+            {
+                int hash = 23; // Start with a prime number
+                foreach (char c in s)
+                {
+                    hash = hash * 31 + c; // Multiply by another prime, add character value
+                }
+                return hash;
             }
         }
 
