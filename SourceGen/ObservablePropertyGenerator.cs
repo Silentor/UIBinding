@@ -17,22 +17,23 @@ namespace UIBindings.SourceGen;
 [Generator]
 public class UIBindingsGenerator : IIncrementalGenerator
 {
-    private const String ObservablePropertyFullyQualifiedName = "UIBindings.ObservablePropertyAttribute";
+    private const String ObservablePropertyFullyQualifiedName = "UIBindings.SourceGen.ObservablePropertyAttribute";
+    private const String NotifyPropertyChangedForFullyQualifiedName = "UIBindings.SourceGen.NotifyPropertyChangedForAttribute";
     private const String INotifyPropertyChangedFullyQualifiedName = "UIBindings.INotifyPropertyChanged";
     private const String INotifyPropertyChangingFullyQualifiedName = "UIBindings.INotifyPropertyChanging";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Add the marker attribute
-        context.RegisterPostInitializationOutput(static ctx => ctx.AddSource(
-                "ObservablePropertyAttribute.g.cs", SourceText.From(AttributesHelper.ObservableProperty, Encoding.UTF8)));
+        //context.RegisterPostInitializationOutput(static ctx => ctx.AddSource(
+          //      "ObservablePropertyAttribute.g.cs", SourceText.From(AttributesHelper.ObservableProperty, Encoding.UTF8)));
 
         //Find all fields with the ObservablePropertyAttribute
         IncrementalValuesProvider<AnnotatedField?> observableFields = context.SyntaxProvider
                                                                              .ForAttributeWithMetadataName(
                                                                                       ObservablePropertyFullyQualifiedName,
                                                                                       predicate: static (s, _) => true,
-                                                                                      transform: static (ctx, _) => GetAnnotatedField( ctx.SemanticModel, ctx.TargetNode, ctx.TargetSymbol ) )
+                                                                                      transform: static (ctx, _) => GetAnnotatedField( ctx.SemanticModel, ctx.TargetNode, ctx.TargetSymbol, ctx.Attributes ) )
                                                                              .Where( static m => m is not null );
 
         IncrementalValueProvider<ImmutableArray<AnnotatedField?>> observableFieldsCollection = observableFields.Collect();
@@ -47,14 +48,15 @@ public class UIBindingsGenerator : IIncrementalGenerator
 
     
 
-    private static AnnotatedField? GetAnnotatedField( SemanticModel semanticModel, SyntaxNode variableDeclarator, ISymbol symbol )
+    private static AnnotatedField? GetAnnotatedField(   SemanticModel semanticModel, SyntaxNode variableDeclarator, ISymbol symbol,
+                                                        ImmutableArray<AttributeData> attributes )
     {
         //Must be when marker attribute is applied to a field
         if (variableDeclarator is not VariableDeclaratorSyntax varDeclarator )
             return null;
 
-        //var varDeclaration = (VariableDeclarationSyntax)varDeclarator.Parent;
-        //var fieldDeclaration = (FieldDeclarationSyntax)varDeclaration.Parent;
+        var varDeclaration = (VariableDeclarationSyntax)varDeclarator.Parent;
+        var fieldDeclaration = (FieldDeclarationSyntax)varDeclaration.Parent;
         //var classDeclaration = (ClassDeclarationSyntax)fieldDeclaration.Parent;
         //var namespaceDeclaration = (NamespaceDeclarationSyntax)classDeclaration.Parent;
 
@@ -68,12 +70,21 @@ public class UIBindingsGenerator : IIncrementalGenerator
         var classFullName = declaredType.ToDisplayString( SymbolDisplayFormat.FullyQualifiedFormat );
         var namespaceNameOnly = declaredType.ContainingNamespace.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         //var namespaceName = declaredType.ContainingNamespace.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+ 
+        var allAttributes = symbol.GetAttributes();
+        var alsoNotifyProperties = allAttributes
+                                  .Where( a => a.AttributeClass?.ToDisplayString() == NotifyPropertyChangedForFullyQualifiedName )
+                                  .SelectMany( a => a.ConstructorArguments )
+                                  .SelectMany( arg => arg.Kind == TypedConstantKind.Primitive ? new [] { arg.Value.ToString() } : arg.Values.Select( v => v.Value.ToString() ) )
+                                  .Where( v => !string.IsNullOrEmpty( v ) )
+                                  .ToArray();
 
         return new AnnotatedField()
                {
                        Name = fieldName,
                        Type  = fieldType,
                        ClassFullName = classFullName,
+                       AlsoNotifyProperties = alsoNotifyProperties,
                        FieldSymbol = fieldSymbol,
                };
     }
@@ -164,11 +175,23 @@ public class UIBindingsGenerator : IIncrementalGenerator
             AppendLine( sb, "{", indent + 2 );
             AppendLine( sb, $"var oldValue = {annotatedField.Name};", indent + 3 );
             AppendLine( sb, $"On{propName}Changing( oldValue, value );", indent + 3 );
-            if( source.IsImplementsNotifyChanging )
+            if ( source.IsImplementsNotifyChanging )
+            {
                 AppendLine( sb, "OnPropertyChanging( );", indent + 3 );
+                foreach ( var alsoNotify in annotatedField.AlsoNotifyProperties )
+                {
+                    AppendLine( sb, $"OnPropertyChanging( \"{alsoNotify}\" );", indent + 3 );    
+                }
+            }
             AppendLine( sb, $"{annotatedField.Name} = value;", indent + 3 );
             AppendLine( sb, $"On{propName}Changed( oldValue, value );", indent + 3 );
             AppendLine( sb, "OnPropertyChanged( );", indent + 3 );
+
+            foreach ( var alsoNotify in annotatedField.AlsoNotifyProperties )
+            {
+                AppendLine( sb, $"OnPropertyChanged( \"{alsoNotify}\" );", indent + 3 );
+            }
+
             AppendLine( sb, "}", indent + 2 );
             AppendLine( sb, "}", indent + 1 );   
             AppendLine( sb, "}", indent );   
@@ -217,6 +240,7 @@ public class UIBindingsGenerator : IIncrementalGenerator
         public string Name;
         public string Type;
         public string ClassFullName;
+        public string[] AlsoNotifyProperties;
         public IFieldSymbol FieldSymbol;    //Stored for future processing, exclude from equality check
 
         public bool Equals(AnnotatedField other)

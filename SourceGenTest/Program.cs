@@ -1,8 +1,7 @@
-﻿
-using System.CodeDom.Compiler;
-using System.Runtime.CompilerServices;
+﻿using System.Text.Json.Serialization;
 using MyNamespace.AnotherNS;
 using UIBindings;
+using UIBindings.SourceGen;
 
 namespace MyNamespace
 {
@@ -22,6 +21,8 @@ namespace MyNamespace
 
     public partial class TestClass : ObservableObject
     {
+        [property: JsonRequired]
+        [NotifyPropertyChangedFor(nameof(CustomTypeProp))]
         [ObservableProperty]
         private int _camelField;
 

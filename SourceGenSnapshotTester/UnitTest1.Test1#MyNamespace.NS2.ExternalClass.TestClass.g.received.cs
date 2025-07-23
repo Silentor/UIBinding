@@ -4,7 +4,7 @@ namespace MyNamespace.NS2
     partial class ExternalClass<T>
     {
         [System.CodeDom.Compiler.GeneratedCode("UIBindings.SourceGen", "1.0.0.0")]
-        partial class TestClass : UIBindings.INotifyPropertyChanged
+        partial class TestClass
         {
             public int ObservableField
             {
@@ -15,6 +15,7 @@ namespace MyNamespace.NS2
                     {
                         var oldValue = _observableField;
                         OnObservableFieldChanging( oldValue, value );
+                        OnPropertyChanging( );
                         _observableField = value;
                         OnObservableFieldChanged( oldValue, value );
                         OnPropertyChanged( );
@@ -33,6 +34,7 @@ namespace MyNamespace.NS2
                     {
                         var oldValue = _obs2;
                         OnObs2Changing( oldValue, value );
+                        OnPropertyChanging( );
                         _obs2 = value;
                         OnObs2Changed( oldValue, value );
                         OnPropertyChanged( );
@@ -51,6 +53,7 @@ namespace MyNamespace.NS2
                     {
                         var oldValue = _obs3;
                         OnObs3Changing( oldValue, value );
+                        OnPropertyChanging( );
                         _obs3 = value;
                         OnObs3Changed( oldValue, value );
                         OnPropertyChanged( );
@@ -60,15 +63,6 @@ namespace MyNamespace.NS2
             partial void OnObs3Changing( string oldValue, string newValue );
             partial void OnObs3Changed( string oldValue, string newValue );
             
-        public event Action<System.Object, System.String> PropertyChanged;
-        
-        protected virtual void OnPropertyChanged( [System.Runtime.CompilerServices.CallerMemberName] string propertyName = null )
-        {
-            if ( PropertyChanged != null )
-            {
-                PropertyChanged.Invoke(this, propertyName );
-            }
-        }
         }
     }
 }
