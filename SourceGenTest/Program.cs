@@ -10,37 +10,40 @@ namespace MyNamespace
         static void Main( )
         {
             var test = new ExternalClass<int>.TestClassDeriv();
-            test.PropertyChanged += (sender, propertyName) =>
-            {
-                Console.WriteLine($"Property {propertyName} changed on {sender} from event");
-            };
-            test.CamelNoUnderscore = "test";
-            test.CamelField = 1;
+            // test.PropertyChanged += (sender, propertyName) =>
+            // {
+            //     Console.WriteLine($"Property {propertyName} changed on {sender} from event");
+            // };
+            //test.CamelNoUnderscore = "test";
+            //test.CamelField = 1;
+            //test.ObservableFloat = 42.0f;
 
         }
     }
 
-    public partial class TestClass : ObservableObject
+    [INotifyPropertyChanged]
+    public partial class TestClass<T>  where T : new() 
     {
-        [property: Obsolete("This field is obsolete", false)]
-        [NotifyPropertyChangedFor(nameof(CustomTypeProp))]
-        [ObservableProperty]
+        //[property: Obsolete("This field is obsolete", false)]
+        //[NotifyPropertyChangedFor(nameof(CustomTypeProp))]
+        //[ObservableProperty]
         private int _camelField;
 
-        [property: JsonRequired]
-        [ObservableProperty]
+        //[property: JsonRequired]
+        //[ObservableProperty]
         private System.String camelNoUnderscore, m_theMPrefixField = "bla";
 
-        [ObservableProperty]
+        //[ObservableProperty]
         private CustomType _customTypeProp;
     }
 
     namespace AnotherNS
     {
-        public partial class ExternalClass<T>
+        //[INotifyPropertyChanged]
+        public partial class ExternalClass<T> where T : struct
         {
-
-            public partial class TestClassDeriv : TestClass
+            //[INotifyPropertyChanged ]
+            public partial class TestClassDeriv : TestClass<T>
             {
                 [ObservableProperty]
                 private float  _observableFloat;

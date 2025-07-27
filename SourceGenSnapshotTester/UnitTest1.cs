@@ -26,18 +26,24 @@ public class UnitTest1
 
             namespace MyNamespace.NS2
             {
-                public class ExternalClass<T>
+                public class ExternalClass<T> where T : struct
                 {
-                    public class TestClass : ObservableObject
+                    //[INotifyPropertyChanged]
+                    public class TestClass 
                     {
-                        [property: Obsolete("Use Obs2 instead", false)]
+                        //[property: Obsolete("Use Obs2 instead", false)]
                         //[NotifyPropertyChangedFor(nameof(Obs2))]
-                        [NotifyPropertyChangedFor("Obs2", "Obs3")]
-                        [ObservableProperty]
+                        //[NotifyPropertyChangedFor("Obs2", "Obs3")]
+                        //[ObservableProperty]
                         private int _observableField;
 
-                        [ObservableProperty]
+                        //[ObservableProperty]
                         private System.String _obs2, _obs3;
+                    }
+                    
+                    [INotifyPropertyChanged]
+                    public class TestDeriv : TestClass
+                    {
                     }
                 }
             }

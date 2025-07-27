@@ -10,7 +10,7 @@ namespace UIBindings
 {
     public class ObservableBeh : MonoBehaviour, INotifyPropertyChanging, INotifyPropertyChanged
     {
-        protected bool SetProperty<T>([NotNullIfNotNull( nameof(newValue) )] ref T field, T newValue, [CallerMemberName] string? propertyName = null)
+        protected bool SetProperty<T>(/*[NotNullIfNotNull( nameof(newValue) )]*/ ref T field, T newValue, [CallerMemberName] string? propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, newValue))
                 return false;
@@ -22,7 +22,7 @@ namespace UIBindings
             return true;
         }
 
-        protected bool SetProperty<T>([NotNullIfNotNull(nameof(newValue))] ref T field, T newValue, IEqualityComparer<T> comparer, [CallerMemberName] string? propertyName = null)
+        protected bool SetProperty<T>(/*[NotNullIfNotNull(nameof(newValue))]*/ ref T field, T newValue, IEqualityComparer<T> comparer, [CallerMemberName] string? propertyName = null)
         {
             Assert.IsNotNull( comparer );
 
