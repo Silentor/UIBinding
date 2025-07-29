@@ -93,7 +93,7 @@ public static class Utils
                        {
                                ClassOrStructConstraintSyntax  cos  => cos.ClassOrStructKeyword.Text,
                                ConstructorConstraintSyntax cons    => cons.NewKeyword.Text,
-                               AllowsConstraintClauseSyntax allow  => allow.AllowsKeyword.Text,
+                               //AllowsConstraintClauseSyntax allow  => allow.AllowsKeyword.Text,       not supported by Unity Roslyn version
                                DefaultConstraintSyntax def         => def.DefaultKeyword.Text,
                                TypeConstraintSyntax typeConstraint => typeConstraint.Type.ToString(),
                                _                                   => string.Empty

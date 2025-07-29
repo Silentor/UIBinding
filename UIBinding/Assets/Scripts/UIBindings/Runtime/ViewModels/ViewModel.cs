@@ -1,4 +1,5 @@
 ﻿using System;
+using UIBindings.SourceGen;
 using UnityEngine;
 using Object = System.Object;
 
@@ -7,7 +8,8 @@ namespace UIBindings.Runtime
     /// <summary>
     /// Source of data for the UI Bindings system. Child bindings use VM as default data source.
     /// </summary>
-    public abstract class ViewModel : BinderBase
+    [INotifyPropertyChanged]
+    public abstract partial class ViewModel : BinderBase
     {
         
     }
