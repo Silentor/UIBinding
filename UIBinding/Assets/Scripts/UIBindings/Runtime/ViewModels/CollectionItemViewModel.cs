@@ -32,6 +32,7 @@ namespace UIBindings.Runtime
         public override void Initialize( Object collectionItem)
         {
             Source = (TItem)Convert.ChangeType( collectionItem, typeof(TItem) );
+            OnPropertyChangedAll();
         }
 
         /// <summary>

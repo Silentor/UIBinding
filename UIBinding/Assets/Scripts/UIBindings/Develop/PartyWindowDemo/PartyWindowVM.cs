@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using UIBindings.Runtime;
 using UIBindings.SourceGen;
+using UnityEngine;
 using Object = System.Object;
 
 namespace UIBindings.Develop
@@ -20,6 +21,12 @@ namespace UIBindings.Develop
 
         [ObservableProperty]
         private Hero _selectedHero;
+
+        partial void OnSelectedHeroChanged(Hero oldValue, Hero newValue )
+        {
+            var playerPreview = FindAnyObjectByType<Player>();
+            playerPreview.Init( newValue.Name );
+        }
 
         private void Awake( )
         {

@@ -19,7 +19,7 @@ namespace UIBindings.Runtime.Utils
         
         public static Object GetParentSource( Component bindingHost )
         {
-            return bindingHost.GetComponentInParent<ViewModel>();    //For now, we assume that the parent source is always a ViewModel component
+            return (Object)bindingHost.GetComponentInParent<IViewModel>( true );    //For now, we assume that the parent source is always a ViewModel component
         }     
 
         public static (Type, Object) GetSourceTypeAndObject( BindingBase binding, Object bindingHost )

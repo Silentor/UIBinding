@@ -78,7 +78,7 @@ namespace UIBindings.Editor.Utils
 
             using var zeroIndentScope = new EditorGUIUtils.ZeroLevelScope(  ); //Indent mess with some fields without labels
 
-            var (sourceFieldRect, sourceTypeBtnRect) = GUIUtils.GetHorizontalRects( position, 2, 0, 50 );
+            var (sourceFieldRect, sourceTypeBtnRect) = GUIUtils.GetHorizontalRects( position, 2, 0, 55 );
             var bindType = bindTypeProp.boolValue;
             if ( bindType )         //Type source, use sourceTypeStrProp
             {
@@ -186,7 +186,7 @@ namespace UIBindings.Editor.Utils
             }
 
             //Button "object reference" or "type" for source
-            var nextModeLabel = bindType ? new GUIContent("Ref", "Click to switch to Unity object source mode") : new GUIContent("Type", "Click to switch to C# any type source mode");
+            var nextModeLabel = bindType ? new GUIContent("To Ref", "Click to switch to Unity object source mode") : new GUIContent("To Type", "Click to switch to C# any type source mode");
             if ( GUI.Button( sourceTypeBtnRect, nextModeLabel ) )
             {
                 bindType               = !bindType;

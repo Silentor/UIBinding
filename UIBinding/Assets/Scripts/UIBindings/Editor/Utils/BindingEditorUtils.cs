@@ -242,7 +242,11 @@ namespace UIBindings.Editor.Utils
 
         public static (T binding, UnityEngine.Object host) GetBindingObject<T>( SerializedProperty bindingProp ) where T : BindingBase
         {
-            return ((T)bindingProp.boxedValue, bindingProp.serializedObject.targetObject);
+            var hostObject = bindingProp.serializedObject.targetObject;
+            var propertyPath = bindingProp.propertyPath;
+            var propInfo = hostObject.GetType().GetField( propertyPath, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+            var result = propInfo?.GetValue( hostObject );
+            return ((T)result, bindingProp.serializedObject.targetObject);
         }
     }
 

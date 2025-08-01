@@ -6,6 +6,9 @@ using Object = UnityEngine.Object;
 
 namespace UIBindings
 {
+    /// <summary>
+    /// Container for <see cref="BindingBase"/>
+    /// </summary>
     public class BinderBase : MonoBehaviour
     {
         protected  Object GetSource( BindingBase binding )

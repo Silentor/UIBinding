@@ -9,7 +9,7 @@ namespace UIBindings.Runtime
     /// Source of data for the UI Bindings system. Child bindings use VM as default data source.
     /// </summary>
     [INotifyPropertyChanged]
-    public abstract partial class ViewModel : BinderBase
+    public abstract partial class ViewModel : BinderBase, IViewModel
     {
         
     }
@@ -47,6 +47,7 @@ namespace UIBindings.Runtime
         private void OnDataSourceChanged(Object sender, T value )
         {
             Source = value;
+            OnPropertyChangedAll();
         }
 
         /// <summary>

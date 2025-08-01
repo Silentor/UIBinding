@@ -84,6 +84,12 @@ namespace UIBindings.Editor
             }
         }
 
+        /// <summary>
+        /// Convert list of ViewModels to a tree structure of ViewModelTreeItem.
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="list"></param>
+        /// <returns></returns>
         private ViewModelTreeItem CreateTree( ViewModel root, IReadOnlyList<ViewModel> list )
         {
             var rootItem = new ViewModelTreeItem
@@ -159,10 +165,10 @@ namespace UIBindings.Editor
             var allBinders = root.transform.GetComponentsInChildren<BinderBase>();
             foreach ( var binder in allBinders )
             {
-                var parentVm = binder.transform.GetComponentInParent<ViewModel>();
-                var bindings = GetBindings( binder );
-                if ( itemMap.TryGetValue( parentVm, out var parentTreeItem ) )
+                var parentVm = binder.transform.GetComponentInParent<ViewModel>( true );
+                if ( parentVm && itemMap.TryGetValue( parentVm, out var parentTreeItem ) )
                 {
+                    var bindings = GetBindings( binder );
                     parentTreeItem.Bindings.AddRange( bindings );
                 }
 

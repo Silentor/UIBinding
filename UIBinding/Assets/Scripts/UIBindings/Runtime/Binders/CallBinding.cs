@@ -67,6 +67,8 @@ namespace UIBindings
             }
 
             InitInfrastructure();
+
+            Debug.Log( $"Inited callbinding {GetHashCode()} on {_debugHost.name} ({_debugHost.GetHashCode()})" );
         }
 
         private void InitInfrastructure( )

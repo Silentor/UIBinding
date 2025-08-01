@@ -369,15 +369,15 @@ MonoBehaviour:
   ButtonText: {fileID: 0}
   CallBinding:
     Enabled: 1
-    Source: {fileID: 223276747142826742}
+    Source: {fileID: 0}
     SourceType: 
     BindToType: 0
     Path: Select
     Params:
     - Primitive: 0
       String: 
-      Object: {fileID: 0}
-      ValueType: 0
+      Object: {fileID: 223276747142826742}
+      ValueType: 5
     - Primitive: 0
       String: 
       Object: {fileID: 0}
@@ -503,7 +503,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24.5
+  m_fontSize: 31.85
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

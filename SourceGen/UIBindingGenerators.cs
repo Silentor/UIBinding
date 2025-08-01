@@ -317,6 +317,11 @@ public class UIBindingsGenerator : IIncrementalGenerator
         sb.AppendLine( "{" ).AddIndent();
         sb.AppendLine( "PropertyChanged?.Invoke(this, propertyName );"  );
         sb.RemoveIndent().AppendLine( "}" );
+        sb.AppendLine( generatedCodeAttribute );
+        sb.AppendLine( "protected virtual void OnPropertyChangedAll( )");
+        sb.AppendLine( "{" ).AddIndent();
+        sb.AppendLine( "PropertyChanged?.Invoke(this, null );"  );
+        sb.RemoveIndent().AppendLine( "}" );
         //if(  isNotifyChangingSupported ) 
         {
             sb.AppendLine( generatedCodeAttribute );
