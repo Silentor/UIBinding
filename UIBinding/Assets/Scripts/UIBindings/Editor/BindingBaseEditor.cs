@@ -36,7 +36,7 @@ namespace UIBindings.Editor.Utils
             //Draw main content line = enabled toggle + main binding info label
             var mainLineContentPosition = position;
             mainLineContentPosition.xMin += EditorGUIUtility.labelWidth;
-            var rects = GUIUtils.GetHorizontalRects( mainLineContentPosition, 2, 0, 20 );
+            var rects = EditorGUIUtils.GetHorizontalRects( mainLineContentPosition, 2, 0, 20 );
 
             //Draw Enabled toggle
             var enabledProp = property.FindPropertyRelative( nameof(BindingBase.Enabled) );
@@ -76,9 +76,9 @@ namespace UIBindings.Editor.Utils
 
             position = EditorGUI.PrefixLabel( position, new GUIContent( bindTypeProp.boolValue ? "Source type" : "Source reference" ));
 
-            using var zeroIndentScope = new EditorGUIUtils.ZeroLevelScope(  ); //Indent mess with some fields without labels
+            using var zeroIndentScope = EditorGUIUtils.ZeroIndent(  ); //Indent mess with some fields without labels
 
-            var (sourceFieldRect, sourceTypeBtnRect) = GUIUtils.GetHorizontalRects( position, 2, 0, 55 );
+            var (sourceFieldRect, sourceTypeBtnRect) = EditorGUIUtils.GetHorizontalRects( position, 2, 0, 55 );
             var bindType = bindTypeProp.boolValue;
             if ( bindType )         //Type source, use sourceTypeStrProp
             {
@@ -142,7 +142,7 @@ namespace UIBindings.Editor.Utils
                 }
                 else if ( !oldSource && parentSource )       //Source not overriden, use parent source
                 {
-                    var (inheritedSourceRect, sourceFieldRect2) = GUIUtils.GetHorizontalRects( sourceFieldRect, 2, 15, 0 );
+                    var (inheritedSourceRect, sourceFieldRect2) = EditorGUIUtils.GetHorizontalRects( sourceFieldRect, 2, 15, 0 );
                     //Draw inherited source mark
                     GUI.Label( inheritedSourceRect, new GUIContent( "↑", tooltip: $"Used parent object {parentSource.name} as a Source. Select another source object to override." ) );  
 
@@ -156,7 +156,7 @@ namespace UIBindings.Editor.Utils
                 }
                 else                //Source is overriden, draw object field with override mark, allow to clear override
                 {
-                    var (overridenSourceRect, sourceFieldRect2) = GUIUtils.GetHorizontalRects( sourceFieldRect, 2, 15, 0 );
+                    var (overridenSourceRect, sourceFieldRect2) = EditorGUIUtils.GetHorizontalRects( sourceFieldRect, 2, 15, 0 );
                     //Draw override source mark
                     if ( GUI.Button( overridenSourceRect, new GUIContent("*", tooltip: $"Parent source overrided. Click to ping parent source object {parentSource.name}. Select None to remove source override and use parent source.") ) )  
                         EditorGUIUtility.PingObject( parentSource );

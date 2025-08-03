@@ -18,16 +18,16 @@ namespace UIBindings.Editor
             var delayProp = property.FindPropertyRelative( nameof(DataBinding.UpdateMode.Delay) );
             var scaledTimeProp = property.FindPropertyRelative( nameof(DataBinding.UpdateMode.ScaledTime) );
 
-            using ( GUIUtils.ZeroIndent() )
+            using ( EditorGUIUtils.ZeroIndent() )
             {
                 if ( ((DataBinding.EUpdateMode)modeProp.intValue) != DataBinding.EUpdateMode.Manual )
                 {
-                    var rects = GUIUtils.GetHorizontalRects( position, 1, 0, 60, 40 );
+                    var rects = EditorGUIUtils.GetHorizontalRects( position, 1, 0, 60, 40 );
                     EditorGUI.PropertyField( rects.Item1, modeProp, GUIContent.none );
-                     var delayRects = GUIUtils.GetHorizontalRects( rects.Item2, 1, 20, 40 );
+                     var delayRects = EditorGUIUtils.GetHorizontalRects( rects.Item2, 1, 20, 40 );
                      GUI.Label( delayRects.Item1, Resources.DelayLabel, Resources.RightAlignedLabel );
                     EditorGUI.PropertyField( delayRects.Item2, delayProp, GUIContent.none );
-                     var unscaledRects = GUIUtils.GetHorizontalRects( rects.Item3,  1, 20, 20 );
+                     var unscaledRects = EditorGUIUtils.GetHorizontalRects( rects.Item3,  1, 20, 20 );
                      GUI.Label( unscaledRects.Item1, Resources.UnscaledTimeLabel, Resources.RightAlignedLabel );
                      EditorGUI.PropertyField( unscaledRects.Item2, scaledTimeProp, GUIContent.none );
                 }

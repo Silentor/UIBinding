@@ -5,7 +5,7 @@ using Object = System.Object;
 
 namespace UIBindings.Editor.Utils
 {
-    public static class GUIUtils
+    public static class EditorGUIUtils
     {
         public static IDisposable ChangeContentColor( Color contentColor )
         {

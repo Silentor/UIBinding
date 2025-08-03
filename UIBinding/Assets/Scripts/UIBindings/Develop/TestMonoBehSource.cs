@@ -5,8 +5,10 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
+using UIBindings.Adapters;
 using UIBindings.Runtime;
 using UIBindings.Runtime.PlayerLoop;
+using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using Unity.Profiling.LowLevel.Unsafe;
 using UnityEngine;
@@ -37,6 +39,7 @@ namespace UIBindings
         private Func<StructEnum> _fastGetter;
         private Func<Int32> _boxedGetter;
 
+        public TestComplexValue TestComplexSource { get; private set; } = new ( );
 
         public Single SourceFloat
         {
@@ -230,6 +233,84 @@ namespace UIBindings
         {
             Application.targetFrameRate = 30;
 
+            // var propInfo1 = GetType().GetProperty( nameof(TestComplexSource) );
+            // var propAdapter = new PropertyAdapter<TestComplexValue>( this, propInfo1, false );
+            // var propInfo2 = propInfo1.PropertyType.GetProperty( nameof(TestComplexValue.Value) );
+            // var complexAdapter = new ComplexPropertyAdapter<TestComplexValue, float>(propAdapter, propInfo2, false);
+            //
+            // complexAdapter.TryGetValue( out var testValue );
+            // Debug.Log( $"TestComplexSource.Value = {testValue}" );
+            // TestComplexSource.Value = "43";
+            // complexAdapter.TryGetValue( out testValue );
+            // Debug.Log( $"TestComplexSource.Value = {testValue}" );
+            //
+            // var timer = System.Diagnostics.Stopwatch.StartNew();
+            // var param1Type = typeof(PropertyAdapter<>).MakeGenericType( typeof(TestComplexValue) );
+            // timer.Restart();
+            // for ( int i = 0; i < 1000; i++ )
+            // {
+            //     param1Type = typeof(PropertyAdapter<>).MakeGenericType( typeof(TestComplexValue) );    
+            // }
+            // timer.Stop();
+            // var param1TypeCreateTime = timer.Elapsed.TotalMicroseconds();
+            //
+            // var param2Type = typeof(ComplexPropertyAdapter<,>).MakeGenericType( typeof(TestComplexValue), typeof(float) );
+            // timer.Restart();
+            // for ( int i = 0; i < 1000; i++ )
+            // {
+            //     param2Type = typeof(ComplexPropertyAdapter<,>).MakeGenericType( typeof(TestComplexValue), typeof(float) );
+            // }
+            // timer.Stop();
+            // var param2TypeCreateTime = timer.Elapsed.TotalMicroseconds();
+            //
+            // Debug.Log( $"param1 create type time {param1TypeCreateTime} mks, param2 create type time {param2TypeCreateTime} mks" );
+
+            
+
+            // var propInfo = GetType().GetProperty(nameof(SourceByte));
+            // var closedDelegate = (Func<Byte>)Delegate.CreateDelegate( typeof(Func<Byte>), this, propInfo.GetGetMethod() );
+            // var openDelegate = (Func<TestMonoBehSource, Byte>)Delegate.CreateDelegate( typeof(Func<TestMonoBehSource, Byte>), propInfo.GetGetMethod() );
+            //
+            // int closedValue = closedDelegate();
+            // int openValue = openDelegate(this);
+            //
+            // var timer = System.Diagnostics.Stopwatch.StartNew();
+            //
+            // timer.Restart();
+            // for ( int i = 0; i < 10000; i++ )
+            // {
+            //     closedDelegate = (Func<Byte>)Delegate.CreateDelegate( typeof(Func<Byte>), this, propInfo.GetGetMethod() );
+            // }
+            // timer.Stop();
+            // var closedCreateTime = timer.Elapsed.TotalMicroseconds();
+            //
+            // timer.Restart();
+            // for ( int i = 0; i < 10000; i++ )
+            // {
+            //     openDelegate = (Func<TestMonoBehSource, Byte>)Delegate.CreateDelegate( typeof(Func<TestMonoBehSource, Byte>), propInfo.GetGetMethod() );
+            // }
+            // timer.Stop();
+            // var openCreateTime = timer.Elapsed.TotalMicroseconds();
+            //
+            // timer.Restart();
+            // for ( int i = 0; i < 10000; i++ )
+            // {
+            //     closedValue += closedDelegate();
+            // }
+            // timer.Stop();
+            // var closedTime = timer.Elapsed.TotalMicroseconds();
+            //
+            // timer.Restart();
+            // for ( int i = 0; i < 10000; i++ )
+            // {
+            //     openValue += openDelegate(this);
+            // }
+            // timer.Stop();
+            // var openTime = timer.Elapsed.TotalMicroseconds();
+            //
+            //
+            // Debug.Log( $"closed create {closedCreateTime} mks, open create {openCreateTime}, closed exec {closedTime} mks, open exec {openTime} mks" );
+
             //EnumerateProfilerStats();
 
             // if ( DelayedCanvas )
@@ -325,11 +406,13 @@ namespace UIBindings
         }
 
         void Update()
-        {
+        {    
             if( Time.frameCount % 2 == 0 )            //Test notifications
             {
                 SourceFloat  = Time.time % 3f;
             }
+
+            TestComplexSource = new TestComplexValue() { Value = ((int)Time.time).ToString() };
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] String propertyName = null)
@@ -346,5 +429,10 @@ namespace UIBindings
          }
 
         public event Action<Object, String> PropertyChanged;
+
+        public class TestComplexValue
+        {
+            public string Value { get; set; } = "42";
+        }
     }
 }

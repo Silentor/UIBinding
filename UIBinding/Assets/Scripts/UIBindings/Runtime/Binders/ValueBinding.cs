@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using UIBindings.Adapters;
@@ -8,6 +9,7 @@ using UIBindings.Converters;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Debug = UnityEngine.Debug;
 using Object = System.Object;
 
@@ -58,7 +60,7 @@ namespace UIBindings
             if ( !Enabled )   
                 return;
             
-            AssertWithContext.IsNotNull( Path, $"[{nameof(ValueBinding<T>)}] Path is not assigned at {GetBindingTargetInfo()}", _debugHost );
+            AssertWithContext.IsNotEmpty( Path, $"[{nameof(ValueBinding<T>)}] Path is not assigned at {GetBindingTargetInfo()}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer( );
 
@@ -74,20 +76,25 @@ namespace UIBindings
                 _sourceObjectType = SourceObject.GetType();
             }
 
-            var property   = _sourceObjectType.GetProperty( Path );
+            //Here we process deep binding
+            var splitPath = Path.Split( '.' );
+            var isComplexPath = splitPath.Length > 1;
+            
+            var firstPropertyName = splitPath.First();
+            var firstProperty   = _sourceObjectType.GetProperty( firstPropertyName );
 
             timer.AddMarker( "GetProperty" );
 
-            AssertWithContext.IsNotNull( property, $"Property {Path} not found in {_sourceObjectType.Name}", _debugHost );
-            AssertWithContext.IsTrue( property.CanRead, $"Property {Path} in {_sourceObjectType.Name} must be readable for binding", _debugHost );
+            AssertWithContext.IsNotNull( firstProperty, $"Property {firstPropertyName} not found in {_sourceObjectType.Name}", _debugHost );
+            AssertWithContext.IsTrue( firstProperty.CanRead, $"Property {firstPropertyName} in {_sourceObjectType.Name} must be readable for binding", _debugHost );
 
             _sourceNotify = SourceObject as INotifyPropertyChanged;
-            DataProvider lastConverter = null;
+            DataProvider lastDataSource = null;
 
             //Check fast pass - direct getter
-            if ( Converters.Count == 0 && property.PropertyType == typeof(T) && property.CanRead )
+            if ( Converters.Count == 0 && !isComplexPath && firstProperty.PropertyType == typeof(T) )
             {
-                _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), SourceObject, property.GetGetMethod( true ) );
+                _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), SourceObject, firstProperty.GetGetMethod( true ) );
 
                 //TODO logic to create open getter. Its support on-the-fly changing of source object because source object its just a parameter of a getter.
                 //This also allows to cache the same getter for many source objects of the same type. May be useful for collection items view models.
@@ -99,11 +106,27 @@ namespace UIBindings
 
                 timer.AddMarker( "DirectGetter" );
             }
-            else        //Need adapter/converters/etc
+            else        //Need adapters/converters/etc
             {
-                //First prepare property reader
-                _propReader = PropertyAdapter.GetPropertyAdapter( SourceObject, property, IsTwoWay );
-                lastConverter = _propReader;
+                //Create first property adapter
+                _propReader = PropertyAdapter.GetPropertyAdapter( SourceObject, firstProperty, IsTwoWay );
+                lastDataSource = _propReader;
+
+                //Create inner property adapters
+                if ( isComplexPath )
+                {
+                    var sourceObjectType = firstProperty.PropertyType;
+                    foreach ( var pathPart in splitPath.Skip( 1 ) )
+                    {
+                        var innerProp = sourceObjectType.GetProperty( pathPart );
+                        AssertWithContext.IsNotNull( innerProp, $"Property {pathPart} not found in {sourceObjectType.Name} at binding {GetBindingTargetInfo()}", _debugHost );
+                        AssertWithContext.IsTrue( innerProp.CanRead, $"Property {pathPart} in {sourceObjectType.Name} must be readable for binding at {GetBindingTargetInfo()}", _debugHost );
+                        sourceObjectType = innerProp.PropertyType;
+                        var innerPropAdapter = PropertyAdapter.GetInnerPropertyAdapter( _propReader, innerProp, IsTwoWay );
+                        _propReader = innerPropAdapter;     //We will use last inner property to get value. Last property will process all previous inner properties.
+                        lastDataSource = _propReader;
+                    }
+                }
 
                 timer.AddMarker( "CreateAdapter" );
 
@@ -111,61 +134,48 @@ namespace UIBindings
                 var converters = _converters.Converters;
                 if ( converters.Length > 0 )
                 {
-                    for ( int i = 0; i < converters.Length; i++ )
+                    for ( int i = 0; i < converters.Length; i++ )   //Some converters can be reversed
                         converters[ i ] = converters[ i ].ReverseMode ? converters[ i ].GetReverseConverter() : converters[ i ];
 
                     timer.AddMarker( "ReverseConv" );
 
-                    //Connect first converter to source property
-                    var firstConverter                = converters[0];
-                    var result = firstConverter.InitAttachToSource( _propReader, IsTwoWay, !Update.ScaledTime );
-                    if( !result )
+                    //Make each converter know about prev data source
+                    for ( var i = 0; i < converters.Length; i++ )
                     {
-                        Debug.LogError( $"[{nameof(BindingBase)}] First converter {firstConverter} cannot be attached to source property adapter {_propReader} at binding {GetBindingTargetInfo()}", _debugHost );
-                        return;
-                    }
-                    lastConverter = firstConverter;
-                    timer.AddMarker( "InitConv0" );
-
-                    //Make each converter know about prev converter
-                    for ( var i = 1; i < converters.Length; i++ )
-                    {
-                        var prevConverter = converters[i - 1];
                         var currentConverter = converters[i];
 
-                        result = converters[i].InitAttachToSource( converters[ i - 1], IsTwoWay, !Update.ScaledTime );
+                        var result = currentConverter.InitAttachToSource( lastDataSource, IsTwoWay, !Update.ScaledTime );
                         if ( !result )
                         {
-                            Debug.LogError( $"[{nameof(BindingBase)}] Converter {currentConverter} cannot be attached to previous converter {prevConverter} at binding {GetBindingTargetInfo()}", _debugHost );
+                            Debug.LogError( $"[{nameof(BindingBase)}] Converter {currentConverter} cannot be attached to previous data source {lastDataSource} at binding {GetBindingTargetInfo()}", _debugHost );
                             return;
                         }
-                        lastConverter = converters[ i ];
+                        lastDataSource = currentConverter;
                         timer.AddMarker( $"InitConv{i}" );
                     }
                 }
 
-                if ( lastConverter is IDataReader<T> compatibleConverter )
+                if ( lastDataSource is IDataReader<T> compatibleConverter )
                 {
                     _lastReader = compatibleConverter;
                     timer.AddMarker( "Connect" );
                 }
                 else
                 {
-                    var lastConverterToBindingConverter = ImplicitConversion.GetConverter( lastConverter, typeof(T) );
-                    if( lastConverterToBindingConverter == null )
+                    var lastImplicitConverter = ImplicitConversion.GetConverter( lastDataSource, typeof(T) );
+                    if( lastImplicitConverter == null )
                     {
-                        Debug.LogError( $"[{nameof(BindingBase)}] Cannot find implicit conversion from last converter {lastConverter} to {typeof(T)} at binding {GetBindingTargetInfo()}", _debugHost );
+                        Debug.LogError( $"[{nameof(BindingBase)}] Cannot find implicit conversion from last converter {lastDataSource} to {typeof(T)} at binding {GetBindingTargetInfo()}", _debugHost );
                         return;
                     } 
-                    _lastReader = ( IDataReader<T> )lastConverterToBindingConverter;
-                    timer.AddMarker( "ConnectImplicitConversion" );
-                    lastConverter = lastConverterToBindingConverter;
+                    _lastReader = ( IDataReader<T> )lastImplicitConverter;
+                    lastDataSource = lastImplicitConverter;
+                    timer.AddMarker( "ConnectImplicitConverter" );
                 }
             }
             
-            DoInitInfrastructure( SourceObject, property, lastConverter, forceOneWay, _debugHost );
-
-            timer.AddMarker( "TwoWayAwake" );
+            DoInitInfrastructure( SourceObject, firstProperty, lastDataSource, forceOneWay, _debugHost );
+            timer.AddMarker( "AdditionalInit" );
             var report = timer.StopAndGetReport();
 
             _isValueInitialized = false;

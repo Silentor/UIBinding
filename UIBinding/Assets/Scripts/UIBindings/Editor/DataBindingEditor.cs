@@ -159,7 +159,7 @@ namespace UIBindings.Editor
             {
                 //No converters present, show message and button to add converter
                 GUI.Label( EditorGUI.IndentedRect( labelRect ), convertersProp.displayName);
-                var rects = GUIUtils.GetHorizontalRects( mainContentPosition, 2, 0, 20 );
+                var rects = EditorGUIUtils.GetHorizontalRects( mainContentPosition, 2, 0, 20 );
                 GUI.Label( rects.Item1, "No converters" );
                 if ( GUI.Button( rects.Item2, Resources.AddButtonContent ) )
                     AppendConverter( binding, host, convertersProp );
@@ -293,9 +293,9 @@ namespace UIBindings.Editor
             //Draw converter title 
             Rect titleRect, appendBtnRect = default, removeBtnRect;
             if ( isLastConverter )
-                (titleRect, appendBtnRect, removeBtnRect) = GUIUtils.GetHorizontalRects( position, 3, 0, 20, 20 );
+                (titleRect, appendBtnRect, removeBtnRect) = EditorGUIUtils.GetHorizontalRects( position, 3, 0, 20, 20 );
             else
-                (titleRect, removeBtnRect) = GUIUtils.GetHorizontalRects( position, 3, 0, 20 );
+                (titleRect, removeBtnRect) = EditorGUIUtils.GetHorizontalRects( position, 3, 0, 20 );
             var converter = (ConverterBase)converterProp.boxedValue;
             if ( converter == null )
             {

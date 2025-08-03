@@ -21,7 +21,7 @@ namespace UIBindings.Editor
 
             var keyType = GetSourceKeyType( property );
             var isWide = !keyType.IsPrimitive ;
-            var rects  = GUIUtils.GetHorizontalRects( position, 5, isWide ? 0 : 100, 0 );
+            var rects  = EditorGUIUtils.GetHorizontalRects( position, 5, isWide ? 0 : 100, 0 );
 
             EditorGUI.BeginChangeCheck();
             if( keyType.IsPrimitive )

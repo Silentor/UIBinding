@@ -53,7 +53,7 @@ namespace UIBindings
                 return;
 
             AssertWithContext.IsNotNull( SourceObject, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
-            AssertWithContext.IsNotNull( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
+            AssertWithContext.IsNotEmpty( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer(); 
 

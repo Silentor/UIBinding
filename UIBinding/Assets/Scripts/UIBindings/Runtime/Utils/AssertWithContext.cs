@@ -49,7 +49,7 @@ namespace UIBindings.Runtime.Utils
         }
 
         [Conditional("UNITY_ASSERTIONS")]
-        public static void IsNotNull( string value, string message, UnityEngine.Object context )
+        public static void IsNotEmpty( string value, string message, UnityEngine.Object context )
         {
             if (String.IsNullOrEmpty( value ))
             {
