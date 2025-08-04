@@ -12,6 +12,8 @@ namespace UIBindings.Adapters
     /// </summary>
     public abstract class PropertyAdapter : DataProvider
     {
+        public override Boolean IsTwoWay { get; }
+
         public abstract Type OutputType  { get; }
 
         /// <summary>
@@ -26,7 +28,7 @@ namespace UIBindings.Adapters
             return propertyType;
         }
 
-        public static PropertyAdapter GetPropertyAdapter( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding )
+        public static PropertyAdapter GetPropertyAdapter( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             Assert.IsNotNull( source );
             Assert.IsNotNull( propertyInfo );
@@ -34,37 +36,67 @@ namespace UIBindings.Adapters
 
             //Fast way for some common types
             if ( type == typeof(int) )
-                return new PropertyAdapter<int>( source, propertyInfo, isTwoWayBinding );
+                return new PropertyAdapter<int>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if ( type == typeof(float) )
-                return new PropertyAdapter<float>( source, propertyInfo, isTwoWayBinding );
+                return new PropertyAdapter<float>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if( type == typeof(bool) )
-                return new PropertyAdapter<bool>( source, propertyInfo, isTwoWayBinding );
+                return new PropertyAdapter<bool>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if ( type == typeof(string) )
-                return new PropertyAdapter<string>( source, propertyInfo, isTwoWayBinding );
+                return new PropertyAdapter<string>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if( type.IsEnum )
-                return new StructEnumPropertyAdapter( source, propertyInfo, isTwoWayBinding );
+                return new StructEnumPropertyAdapter( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
 
             //Slow way for all other types
             var adapterType = typeof(PropertyAdapter<>).MakeGenericType( type );
-            return (PropertyAdapter)Activator.CreateInstance( adapterType, source, propertyInfo, isTwoWayBinding, null );
+            return (PropertyAdapter)Activator.CreateInstance( adapterType, source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
         }
 
-        public static PropertyAdapter GetInnerPropertyAdapter( PropertyAdapter sourceAdapter, PropertyInfo propertyInfo, bool isTwoWayBinding )
+        public static PropertyAdapter GetInnerPropertyAdapter( PropertyAdapter sourceAdapter, PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             var sourceType = propertyInfo.DeclaringType;
             var propertyType = propertyInfo.PropertyType;
-            var complexAdapterType = typeof(ComplexPropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
-            return (PropertyAdapter)Activator.CreateInstance( complexAdapterType, sourceAdapter, propertyInfo, isTwoWayBinding );
+            var complexAdapterType = typeof(InnerPropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
+            return (PropertyAdapter)Activator.CreateInstance( complexAdapterType, sourceAdapter, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+        }
+
+        public PropertyAdapter( [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        {
+            Assert.IsNotNull( propertyInfo );
+            Assert.IsTrue( !isTwoWayBinding || propertyInfo.CanWrite );
+
+            NotifyPropertyChanged = notifyPropertyChanged;
+            PropertyName = propertyInfo.Name;
+            IsTwoWay = isTwoWayBinding;
         }
 
         /// <summary>
-        /// For debugging, ignore boxing
+        /// For debugging, its ignore boxing
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
         public abstract EResult TryGetValue(out object value );
 
-        protected static readonly ProfilerMarker ReadPropertyMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(PropertyAdapter)}.ReadProperty" );
-        protected static readonly ProfilerMarker WritePropertyMarker = new ( ProfilerCategory.Scripts,  $"{nameof(PropertyAdapter)}.WriteProperty" );
+        /// <summary>
+        /// Property adapter will be detect his property changing by subscribing to INotifyPropertyChanged of source object.
+        /// If source object does not support INotifyPropertyChanged, method will do nothing.
+        /// </summary>
+        public virtual void Subscribe( )
+        {
+            IsSubscribed = true;
+        }
+
+        public virtual void Unsubscribe( )
+        {
+            IsSubscribed = false;
+        }
+
+        public abstract Boolean IsNeedPolling( );
+
+        protected bool IsSubscribed;
+        protected readonly String PropertyName;
+        protected readonly Action<Object, String> NotifyPropertyChanged;
+
+        protected static readonly ProfilerMarker ReadPropertyMarker  = new ( ProfilerCategory.Scripts,  $"Binding.{nameof(PropertyAdapter)}.ReadProperty" );
+        protected static readonly ProfilerMarker WritePropertyMarker = new ( ProfilerCategory.Scripts,  $"Binding.{nameof(PropertyAdapter)}.WriteProperty" );
     }
 }

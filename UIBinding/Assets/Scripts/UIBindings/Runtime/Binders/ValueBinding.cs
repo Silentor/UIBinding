@@ -55,7 +55,7 @@ namespace UIBindings
             InitInfrastructure( forceOneWay );
         }
 
-        private void InitInfrastructure( bool forceOneWay = false )
+        private void  InitInfrastructure( bool forceOneWay = false )
         {
             if ( !Enabled )   
                 return;
@@ -67,7 +67,6 @@ namespace UIBindings
             if ( BindToType )
             {
                 _sourceObjectType = SourceObject.GetType();
-                AssertWithContext.IsNotNull( _sourceObjectType, $"[{nameof(ValueBinding<T>)}] SourceType '{SourceType}' not found at {GetBindingTargetInfo()}", _debugHost );
                 AssertWithContext.IsTrue( _sourceObjectType.IsInstanceOfType( SourceObject ),
                     $"[{nameof(ValueBinding<T>)}] Source object {SourceObject.GetType().Name}  is not compartible with declared source object type '{_sourceObjectType.Name}' at {GetBindingTargetInfo()}", _debugHost );
             }
@@ -77,24 +76,19 @@ namespace UIBindings
             }
 
             //Here we process deep binding
-            var splitPath = Path.Split( '.' );
-            var isComplexPath = splitPath.Length > 1;
-            
-            var firstPropertyName = splitPath.First();
-            var firstProperty   = _sourceObjectType.GetProperty( firstPropertyName );
+            var pathProcessor = new PropertyPathProcessor( SourceObject, Path );
+            pathProcessor.MoveNext();   //Get first property info
+            var firstProperty   = pathProcessor.CurrentPropertyInfo;
 
             timer.AddMarker( "GetProperty" );
 
-            AssertWithContext.IsNotNull( firstProperty, $"Property {firstPropertyName} not found in {_sourceObjectType.Name}", _debugHost );
-            AssertWithContext.IsTrue( firstProperty.CanRead, $"Property {firstPropertyName} in {_sourceObjectType.Name} must be readable for binding", _debugHost );
-
-            _sourceNotify = SourceObject as INotifyPropertyChanged;
             DataProvider lastDataSource = null;
 
             //Check fast pass - direct getter
-            if ( Converters.Count == 0 && !isComplexPath && firstProperty.PropertyType == typeof(T) )
+            if ( Converters.Count == 0 && !pathProcessor.IsComplexPath && firstProperty.PropertyType == typeof(T) )
             {
                 _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), SourceObject, firstProperty.GetGetMethod( true ) );
+                _isNeedPolling = SourceObject is INotifyPropertyChanged;
 
                 //TODO logic to create open getter. Its support on-the-fly changing of source object because source object its just a parameter of a getter.
                 //This also allows to cache the same getter for many source objects of the same type. May be useful for collection items view models.
@@ -108,25 +102,12 @@ namespace UIBindings
             }
             else        //Need adapters/converters/etc
             {
-                //Create first property adapter
-                _propReader = PropertyAdapter.GetPropertyAdapter( SourceObject, firstProperty, IsTwoWay );
-                lastDataSource = _propReader;
-
-                //Create inner property adapters
-                if ( isComplexPath )
+                Action<object, string> notifyDelegate = OnSourcePropertyChangedFromPropertyAdapter;
+                do
                 {
-                    var sourceObjectType = firstProperty.PropertyType;
-                    foreach ( var pathPart in splitPath.Skip( 1 ) )
-                    {
-                        var innerProp = sourceObjectType.GetProperty( pathPart );
-                        AssertWithContext.IsNotNull( innerProp, $"Property {pathPart} not found in {sourceObjectType.Name} at binding {GetBindingTargetInfo()}", _debugHost );
-                        AssertWithContext.IsTrue( innerProp.CanRead, $"Property {pathPart} in {sourceObjectType.Name} must be readable for binding at {GetBindingTargetInfo()}", _debugHost );
-                        sourceObjectType = innerProp.PropertyType;
-                        var innerPropAdapter = PropertyAdapter.GetInnerPropertyAdapter( _propReader, innerProp, IsTwoWay );
-                        _propReader = innerPropAdapter;     //We will use last inner property to get value. Last property will process all previous inner properties.
-                        lastDataSource = _propReader;
-                    }
-                }
+                    _propReader = pathProcessor.CreatePropertyAdapter( IsTwoWay, notifyDelegate );
+                    lastDataSource = _propReader;
+                } while ( pathProcessor.MoveNext() );
 
                 timer.AddMarker( "CreateAdapter" );
 
@@ -158,7 +139,7 @@ namespace UIBindings
                 if ( lastDataSource is IDataReader<T> compatibleConverter )
                 {
                     _lastReader = compatibleConverter;
-                    timer.AddMarker( "Connect" );
+                    timer.AddMarker( "Connect" );           //Data pipeline is completed
                 }
                 else
                 {
@@ -174,28 +155,28 @@ namespace UIBindings
                 }
             }
             
-            DoInitInfrastructure( SourceObject, firstProperty, lastDataSource, forceOneWay, _debugHost );
+            OoInitInfrastructure( SourceObject, firstProperty, lastDataSource, forceOneWay, _debugHost );
             timer.AddMarker( "AdditionalInit" );
             var report = timer.StopAndGetReport();
 
             _isValueInitialized = false;
             _isValid = true;
             
-            Debug.Log( $"Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}. Profile {report}", _debugHost );
+            Debug.Log( $"Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}. Profile {report}", _debugHost );
         }
 
         public event Action<Object, T> SourceChanged;
 
         public override Boolean IsRuntimeValid => _isValid;
 
-        protected virtual void DoInitInfrastructure(  Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
+        protected virtual void OoInitInfrastructure(  Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
 
         /// <summary>
         /// To get change event at desired time (LateUpdate for example)
         /// </summary>
         protected override void  CheckChangesInternal( )
         {
-            if( _sourceNotify == null || _sourceChanged || !_isValueInitialized || _isTweened )
+            if( !_isValueInitialized || _isNeedPolling || _sourceChanged || _isTweened )
             {
                 T   value;
                 var isChangedOnSource = true;
@@ -216,11 +197,12 @@ namespace UIBindings
                     var changeStatus = _lastReader.TryGetValue( out value );
                     isChangedOnSource = changeStatus != EResult.NotChanged;
                     _isTweened        = changeStatus == EResult.Tweened;
+                    _isNeedPolling = _propReader.IsNeedPolling();
                     ReadConvertedValueMarker.End();
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
 
-                if( isChangedOnSource && (!_isValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) ))
+                if( !_isValueInitialized || isChangedOnSource || !EqualityComparer<T>.Default.Equals( value, _lastValue ) ) //todo consider is comparison needs here because we already do same comparison in PropertyAdapter
                 {
                     _isValueInitialized = true;
                     _lastValue              = value;
@@ -239,7 +221,50 @@ namespace UIBindings
         protected T              _lastValue;
         protected IDataReader<T> _lastReader;
         private   Boolean        _isTweened;
+        private   Boolean        _isNeedPolling;
         private   Type           _sourceObjectType;
+        //private   Action<object, string> _sourceNotifyFromPropertyAdapterDelegate;
+
+        protected override void OnSubscribe( )
+        {
+            base.OnSubscribe();
+
+            if ( _directGetter != null )
+            {
+                if( !_isNeedPolling )
+                    ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChanged;
+            }
+            else
+                _propReader.Subscribe();
+        }
+
+        protected override void OnUnsubscribe( )
+        {
+            base.OnUnsubscribe();
+
+            if ( _directGetter != null )
+            {
+                if( !_isNeedPolling )
+                    ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChanged;
+            }
+            else
+                _propReader.Unsubscribe();
+        }
+
+        private void OnSourcePropertyChanged(Object sender, String propertyName )
+        {
+            if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
+            {
+                _sourceChanged = true;
+            }
+        }
+
+        private void OnSourcePropertyChangedFromPropertyAdapter(Object sender, String propertyName )
+        {
+            //No property name checking, property adapter will check it
+            _sourceChanged = true;
+        }
+
 
         //Create open delegate for getter. Source object is passed as parameter.
         // private static Func<Object, T> CreateOpenDelegate<TSource>( MethodInfo method )

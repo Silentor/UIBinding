@@ -38,8 +38,6 @@ namespace UIBindings
         {
             if( !Enabled || !_isValid || _isSubscribed ) return;
 
-            if ( _sourceNotify != null )                
-                _sourceNotify.PropertyChanged += OnSourcePropertyChanged;
             switch ( Update.Mode )
             {
                 case EUpdateMode.AfterLateUpdate:  UpdateManager.RegisterAfterLateUpdate( DoUpdate, updateOrder ); break;
@@ -54,6 +52,8 @@ namespace UIBindings
             _isValueInitialized = false;        //Source can change while we are not subscribed, so we need to re-read it
 
             _isSubscribed = true;
+
+            OnSubscribe();
         }
 
         /// <summary>
@@ -64,8 +64,6 @@ namespace UIBindings
         {
             if( !Enabled || !_isValid || !_isSubscribed ) return;
 
-            if ( _sourceNotify != null )                
-                _sourceNotify.PropertyChanged -= OnSourcePropertyChanged;
             switch ( _currentUpdateMode )
             {
                 case EUpdateMode.AfterLateUpdate:  UpdateManager.UnregisterAfterLateUpdate( DoUpdate ); break;
@@ -77,6 +75,8 @@ namespace UIBindings
             }
 
             _isSubscribed = false;
+
+            OnUnsubscribe();
         }
 
         /// <summary>
@@ -90,7 +90,6 @@ namespace UIBindings
         }
 
 
-        protected INotifyPropertyChanged _sourceNotify;
         protected Boolean                _sourceChanged;
         protected bool                   _isValid;
         protected Boolean                _isSubscribed;
@@ -153,15 +152,18 @@ namespace UIBindings
             CheckChangesPeriodically();           
         }
 
+        protected virtual void OnSubscribe(){}
+        protected virtual void OnUnsubscribe(){}
+
         protected abstract void CheckChangesInternal( );
 
 #region Debug stuff
 
-        protected static readonly ProfilerMarker ReadDirectValueMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.ReadDirectValue" );
-        protected static readonly ProfilerMarker WriteDirectValueMarker    = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.WriteDirectValue" );
-        protected static readonly ProfilerMarker ReadConvertedValueMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.ReadConvertedValue" );
-        protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.WriteConvertedValue" );
-        protected static readonly ProfilerMarker UpdateTargetMarker        = new ( ProfilerCategory.Scripts,  $"{nameof(BindingBase)}.UpdateTarget" );
+        protected static readonly ProfilerMarker ReadDirectValueMarker     = new ( ProfilerCategory.Scripts,  "Binding.ReadDirectValue" );
+        protected static readonly ProfilerMarker WriteDirectValueMarker    = new ( ProfilerCategory.Scripts,  "Binding.WriteDirectValue" );
+        protected static readonly ProfilerMarker ReadConvertedValueMarker  = new ( ProfilerCategory.Scripts,  "Binding.ReadConvertedValue" );
+        protected static readonly ProfilerMarker WriteConvertedValueMarker = new ( ProfilerCategory.Scripts,  "Binding.WriteConvertedValue" );
+        protected static readonly ProfilerMarker UpdateTargetMarker        = new ( ProfilerCategory.Scripts,  "Binding.UpdateTarget" );
 
         protected string ProfilerMarkerName = String.Empty;
 

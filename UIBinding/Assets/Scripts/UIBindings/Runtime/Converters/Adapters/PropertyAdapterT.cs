@@ -8,44 +8,24 @@ using Unity.Profiling;
 namespace UIBindings.Adapters
 {
     /// <summary>
-    /// Read property value of some type (and write it if two-way binding)
+    /// Read/write property value of some source object 
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class PropertyAdapter<T> : PropertyAdapter, IDataReadWriter<T>
     {
-        public override Boolean IsTwoWay { get; }
         public override Type InputType  => typeof(T);
         public override Type OutputType  => typeof(T);
-
-        private readonly Object      _source;
-        private readonly Func<T>     _getter;
-        private readonly Action<T>   _setter;
-        private readonly Action<object, string> _notifyPropertyChanged;
-
-        private bool _isInited;
-        private T _lastValue;
         
-
-        public PropertyAdapter( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged = null )
+        public  PropertyAdapter( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+                : base( propertyInfo, isTwoWayBinding, notifyPropertyChanged )
         {
             Assert.IsNotNull( source );
-            Assert.IsNotNull( propertyInfo );
-            Assert.IsTrue( !isTwoWayBinding || propertyInfo.CanWrite );
             Assert.IsTrue( propertyInfo.PropertyType == typeof(T) );
 
-            IsTwoWay = isTwoWayBinding;
-            _source = source;
+            _sourceObject = source;
             _getter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), source, propertyInfo.GetGetMethod() );
-            _notifyPropertyChanged = notifyPropertyChanged;
-
-            if( source is INotifyPropertyChanged notifyChangedSupported )
-                notifyChangedSupported.PropertyChanged += (sender, propertyName) =>
-                {
-                    if( propertyName == propertyInfo.Name )
-                    {
-                        _notifyPropertyChanged( sender, propertyName );
-                    }
-                };
+            _isNeedPolling = source is not INotifyPropertyChanged;
+            _onSourcePropertyChangedDelegate = OnSourcePropertyChanged;
 
             // Is binding one-way we dont want to spent time on creating setter delegate
             if( isTwoWayBinding )
@@ -54,7 +34,7 @@ namespace UIBindings.Adapters
 
         public EResult TryGetValue(out T value )
         {
-            ReadPropertyMarker.Begin( nameof(T) );
+            ReadPropertyMarker.Begin( NameofType );
             
             var propValue = _getter();
             if( !_isInited || !EqualityComparer<T>.Default.Equals( propValue, _lastValue ) )        //TODO Check performance of EqualityComparer, consider using custom property adapter for some primitive types
@@ -65,9 +45,10 @@ namespace UIBindings.Adapters
                 ReadPropertyMarker.End();
                 return EResult.Changed;
             }
+            
+            value = propValue;
 
             ReadPropertyMarker.End();
-            value = propValue;
             return EResult.NotChanged;
         }
 
@@ -85,7 +66,7 @@ namespace UIBindings.Adapters
         {
             Assert.IsTrue( IsTwoWay );
 
-            WritePropertyMarker.Begin( nameof(T) );
+            WritePropertyMarker.Begin( NameofType );
             if( !_isInited || !EqualityComparer<T>.Default.Equals( value, _lastValue ) )
             {
                 _lastValue = value;
@@ -95,9 +76,48 @@ namespace UIBindings.Adapters
             WritePropertyMarker.End();
         }
 
+        public override void Subscribe( )
+        {
+            base.Subscribe();
+
+            if( _sourceObject is INotifyPropertyChanged notifyChanged )                
+                notifyChanged.PropertyChanged += _onSourcePropertyChangedDelegate;
+        }
+
+        public override void Unsubscribe( )
+        {
+            base.Unsubscribe();
+
+            if( _sourceObject is INotifyPropertyChanged notifyChanged )                
+                notifyChanged.PropertyChanged -= _onSourcePropertyChangedDelegate;
+        }
+
+        public override Boolean IsNeedPolling( )
+        {
+            return _isNeedPolling;
+        }
+
         public override String ToString( )
         {
-            return  $"{nameof(PropertyAdapter<T>)}: {typeof(T).Name} property '{_source.GetType().Name}.{_getter.Method.Name}' on source '{_source}'";
+            return  $"{nameof(PropertyAdapter<T>)}{NameofType}.{_getter.Method.Name}' of source '{_sourceObject.GetType().Name}'";
+        }
+
+        private static readonly string NameofType = $"<{typeof(T).Name}>";
+
+
+        private readonly Object                 _sourceObject;
+        private readonly Func<T>                _getter;
+        private readonly Action<T>              _setter;
+        private readonly Boolean                _isNeedPolling;
+        private readonly Action<object, string> _onSourcePropertyChangedDelegate;
+
+        private bool _isInited;
+        private T    _lastValue;
+
+        private void OnSourcePropertyChanged(Object sender, String propertyName )
+        {
+            if( String.IsNullOrEmpty( propertyName ) || propertyName == PropertyName )
+                NotifyPropertyChanged?.Invoke( sender, propertyName );
         }
     }
 }

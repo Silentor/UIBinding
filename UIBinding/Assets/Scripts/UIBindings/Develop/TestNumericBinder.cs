@@ -12,6 +12,7 @@ namespace UIBindings
         public ValueBindingRW<int>     IntBinding;
         public ValueBinding<float>         FloatBinding;
         public ValueBindingRW<StructEnum>     EnumBinding;
+        public ValueBinding<TestComplex2> ComplexClassBinding;
 
         public bool WriteEnumValue = false;
         private Int32 _intValue;
@@ -34,8 +35,18 @@ namespace UIBindings
             EnumBinding.SourceChanged += OnEnumValueChanged;
             EnumBinding.Subscribe();
 
+            ComplexClassBinding.SetDebugInfo( this, nameof(ComplexClassBinding) );
+            ComplexClassBinding.Init(  );
+            ComplexClassBinding.SourceChanged += ComplexClassBindingOnSourceChanged;
+            ComplexClassBinding.Subscribe();
+
 
             //StartCoroutine( DelayAwake() );
+        }
+
+        private void ComplexClassBindingOnSourceChanged(Object arg1, TestComplex2 arg2 )
+        {
+            Debug.Log( arg2.Value2 );
         }
 
         private void OnEnumValueChanged(Object arg1, StructEnum arg2 )

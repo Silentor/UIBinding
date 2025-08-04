@@ -9,6 +9,7 @@ using UIBindings.Adapters;
 using UIBindings.Runtime;
 using UIBindings.Runtime.PlayerLoop;
 using UIBindings.Runtime.Utils;
+using UIBindings.SourceGen;
 using Unity.Profiling;
 using Unity.Profiling.LowLevel.Unsafe;
 using UnityEngine;
@@ -20,7 +21,7 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TestMonoBehSource : MonoBehaviour//, INotifyPropertyChanged
+    public class TestMonoBehSource : ObservableBeh//, INotifyPropertyChanged
     {
         // You can specify an initial query, a search provider and some SearchViewFlags
         //[SearchContext("t:texture filtermode=0", "asset", SearchViewFlags.OpenInBuilderMode | SearchViewFlags.GridView)]
@@ -39,12 +40,18 @@ namespace UIBindings
         private Func<StructEnum> _fastGetter;
         private Func<Int32> _boxedGetter;
 
-        public TestComplexValue TestComplexSource { get; private set; } = new ( );
+        public TestComplexValue TestComplexSource
+        {
+            get => _testComplexValue;
+            set => SetProperty( ref _testComplexValue, value );
+        }
+
+        private TestComplexValue _testComplexValue = new();
 
         public Single SourceFloat
         {
             get => _sourceFloat;
-            set => SetField( ref _sourceFloat, value );
+            set => SetProperty( ref _sourceFloat, value );
         }
 
         public Boolean TargetBool
@@ -53,7 +60,7 @@ namespace UIBindings
             set
             {
                 //var oldValue = _targetBool;
-                SetField( ref _targetBool, value );
+                SetProperty( ref _targetBool, value );
                 //Debug.Log( $"Changed bool from {oldValue} to {value}" );
             }
         }
@@ -61,7 +68,7 @@ namespace UIBindings
         public int SourceInt
         {
             get => _sourceInt;
-            set => SetField( ref _sourceInt, value );
+            set => SetProperty( ref _sourceInt, value );
         }
 
         public Sprite SourceSprite => TestSprite;
@@ -412,27 +419,29 @@ namespace UIBindings
                 SourceFloat  = Time.time % 3f;
             }
 
-            TestComplexSource = new TestComplexValue() { Value = ((int)Time.time).ToString() };
+            TestComplexSource.Inner.Value2 = ((int)Time.time + 1).ToString();
+            //TestComplexSource.Inner = new TestComplex2(){Value2 = "42" };
         }
+    }
 
-        protected virtual void OnPropertyChanged([CallerMemberName] String propertyName = null)
+    //[INotifyPropertyChanged]
+    public partial class TestComplexValue : ObservableObject
+    {
+        //public string Value { get; set; } = "42";
+
+        //[ObservableProperty]
+        public TestComplex2 Inner
         {
-            PropertyChanged?.Invoke( this, propertyName );
+            get  => _inner;
+            set => SetProperty( ref _inner, value );
         }
+        private TestComplex2 _inner = new();
+    }
 
-         protected Boolean SetField<T>(ref T field, T value, [CallerMemberName] String propertyName = null)
-         {
-             if ( EqualityComparer<T>.Default.Equals( field, value ) ) return false;
-             field = value;
-             OnPropertyChanged( propertyName );
-             return true;
-         }
+    public partial class TestComplex2 : ObservableObject
+    {
+        [ObservableProperty]
+        private string _value2;
 
-        public event Action<Object, String> PropertyChanged;
-
-        public class TestComplexValue
-        {
-            public string Value { get; set; } = "42";
-        }
     }
 }

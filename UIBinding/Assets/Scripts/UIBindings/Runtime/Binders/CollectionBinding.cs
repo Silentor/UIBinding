@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
+using UIBindings.Adapters;
 using UIBindings.Runtime.Utils;
 using UnityEngine;
 using Object = System.Object;
@@ -58,45 +59,71 @@ namespace UIBindings
             var timer = ProfileUtils.GetTraceTimer(); 
 
             var sourceType = SourceObject.GetType();
-            var property   = sourceType.GetProperty( Path );
+
+
+            //Here we process deep binding
+            var pathProcessor = new PropertyPathProcessor( SourceObject, Path );
+            pathProcessor.MoveNext();   //Get first property info
+            var firstProperty   = pathProcessor.CurrentPropertyInfo;
 
             timer.AddMarker( "GetProperty" );
 
-            AssertWithContext.IsNotNull( property, $"Property {Path} not found in {sourceType.Name}", _debugHost );
-            AssertWithContext.IsTrue( property.CanRead, $"Property {Path} in {sourceType.Name} must be readable for binding", _debugHost );
+            DataProvider lastDataSource = null;
 
-            _sourceNotify = SourceObject as INotifyPropertyChanged;
-            DataProvider lastConverter = null;
-
-            //Check fast pass - direct getter
+            //Do not support converters for now
             if ( Converters.Count == 0 )
             {
-                if ( property.PropertyType == typeof(ViewCollection) )
+                //Check fast pass - direct getter
+                if ( !pathProcessor.IsComplexPath )
                 {
-                    _viewCollectionGetter = (Func<ViewCollection>)Delegate.CreateDelegate( typeof(Func<ViewCollection>), SourceObject, property.GetGetMethod( true ) );
-                    timer.AddMarker( "ViewCollectionGetter" );
-                }
-                else if( typeof(IEnumerable).IsAssignableFrom( property.PropertyType ) )
-                {
-                    _enumerableGetter = (Func<IEnumerable>)Delegate.CreateDelegate( typeof(Func<IEnumerable>), SourceObject, property.GetGetMethod( true ) );
-                    var bindingAttribute = property.GetCustomAttribute<CollectionBindingAttribute>();
-                    if( bindingAttribute != null )
+                    if ( firstProperty.PropertyType == typeof(ViewCollection) )
                     {
-                        if( bindingAttribute.BindMethodName != null )
-                        {
-                            var bindMethodInfo = sourceType.GetMethod( bindingAttribute.BindMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                            if( bindMethodInfo != null )
-                                _bindMethod = (Action<object, GameObject>)Delegate.CreateDelegate( typeof(Action<object, GameObject>), SourceObject, bindMethodInfo );
-                            var processMethodInfo = sourceType.GetMethod( bindingAttribute.ProcessMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                            if( processMethodInfo != null )
-                                _processMethod = (Action<List<Object>>)Delegate.CreateDelegate( typeof(Action<List<Object>>), SourceObject, processMethodInfo );
-                        }
+                        _viewCollectionDirectGetter = (Func<ViewCollection>)Delegate.CreateDelegate( typeof(Func<ViewCollection>), SourceObject, firstProperty.GetGetMethod( true ) );
+                        _isNeedPolling = SourceObject is INotifyPropertyChanged;
+                        timer.AddMarker( "ViewCollectionDirectGetter" );
                     }
-                    timer.AddMarker( "IEnumerableGetter" );
+                    else if( typeof(IEnumerable).IsAssignableFrom( firstProperty.PropertyType ) )
+                    {
+                        _enumerableDirectGetter = (Func<IEnumerable>)Delegate.CreateDelegate( typeof(Func<IEnumerable>), SourceObject, firstProperty.GetGetMethod( true ) );
+                        _isNeedPolling = SourceObject is INotifyPropertyChanged;
+                        var bindingAttribute = firstProperty.GetCustomAttribute<CollectionBindingAttribute>();
+                        if( bindingAttribute != null )
+                        {
+                            if( bindingAttribute.BindMethodName != null )
+                            {
+                                var bindMethodInfo = sourceType.GetMethod( bindingAttribute.BindMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                                if( bindMethodInfo != null )
+                                    _bindMethod = (Action<object, GameObject>)Delegate.CreateDelegate( typeof(Action<object, GameObject>), SourceObject, bindMethodInfo );
+                                var processMethodInfo = sourceType.GetMethod( bindingAttribute.ProcessMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                                if( processMethodInfo != null )
+                                    _processMethod = (Action<List<Object>>)Delegate.CreateDelegate( typeof(Action<List<Object>>), SourceObject, processMethodInfo );
+                            }
+                        }
+                        timer.AddMarker( "IEnumerableDirectGetter" );
+                    }
+                    else
+                    {
+                        throw new NotSupportedException($"CollectionBinding does not support collection type {firstProperty.PropertyType } yet.");
+                    }
                 }
                 else
                 {
-                    throw new NotSupportedException($"CollectionBinding does not support collection type {property.PropertyType } yet.");
+                    Action<object, string> notifyDelegate = OnSourcePropertyChangedFromPropertyAdapter;
+                    do
+                    {
+                        _propReader    = pathProcessor.CreatePropertyAdapter( IsTwoWay, notifyDelegate );
+                        lastDataSource = _propReader;
+                    } while ( pathProcessor.MoveNext() );
+
+                    //Try to get ViewCollection or IEnumerable from last property adapter
+                    if ( lastDataSource is IDataReader<ViewCollection> viewCollectionReader )
+                        _viewCollectionReader = viewCollectionReader;
+                    else if ( lastDataSource is IDataReader<IEnumerable> enumerableReader )
+                        _enumerableReader = enumerableReader;
+                    else
+                        throw new NotSupportedException( $"CollectionBinding does not support collection type {lastDataSource.GetType()} yet." );
+
+                    timer.AddMarker( "Connect" );       //Data pipeline is completed
                 }
             }
             else        //Need adapter/converters/etc
@@ -104,12 +131,11 @@ namespace UIBindings
                 throw new NotSupportedException("CollectionBinding does not support converters yet.");
             }
 
-            timer.AddMarker( "TwoWayAwake" );
             var report = timer.StopAndGetReport();
              
             _isValid = true;
             
-            Debug.Log( $"[{nameof(CollectionBinding)}] Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}, notify support {(_sourceNotify != null)}: {report}" );
+            Debug.Log( $"[{nameof(CollectionBinding)}] Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}: {report}" );
         }
 
         public event Action<CollectionBinding, int, object>                            ItemAdded;
@@ -130,41 +156,75 @@ namespace UIBindings
         private          ViewCollection             _sourceCollection;
         private readonly         List<Object>               _processedList = new List<System.Object>();
         private readonly         List<Object>               _processedCopy = new List<System.Object>();
-        private          INotifyPropertyChanged     _notifyPropertyChanged;
+        private             PropertyAdapter _propReader;
+        private             Boolean _isNeedPolling;
 
-        //Source property access getters
-        private          Func<ViewCollection>       _viewCollectionGetter;
-        private          Func<IEnumerable>          _enumerableGetter;
+        //Source property direct getters
+        private          Func<ViewCollection>       _viewCollectionDirectGetter;
+        private          Func<IEnumerable>          _enumerableDirectGetter;
+
+        //Source property readers
+        private         IDataReader<ViewCollection> _viewCollectionReader;
+        private         IDataReader<IEnumerable>    _enumerableReader;
 
         //Collection process methods
         private          Action<object, GameObject> _bindMethod;
         private          Action<List<Object>>       _processMethod;
+        
 
-        protected static readonly ProfilerMarker ReadViewCollectionMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollection" );
+        protected static readonly ProfilerMarker ReadViewCollectionDirectMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollectionDirect" );
+        protected static readonly ProfilerMarker ReadIEnumerableDirectMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerableDirect" );
+        protected static readonly ProfilerMarker ReadViewCollectionMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollection" );
         protected static readonly ProfilerMarker ReadIEnumerableMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerable" );
 
-        private Boolean IsEqual( IReadOnlyList<object> hashes, IReadOnlyList<object> sourceList )
+        private void OnSourcePropertyChanged(Object sender, String propertyName )
         {
-            if( hashes.Count != sourceList.Count )
-                return false;
-
-            for ( int i = 0; i < sourceList.Count; i++ )
+            if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
             {
-                if( sourceList[i] != hashes[i] )
-                    return false;
+                _sourceChanged = true;
             }
-
-            return true;
         }
 
-        private bool IsEquivalent( IReadOnlyList<object> oldList, IReadOnlyList<object> newList )
+        private void OnSourcePropertyChangedFromPropertyAdapter(Object sender, String propertyName )
         {
-            if ( oldList.Count != newList.Count )
+            //No property name checking, property adapter will check it
+            _sourceChanged = true;
+        }
+
+        protected override void OnSubscribe( )
+        {
+            base.OnSubscribe();
+
+            if ( _viewCollectionDirectGetter != null || _enumerableDirectGetter != null )
+            {
+                if( !_isNeedPolling )
+                    ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChanged;
+            }
+            else
+                _propReader.Subscribe();
+        }
+
+        protected override void OnUnsubscribe( )
+        {
+            base.OnUnsubscribe();
+
+            if ( _viewCollectionDirectGetter != null || _enumerableDirectGetter != null )
+            {
+                if( !_isNeedPolling )
+                    ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChanged;
+            }
+            else
+                _propReader.Unsubscribe();
+        }
+
+        private Boolean IsEqual( IReadOnlyList<object> listA, IReadOnlyList<object> listB )
+        {
+            if( listA.Count != listB.Count )
                 return false;
 
-            for ( int i = 0; i < oldList.Count; i++ )
+            for ( int i = 0; i < listB.Count; i++ )
             {
-                if ( !Equals( oldList[i], newList[i] ) )
+                if( listB[i] != listA[i] )
                     return false;
             }
 
@@ -173,35 +233,64 @@ namespace UIBindings
 
         protected override void    CheckChangesInternal( )
         {
-            if( _sourceNotify == null || _sourceChanged || !_isValueInitialized )
+            if( !_isValueInitialized || _isNeedPolling || _sourceChanged  )
             {
-                Action<List<object> > processListAction;
-                Action<Object, GameObject> bindViewItemAction;
+                Action<List<object> > processListAction = null;
+                Action<Object, GameObject> bindViewItemAction = null;
+                var isChangedOnSource = true;
                 _processedList.Clear();
-                
-                //Read source collection
-                if ( _viewCollectionGetter != null )
+
+                if ( _propReader != null )                                           //Read source collection via data pipeline
                 {
-                    ReadViewCollectionMarker.Begin( ProfilerMarkerName );
-                    var viewCollection = _viewCollectionGetter();
-                    _processedList.AddRange( viewCollection );
-                    processListAction = viewCollection.ProcessList;
-                    bindViewItemAction = viewCollection.BindViewItem;
-                    ReadViewCollectionMarker.End();
+                    if ( _viewCollectionReader != null )
+                    {
+                        ReadViewCollectionMarker.Begin( ProfilerMarkerName );
+                        var changeStatus = _viewCollectionReader.TryGetValue( out var viewCollection );
+                        isChangedOnSource = changeStatus != EResult.NotChanged;
+                        _processedList.AddRange( viewCollection );
+                        processListAction  = viewCollection.ProcessList;
+                        bindViewItemAction = viewCollection.BindViewItem;
+                        ReadViewCollectionMarker.End();
+                    }
+                    else if ( _enumerableReader != null )
+                    {
+                        ReadIEnumerableMarker.Begin( ProfilerMarkerName );
+                        var changeStatus = _enumerableReader.TryGetValue( out var enumerable );
+                        isChangedOnSource = changeStatus != EResult.NotChanged;
+                        if ( enumerable != null )                        
+                            _processedList.AddRange( enumerable.Cast<Object>() );
+                        processListAction  = _processMethod;
+                        bindViewItemAction = _bindMethod;
+                        ReadIEnumerableMarker.End();
+                    }
+                    _isNeedPolling    = _propReader.IsNeedPolling();
                 }
                 else
                 {
-                    ReadIEnumerableMarker.Begin( ProfilerMarkerName );
-                    var enumerable = _enumerableGetter();
-                    if ( enumerable != null )                        
-                        _processedList.AddRange( enumerable.Cast<Object>() );
-                    processListAction = _processMethod;
-                    bindViewItemAction = _bindMethod;
-                    ReadIEnumerableMarker.End();
+                    //Read source collection directly
+                    if ( _viewCollectionDirectGetter != null )
+                    {
+                        ReadViewCollectionDirectMarker.Begin( ProfilerMarkerName );
+                        var viewCollection = _viewCollectionDirectGetter();
+                        _processedList.AddRange( viewCollection );
+                        processListAction  = viewCollection.ProcessList;
+                        bindViewItemAction = viewCollection.BindViewItem;
+                        ReadViewCollectionDirectMarker.End();
+                    }
+                    else if( _enumerableDirectGetter != null )
+                    {
+                        ReadIEnumerableDirectMarker.Begin( ProfilerMarkerName );
+                        var enumerable = _enumerableDirectGetter();
+                        if ( enumerable != null )                        
+                            _processedList.AddRange( enumerable.Cast<Object>() );
+                        processListAction  = _processMethod;
+                        bindViewItemAction = _bindMethod;
+                        ReadIEnumerableDirectMarker.End();
+                    }        
                 }
 
                 //Check for source collection modifications
-                if( !_isValueInitialized || (_sourceNotify != null ? _sourceChanged : !IsEqual( _sourceCopy, _processedList )))
+                if( !_isValueInitialized || isChangedOnSource || !IsEqual( _sourceCopy, _processedList ))
                 {
                     _isValueInitialized = true;
                     _sourceCopy.Clear();              
@@ -349,14 +438,14 @@ namespace UIBindings
         {
             if ( SourceObject == null )
                 return "Source not assigned";
-            else if ( _viewCollectionGetter != null )
+            else if ( _viewCollectionDirectGetter != null )
             {
-                var sourceCollection = _viewCollectionGetter();
+                var sourceCollection = _viewCollectionDirectGetter();
                 return $"{sourceCollection.Count} data items";
             }
-            else if ( _enumerableGetter != null )
+            else if ( _enumerableDirectGetter != null )
             {
-                var sourceCollection = _enumerableGetter().Cast<object>();
+                var sourceCollection = _enumerableDirectGetter().Cast<object>();
                 return $"{sourceCollection.Count()} data items";
             }
         

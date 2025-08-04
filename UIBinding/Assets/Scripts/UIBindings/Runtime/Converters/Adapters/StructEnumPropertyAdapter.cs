@@ -4,34 +4,29 @@ using System.Runtime.CompilerServices;
 using UIBindings.Runtime;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Assertions;
+using Unity.Profiling;
 
 namespace UIBindings.Adapters
 {
     public class StructEnumPropertyAdapter : PropertyAdapter, IDataReadWriter<StructEnum>
     {
-        public override Boolean IsTwoWay  { get; }
         public override Type    InputType { get; }
         public override Type    OutputType { get; }
 
-        public StructEnumPropertyAdapter(Object source, PropertyInfo propertyInfo, Boolean isTwoWayBinding )
+        public StructEnumPropertyAdapter(Object source, PropertyInfo propertyInfo, Boolean isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+            : base(propertyInfo, isTwoWayBinding, notifyPropertyChanged)    
         {
             Assert.IsNotNull( source );
-            Assert.IsNotNull( propertyInfo );
-            Assert.IsTrue( !isTwoWayBinding || propertyInfo.CanWrite, "Property must be writable for two-way binding" );
             Assert.IsTrue( propertyInfo.PropertyType.IsEnum );
 
-            IsTwoWay = isTwoWayBinding;
             _source  = source;
             (_getter, _setter)  = ConstructEnumReaderWriter( source, propertyInfo, isTwoWayBinding );
             InputType = propertyInfo.PropertyType;
             OutputType = typeof(StructEnum);
+            _onSourcePropertyChangedDelegate = OnSourcePropertyChanged;
+            _isNeedPolling = source is not INotifyPropertyChanged;
+            NameofType = $"<{InputType.Name}>";
         }
-
-        private readonly Object _source;
-        private readonly Func<StructEnum> _getter;
-        private readonly Action<StructEnum> _setter;
-        private Boolean _isInited;
-        private StructEnum _lastValue;
 
         //Construct 1 params instance func delegate with boxing. Pack enum value into StructEnum to preserve enum type but avoid boxing to Enum class
         private static (Func<StructEnum> getter, Action<StructEnum> setter) ConstructEnumReaderWriter( Object source, PropertyInfo propertyInfo, Boolean isTwoWayBinding )
@@ -96,16 +91,20 @@ namespace UIBindings.Adapters
 
         public EResult TryGetValue(out StructEnum value )
         {
+            ReadPropertyMarker.Begin( NameofType );
+
             var propValue = _getter();
             if( !_isInited || _lastValue != propValue )
             {
                 _lastValue = propValue;
                 _isInited  = true;
                 value      = propValue;
+                ReadPropertyMarker.End();
                 return EResult.Changed;
             }
 
             value = propValue;
+            ReadPropertyMarker.End();
             return EResult.NotChanged;
         }
 
@@ -128,11 +127,46 @@ namespace UIBindings.Adapters
             }
         }
 
-        public override String ToString( )
+        public override void Subscribe( )
         {
-            return  $"{GetType().Name} at property {InputType.Name} {_source.GetType().Name}.{_getter.Method.Name} on source '{_source}'";
+            base.Subscribe();
+
+            if( _source is INotifyPropertyChanged notifyChanged )                
+                notifyChanged.PropertyChanged += _onSourcePropertyChangedDelegate;
         }
 
+        public override void Unsubscribe( )
+        {
+            base.Unsubscribe();
 
+            if( _source is INotifyPropertyChanged notifyChanged )                
+                notifyChanged.PropertyChanged -= _onSourcePropertyChangedDelegate;
+        }
+
+        public override Boolean IsNeedPolling() => _isNeedPolling;
+
+        public override String ToString( )
+        {
+            return  $"{nameof(StructEnumPropertyAdapter)}{NameofType}.{_getter.Method.Name} of source '{_source.GetType().Name}'";
+        }
+
+        private readonly string NameofType;
+
+        private readonly Object                 _source;
+        private readonly Func<StructEnum>       _getter;
+        private readonly Action<StructEnum>     _setter;
+        private readonly Boolean                _isNeedPolling;
+        private readonly Action<object, string> _onSourcePropertyChangedDelegate;
+
+        private Boolean    _isInited;
+        private StructEnum _lastValue;
+
+        private void OnSourcePropertyChanged(Object sender, String propertyName )
+        {
+            if ( String.IsNullOrEmpty( propertyName ) || propertyName ==  PropertyName )
+            {
+                NotifyPropertyChanged?.Invoke( sender, propertyName );
+            }
+        }
     }
 }

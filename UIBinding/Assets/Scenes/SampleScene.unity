@@ -351,7 +351,7 @@ MonoBehaviour:
     SourceType: UIBindings.Quest, UIBindings.Develop, Version=0.0.0.0, Culture=neutral,
       PublicKeyToken=null
     BindToType: 0
-    Path: TestComplexSource.Value
+    Path: TestComplexSource.Inner.Value2
     Update:
       Mode: 1
       Delay: 0
@@ -5993,7 +5993,7 @@ MonoBehaviour:
     _converters:
       Converters: []
   FloatBinding:
-    Enabled: 1
+    Enabled: 0
     Source: {fileID: 1625701090}
     SourceType: UnityEngine.Device.Screen, UnityEngine.CoreModule, Version=0.0.0.0,
       Culture=neutral, PublicKeyToken=null
@@ -6013,6 +6013,18 @@ MonoBehaviour:
     Path: SourceEnum
     Update:
       Mode: 0
+      Delay: 0
+      ScaledTime: 1
+    _converters:
+      Converters: []
+  ComplexClassBinding:
+    Enabled: 1
+    Source: {fileID: 1625701090}
+    SourceType: 
+    BindToType: 0
+    Path: TestComplexSource.Inner
+    Update:
+      Mode: 2
       Delay: 0
       ScaledTime: 1
     _converters:

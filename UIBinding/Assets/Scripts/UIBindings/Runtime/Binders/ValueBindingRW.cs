@@ -40,9 +40,9 @@ namespace UIBindings
             }
         }
 
-        protected override void DoInitInfrastructure( Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost )
+        protected override void OoInitInfrastructure( Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost )
         {
-            base.DoInitInfrastructure( source, property, lastConverter, forceOneWay, debugHost );
+            base.OoInitInfrastructure( source, property, lastConverter, forceOneWay, debugHost );
 
             if( forceOneWay )
             {
