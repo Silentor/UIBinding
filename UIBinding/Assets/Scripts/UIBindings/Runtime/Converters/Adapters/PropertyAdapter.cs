@@ -60,7 +60,11 @@ namespace UIBindings.Adapters
 
             var sourceType         = propertyInfo.DeclaringType;
             var propertyType       = propertyInfo.PropertyType;
-            var complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
+            Type complexAdapterType;
+            if( propertyType.IsEnum )
+                complexAdapterType = typeof(StructEnumPropertyAdapter<>).MakeGenericType( sourceType );
+            else
+                complexAdapterType = typeof(DefaultPropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
             return (PropertyAdapter)Activator.CreateInstance( complexAdapterType, sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
         }
 
@@ -68,7 +72,11 @@ namespace UIBindings.Adapters
         {
             var sourceType = propertyInfo.DeclaringType;
             var propertyType = propertyInfo.PropertyType;
-            var complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
+            Type complexAdapterType;
+            if( propertyType.IsEnum )
+                complexAdapterType = typeof(StructEnumPropertyAdapter<>).MakeGenericType( sourceType );
+            else
+                complexAdapterType = typeof(DefaultPropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
             var result = (PropertyAdapter)Activator.CreateInstance( complexAdapterType, sourceAdapter, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             return result;
         }

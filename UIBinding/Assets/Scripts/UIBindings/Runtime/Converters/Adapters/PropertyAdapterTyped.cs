@@ -17,32 +17,28 @@ namespace UIBindings.Adapters
 
         //First property adapter mode
         public PropertyAdapterTyped( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, Func<TSource, TProperty> getter, Action<TSource, TProperty> setter, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) 
-                : this( propertyInfo, isTwoWayBinding, notifyPropertyChanged )
+                : this( propertyInfo, getter, setter, isTwoWayBinding, notifyPropertyChanged )
         {
             Assert.IsNotNull( source );
             ChangeSourceObject( source );
         }
 
         //Next property adapter mode
-        public PropertyAdapterTyped( [NotNull] PropertyAdapter source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) 
-                : this( propertyInfo, isTwoWayBinding, notifyPropertyChanged )
+        public PropertyAdapterTyped( [NotNull] PropertyAdapter source, [NotNull] PropertyInfo propertyInfo, Func<TSource, TProperty> getter, Action<TSource, TProperty> setter, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) 
+                : this( propertyInfo, getter, setter, isTwoWayBinding, notifyPropertyChanged )
         {
             Assert.IsNotNull( source );
             _sourcePropertyAdapter = (IDataReadWriter<TSource>)source;
         }
 
-        private PropertyAdapterTyped( [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base(
+        private PropertyAdapterTyped( [NotNull] PropertyInfo propertyInfo, Func<TSource, TProperty> getter, Action<TSource, TProperty> setter, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base(
                 propertyInfo, isTwoWayBinding, notifyPropertyChanged )
         {
-            Assert.IsTrue( propertyInfo.PropertyType  == typeof(TProperty) );
             Assert.IsTrue( propertyInfo.DeclaringType == typeof(TSource) );
 
-            _getter = (Func<TSource, TProperty>)Delegate.CreateDelegate( typeof(Func<TSource, TProperty>), propertyInfo.GetGetMethod( true ) );
+            _getter = getter;
+            _setter = setter;
             _onSourcePropertyChangedDelegate = OnSourcePropertyChanged;
-
-            // Is binding one-way we dont want to spent time on creating setter delegate
-            if( isTwoWayBinding )
-                _setter = (Action<TSource, TProperty>)Delegate.CreateDelegate( typeof(Action<TSource, TProperty>), propertyInfo.GetSetMethod( true ) );
         }
 
         public override void ChangeSourceObject( object newSourceObject )
@@ -172,7 +168,7 @@ namespace UIBindings.Adapters
 
         public override String ToString( )
         {
-            return  $"{nameof(PropertyAdapter<TSource, TProperty>)}{NameofTypes}.{_getter.Method.Name}";
+            return  $"PropertyAdapter{NameofTypes}.{_getter.Method.Name}";
         }
 
         private static readonly string NameofTypes = $"<{typeof(TSource).Name},{typeof(TProperty).Name}>";

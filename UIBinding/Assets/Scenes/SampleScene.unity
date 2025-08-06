@@ -1904,7 +1904,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &645912090
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2029,13 +2029,14 @@ MonoBehaviour:
     SourceType: UIBindings.Quest, UIBindings.Develop, Version=0.0.0.0, Culture=neutral,
       PublicKeyToken=null
     BindToType: 0
-    Path: TestComplexSource.Inner.Value2
+    Path: SourceEnum
     Update:
       Mode: 1
       Delay: 0
       ScaledTime: 1
     _converters:
-      Converters: []
+      Converters:
+      - rid: 2977365493261271274
   ColorBinding:
     Enabled: 0
     Source: {fileID: 1625701090}
@@ -2052,6 +2053,10 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: 2977365493261271274
+      type: {class: EnumToStringConverter, ns: UIBindings, asm: UIBindings}
+      data:
+        ReverseMode: 0
     - rid: 7690191692283510870
       type: {class: ColorTween, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
