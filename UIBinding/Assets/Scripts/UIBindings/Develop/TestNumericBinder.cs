@@ -12,6 +12,7 @@ namespace UIBindings
         public ValueBindingRW<int>     IntBinding;
         public ValueBinding<float>         FloatBinding;
         public ValueBindingRW<StructEnum>     EnumBinding;
+        public ValueBinding<CameraType>     Enum2Binding;
         public ValueBinding<TestComplex2> ComplexClassBinding;
 
         public bool WriteEnumValue = false;
@@ -35,6 +36,11 @@ namespace UIBindings
             EnumBinding.SourceChanged += OnEnumValueChanged;
             EnumBinding.Subscribe();
 
+            Enum2Binding.SetDebugInfo( this, nameof(Enum2Binding) );
+            Enum2Binding.Init(  );
+            Enum2Binding.SourceChanged += OnEnum2ValueChanged;
+            Enum2Binding.Subscribe();
+
             ComplexClassBinding.SetDebugInfo( this, nameof(ComplexClassBinding) );
             ComplexClassBinding.Init(  );
             ComplexClassBinding.SourceChanged += ComplexClassBindingOnSourceChanged;
@@ -44,16 +50,6 @@ namespace UIBindings
             //StartCoroutine( DelayAwake() );
         }
 
-        private void ComplexClassBindingOnSourceChanged(Object arg1, TestComplex2 arg2 )
-        {
-            Debug.Log( arg2.Value2 );
-        }
-
-        private void OnEnumValueChanged(Object arg1, StructEnum arg2 )
-        {
-            _enumType = arg2.EnumType;
-            Debug.Log( arg2 );
-        }
 
         // IEnumerator DelayAwake( )
         // {
@@ -92,10 +88,26 @@ namespace UIBindings
             Debug.Log( $"[{nameof(TestNumericBinder)}]-[{nameof(OnIntValueChanged)}] {value}" );
             _intValue = value;
         }
+
         private void OnFloatValueChanged(Object sender, float value )
         {
             Debug.Log( $"[{nameof(TestNumericBinder)}]-[{nameof(OnFloatValueChanged)}] {value}" );
         }
 
+        private void ComplexClassBindingOnSourceChanged(Object arg1, TestComplex2 arg2 )
+        {
+            Debug.Log( arg2.Value2 );
+        }
+
+        private void OnEnumValueChanged(Object arg1, StructEnum arg2 )
+        {
+            _enumType = arg2.EnumType;
+            Debug.Log( arg2 );
+        }
+
+        private void OnEnum2ValueChanged(Object arg1, CameraType arg2 )
+        {
+            Debug.Log( arg2.ToString() );
+        }
     }
 }

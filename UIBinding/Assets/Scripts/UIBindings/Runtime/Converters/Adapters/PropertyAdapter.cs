@@ -28,35 +28,49 @@ namespace UIBindings.Adapters
             return propertyType;
         }
 
-        public static PropertyAdapter GetPropertyAdapter( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        public static PropertyAdapter GetFirstPropertyAdapter( [NotNull] object sourceObject, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
-            Assert.IsNotNull( source );
+            Assert.IsNotNull( sourceObject );
             Assert.IsNotNull( propertyInfo );
             var type = propertyInfo.PropertyType;
-
+            
             //Fast way for some common types
+            /*
             if ( type == typeof(int) )
-                return new PropertyAdapter<int>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+                return new PropertyAdapter<int>( sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if ( type == typeof(float) )
-                return new PropertyAdapter<float>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+                return new PropertyAdapter<float>( sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if( type == typeof(bool) )
-                return new PropertyAdapter<bool>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+                return new PropertyAdapter<bool>( sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if ( type == typeof(string) )
-                return new PropertyAdapter<string>( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+                return new PropertyAdapter<string>( sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else if( type.IsEnum )
-                return new StructEnumPropertyAdapter( source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+                return new StructEnumPropertyAdapter( sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+                */
 
             //Slow way for all other types
-            var adapterType = typeof(PropertyAdapter<>).MakeGenericType( type );
-            return (PropertyAdapter)Activator.CreateInstance( adapterType, source, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+            // MakeGenericTypeMarker.Begin();
+            // var adapterType = typeof(PropertyAdapter<>).MakeGenericType( type );
+            // MakeGenericTypeMarker.End();
+            // CreateInstanceTypeMarker.Begin();
+            // var result = (PropertyAdapter)Activator.CreateInstance( adapterType, sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+            // CreateInstanceTypeMarker.End();
+            //
+            // return result;
+
+            var sourceType         = propertyInfo.DeclaringType;
+            var propertyType       = propertyInfo.PropertyType;
+            var complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
+            return (PropertyAdapter)Activator.CreateInstance( complexAdapterType, sourceObject, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
         }
 
         public static PropertyAdapter GetInnerPropertyAdapter( PropertyAdapter sourceAdapter, PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             var sourceType = propertyInfo.DeclaringType;
             var propertyType = propertyInfo.PropertyType;
-            var complexAdapterType = typeof(InnerPropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
-            return (PropertyAdapter)Activator.CreateInstance( complexAdapterType, sourceAdapter, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+            var complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
+            var result = (PropertyAdapter)Activator.CreateInstance( complexAdapterType, sourceAdapter, propertyInfo, isTwoWayBinding, notifyPropertyChanged );
+            return result;
         }
 
         public PropertyAdapter( [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
@@ -68,6 +82,8 @@ namespace UIBindings.Adapters
             PropertyName = propertyInfo.Name;
             IsTwoWay = isTwoWayBinding;
         }
+
+        public abstract void ChangeSourceObject( object newSourceObject );
 
         /// <summary>
         /// For debugging, its ignore boxing
@@ -98,5 +114,7 @@ namespace UIBindings.Adapters
 
         protected static readonly ProfilerMarker ReadPropertyMarker  = new ( ProfilerCategory.Scripts,  $"Binding.{nameof(PropertyAdapter)}.ReadProperty" );
         protected static readonly ProfilerMarker WritePropertyMarker = new ( ProfilerCategory.Scripts,  $"Binding.{nameof(PropertyAdapter)}.WriteProperty" );
+
+        //private static readonly object[] PropertyAdapterConstructorParameters = new object[4];
     }
 }

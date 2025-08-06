@@ -106,10 +106,11 @@ namespace UIBindings
                 do
                 {
                     _propReader = pathProcessor.CreatePropertyAdapter( IsTwoWay, notifyDelegate );
+                    timer.AddMarker( "CreateAdapter" );
                     lastDataSource = _propReader;
                 } while ( pathProcessor.MoveNext() );
 
-                timer.AddMarker( "CreateAdapter" );
+                //timer.AddMarker( "CreateAdapter" );
 
                 //Prepare conversion chain
                 var converters = _converters.Converters;

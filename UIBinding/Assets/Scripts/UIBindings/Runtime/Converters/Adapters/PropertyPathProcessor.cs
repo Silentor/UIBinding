@@ -26,7 +26,7 @@ namespace UIBindings.Adapters
             }
 
             if( _start == 0 )
-                _lastPropertyAdapter = PropertyAdapter.GetPropertyAdapter( _sourceObject, CurrentPropertyInfo, isTwoWayBinding, notifyPropertyChanged );
+                _lastPropertyAdapter = PropertyAdapter.GetFirstPropertyAdapter( _sourceObject, CurrentPropertyInfo, isTwoWayBinding, notifyPropertyChanged );
             else
                 _lastPropertyAdapter = PropertyAdapter.GetInnerPropertyAdapter( _lastPropertyAdapter, CurrentPropertyInfo, isTwoWayBinding, notifyPropertyChanged );
 

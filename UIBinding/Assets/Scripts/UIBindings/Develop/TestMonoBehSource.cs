@@ -236,9 +236,15 @@ namespace UIBindings
             Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallParamTextureBool)}] value={value1.format}, value2={value2}" );
         }
 
-        private void Start( )
+        private IEnumerator Start( )
         {
             Application.targetFrameRate = 30;
+
+            yield return new WaitForSeconds( 1 );
+            if( DelayedCanvas && !DelayedCanvas.activeSelf )
+            {
+                DelayedCanvas.SetActive( true );
+            }
 
             // var propInfo1 = GetType().GetProperty( nameof(TestComplexSource) );
             // var propAdapter = new PropertyAdapter<TestComplexValue>( this, propInfo1, false );
@@ -272,7 +278,7 @@ namespace UIBindings
             //
             // Debug.Log( $"param1 create type time {param1TypeCreateTime} mks, param2 create type time {param2TypeCreateTime} mks" );
 
-            
+
 
             // var propInfo = GetType().GetProperty(nameof(SourceByte));
             // var closedDelegate = (Func<Byte>)Delegate.CreateDelegate( typeof(Func<Byte>), this, propInfo.GetGetMethod() );
@@ -414,13 +420,16 @@ namespace UIBindings
 
         void Update()
         {    
-            if( Time.frameCount % 2 == 0 )            //Test notifications
+            if( Time.frameCount % 10 == 0 )            //Test notifications
             {
                 SourceFloat  = Time.time % 3f;
+
+                TestComplexSource.Inner.Value2 = ((int)Time.time + 1).ToString();
+                TestComplexSource.EnumValue    = (CameraType)(Time.frameCount % 4);
+                //TestComplexSource.Inner = new TestComplex2(){Value2 = "42" };
+
             }
 
-            TestComplexSource.Inner.Value2 = ((int)Time.time + 1).ToString();
-            //TestComplexSource.Inner = new TestComplex2(){Value2 = "42" };
         }
     }
 
@@ -436,6 +445,14 @@ namespace UIBindings
             set => SetProperty( ref _inner, value );
         }
         private TestComplex2 _inner = new();
+
+        public CameraType EnumValue
+        {
+            get => _enumValue;
+            set => SetProperty( ref _enumValue, value );
+        }
+
+        private CameraType _enumValue;
     }
 
     public partial class TestComplex2 : ObservableObject

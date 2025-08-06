@@ -8,36 +8,36 @@ using Unity.Profiling;
 namespace UIBindings.Adapters
 {
     /// <summary>
-    /// Read/write property value of some source object 
+    /// Read/write property value of some source object. Source object is embedded in the adapter, hot swapping is not supported.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class PropertyAdapter<T> : PropertyAdapter, IDataReadWriter<T>
+    /// <typeparam name="TProperty"></typeparam>
+    public class SimplePropertyAdapter<TProperty> : PropertyAdapter, IDataReadWriter<TProperty>
     {
-        public override Type InputType  => typeof(T);
-        public override Type OutputType  => typeof(T);
+        public override Type InputType  => typeof(TProperty);
+        public override Type OutputType  => typeof(TProperty);
         
-        public  PropertyAdapter( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        public  SimplePropertyAdapter( [NotNull] object source, [NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
                 : base( propertyInfo, isTwoWayBinding, notifyPropertyChanged )
         {
             Assert.IsNotNull( source );
-            Assert.IsTrue( propertyInfo.PropertyType == typeof(T) );
+            Assert.IsTrue( propertyInfo.PropertyType == typeof(TProperty) );
 
             _sourceObject = source;
-            _getter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), source, propertyInfo.GetGetMethod() );
+            _getter = (Func<TProperty>)Delegate.CreateDelegate( typeof(Func<TProperty>), source, propertyInfo.GetGetMethod() );
             _isNeedPolling = source is not INotifyPropertyChanged;
             _onSourcePropertyChangedDelegate = OnSourcePropertyChanged;
 
             // Is binding one-way we dont want to spent time on creating setter delegate
             if( isTwoWayBinding )
-                _setter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), source, propertyInfo.GetSetMethod( true ) );
+                _setter = (Action<TProperty>)Delegate.CreateDelegate( typeof(Action<TProperty>), source, propertyInfo.GetSetMethod( true ) );
         }
 
-        public EResult TryGetValue(out T value )
+        public EResult TryGetValue(out TProperty value )
         {
             ReadPropertyMarker.Begin( NameofType );
             
             var propValue = _getter();
-            if( !_isInited || !EqualityComparer<T>.Default.Equals( propValue, _lastValue ) )        //TODO Check performance of EqualityComparer, consider using custom property adapter for some primitive types
+            if( !_isInited || !EqualityComparer<TProperty>.Default.Equals( propValue, _lastValue ) )        //TODO Check performance of EqualityComparer, consider using custom property adapter for some primitive types
             {
                 _lastValue = propValue;
                 _isInited  = true;
@@ -52,22 +52,27 @@ namespace UIBindings.Adapters
             return EResult.NotChanged;
         }
 
+        public override void ChangeSourceObject(Object newSourceObject )
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// For debugging, ignore boxing
         /// </summary>
         public override EResult TryGetValue(out Object value )
         {
-            var result = TryGetValue( out T typedValue );
+            var result = TryGetValue( out TProperty typedValue );
             value = typedValue;
             return result;
         }
 
-        public void SetValue(T value )
+        public void SetValue(TProperty value )
         {
             Assert.IsTrue( IsTwoWay );
 
             WritePropertyMarker.Begin( NameofType );
-            if( !_isInited || !EqualityComparer<T>.Default.Equals( value, _lastValue ) )
+            if( !_isInited || !EqualityComparer<TProperty>.Default.Equals( value, _lastValue ) )
             {
                 _lastValue = value;
                 _isInited  = true;
@@ -99,20 +104,20 @@ namespace UIBindings.Adapters
 
         public override String ToString( )
         {
-            return  $"{nameof(PropertyAdapter<T>)}{NameofType}.{_getter.Method.Name}' of source '{_sourceObject.GetType().Name}'";
+            return  $"{nameof(SimplePropertyAdapter<TProperty>)}{NameofType}.{_getter.Method.Name}' of source '{_sourceObject.GetType().Name}'";
         }
 
-        private static readonly string NameofType = $"<{typeof(T).Name}>";
+        private static readonly string NameofType = $"<{typeof(TProperty).Name}>";
 
 
         private readonly Object                 _sourceObject;
-        private readonly Func<T>                _getter;
-        private readonly Action<T>              _setter;
+        private readonly Func<TProperty>                _getter;
+        private readonly Action<TProperty>              _setter;
         private readonly Boolean                _isNeedPolling;
         private readonly Action<object, string> _onSourcePropertyChangedDelegate;
 
         private bool _isInited;
-        private T    _lastValue;
+        private TProperty    _lastValue;
 
         private void OnSourcePropertyChanged(Object sender, String propertyName )
         {
