@@ -252,9 +252,9 @@ namespace UIBindings.Runtime.PlayerLoop
         private static void OnUpdate( )
         {
             AfterUpdateMarker.Begin( _afterUpdateList.Actions.Count );
-            DoUpdate( ref _afterLateUpdateList );
+            DoUpdate( ref _afterUpdateList );
             AfterUpdateMarker.End();
-            PostprocessAddedItems( ref _afterLateUpdateList );
+            PostprocessAddedItems( ref _afterUpdateList );
         }
 
         private static void OnBeforeLateUpdate( )
@@ -284,7 +284,7 @@ namespace UIBindings.Runtime.PlayerLoop
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError( $"[{nameof(UpdateManager)}]-[{nameof(DoUpdate)}] Exception in update item: {updates.Actions[ updates.Index ].Action.Method.Name} with order {updates.Actions[ updates.Index ].Order}. Exception: {e.Message}" );
+                    Debug.LogError( $"[{nameof(UpdateManager)}]-[{nameof(DoUpdate)}] Exception in update item: {updates.Actions[ updates.Index ].Action.Method.Name} with order {updates.Actions[ updates.Index ].Order}. Exception: {e}" );
                 }
                 updates.Index++;
             }
