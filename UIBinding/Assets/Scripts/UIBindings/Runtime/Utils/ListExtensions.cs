@@ -71,5 +71,39 @@ namespace UIBindings.Runtime.Utils
 
             return result.ToString();
         }
+
+        public static string JoinToString<T>(this IEnumerable<T> list, string separator = ", ", int maxValuesToShow = -1)
+        {
+            if (list == null)
+                return string.Empty;
+
+            // If it's already an IReadOnlyList<T>, use the optimized version
+            if (list is IReadOnlyList<T> readOnlyList)
+                return JoinToString(readOnlyList, separator, maxValuesToShow);
+
+            // Otherwise, enumerate manually
+            var result = new System.Text.StringBuilder();
+            int count = 0;
+            int totalCount = 0;
+            using (var enumerator = list.GetEnumerator())
+            {
+                while (enumerator.MoveNext())
+                {
+                    if (maxValuesToShow > 0 && count >= maxValuesToShow)
+                    {
+                        totalCount++;
+                        continue;
+                    }
+                    if (count > 0)
+                        result.Append(separator);
+                    result.Append(enumerator.Current);
+                    count++;
+                    totalCount++;
+                }
+            }
+            if (maxValuesToShow > 0 && totalCount > maxValuesToShow)
+                result.Append($"... ({totalCount - maxValuesToShow} more)");
+            return result.ToString();
+        }
     }
 }

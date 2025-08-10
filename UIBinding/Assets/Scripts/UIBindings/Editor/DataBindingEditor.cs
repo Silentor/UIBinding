@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.ServiceModel;
 using UIBindings.Adapters;
 using UIBindings.Converters;
 using UIBindings.Editor.Utils;
@@ -50,57 +51,71 @@ namespace UIBindings.Editor
             var (sourceType, _) = BindingUtils.GetSourceTypeAndObject( binding, host );
             if ( sourceType != null )
             {
-                position = EditorGUI.PrefixLabel( position, GUIUtility.GetControlID(FocusType.Keyboard), new GUIContent( pathProp.displayName )) ;
-                var propInfo = BindingEditorUtils.GetSourceProperty( (DataBinding)binding, host );
+                position = EditorGUI.PrefixLabel( position, GUIUtility.GetControlID( FocusType.Keyboard ), new GUIContent( pathProp.displayName ) ) ;
+                var pathString  = pathProp.stringValue;
+                var parser      = new PathParser( sourceType, pathString );
+                var tokens      = parser.Tokens;
+                var isValidPath = tokens.Count > 0 && tokens.All( p => p.PropertyType != null );
 
-                //Draw select bindable property button
-                var isSelectPropertyPressed = false;
-                String selectedProperty;
-                if ( propInfo != null )
+                GUI.SetNextControlName( "PathTextField" );
+                var isFocused = GUI.GetNameOfFocusedControl() == "PathTextField";
+                String displayPath = pathString;
+                if ( isFocused )
                 {
-                    var displayName = $"{propInfo.Name} ({propInfo.PropertyType.GetPrettyName()})";
-                    isSelectPropertyPressed = GUI.Button( position, displayName, Resources.TextField );
-                    selectedProperty = pathProp.stringValue;
+                    if ( Event.current.type == EventType.KeyDown )
+                    {
+                        if ( Event.current.keyCode == KeyCode.DownArrow ) //Show suggestions list on arrow down
+                        {
+                            Event.current.Use();  //Prevent further processing of this event
+                            if ( EditorGUIUtils.TryGetCursorPositionInTextField( out var cursorPosition ) &&
+                                 parser.TryGetTokenAtPosition( cursorPosition, out var token )            &&
+                                 token.SourceType != null )
+                            {
+                                //Show suggestion for given source type in the token
+                                var properties = token
+                                                .SourceType
+                                                .GetProperties( BindingFlags.Instance | BindingFlags.Public ) //todo also support methods for CallBinding
+                                                .Where( p => p.CanRead )
+                                                .ToArray();
+                                var menu             = new GenericMenu();
+                                foreach ( var prop in properties )
+                                {
+                                    var    isBaseProp      = prop.DeclaringType != token.SourceType;
+                                    string propDisplayName = isBaseProp ? $"Base/{prop.Name}" : prop.Name;
+                                    string propName        = prop.Name;
+                                    menu.AddItem( new GUIContent( propDisplayName ), propName == token.Token, ( ) =>
+                                    {
+                                        token.Token          = propName;
+                                        pathProp.stringValue = tokens.Select( t => t.Token ).JoinToString( "." );
+                                        pathProp.serializedObject.ApplyModifiedProperties();
+                                    } );
+                                }
+
+                                menu.DropDown( position );
+                            }
+                        }
+                        else if ( Event.current.keyCode == KeyCode.KeypadEnter || Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.Escape ) 
+                        {
+                            Event.current.Use();  
+                            GUI.FocusControl( null );
+                        }
+                    }
                 }
                 else
                 {
-                    var displayName = pathProp.stringValue == String.Empty 
-                            ? $"(property not set)"
-                            : $"{pathProp.stringValue} (missed property on Source)";
-                    //using ( GUIUtils.ChangeContentColor( Color.red ) )
-                    {
-                        isSelectPropertyPressed = GUI.Button( position, displayName, Resources.ErrorTextField );
-                    }
-                    selectedProperty = null;
-                }
+                    //When not focues, show property type also
+                    if( tokens.Last().PropertyType != null )
+                        displayPath += $" ({tokens.Last().PropertyType.Name})";
+                } 
 
-                //Select bindable property from list
-                if ( isSelectPropertyPressed )
-                {
-                    var props = sourceType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                                          .Where(p => p.CanRead)
-                                          .ToArray();
-                    var menu             = new GenericMenu();
-                    foreach (var prop in props)
-                    {
-                        var isBaseProp = prop.DeclaringType != sourceType;
-                        string propDisplayName = isBaseProp ? $"Base/{prop.Name}" : prop.Name;
-                        string propName = prop.Name;
-                        menu.AddItem(new GUIContent(propDisplayName), propName == selectedProperty, () =>
-                        {
-                            pathProp.stringValue = propName;
-                            pathProp.serializedObject.ApplyModifiedProperties();
-                        });
-                    }
-                    menu.DropDown(position);
-                }
+                var newValue = GUI.TextField( position, displayPath, isValidPath ? Resources.TextField : Resources.ErrorTextField );
+                if ( isFocused )
+                    pathProp.stringValue = newValue;
+
             }
             else
             {
-                //using ( new EditorGUI.DisabledScope( true ) )
-                {
-                    EditorGUI.LabelField( position, new GUIContent(pathProp.displayName), new GUIContent("(Source not set)"), Resources.DisabledTextField );
-                }
+                GUI.Label( position, "Source not set", Resources.ErrorLabel );
             }
         }
 

@@ -88,6 +88,22 @@ namespace UIBindings.Editor.Utils
             return ( rects.Item1.Translate( offset ), rects.Item2.Translate( offset ) );
         }
 
+        public static bool TryGetCursorPositionInTextField( out int cursorCharPosition )
+        {
+            cursorCharPosition = -1;
+            // Get the TextEditor object for the focused control.
+            // This is a bit of a "hack" but is the standard approach for IMGUI.
+            TextEditor editor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
+            
+            if (editor != null)
+            {
+                cursorCharPosition = editor.cursorIndex;
+                return true;
+            }
+
+            return false;
+        }
+
 
         private class ContentColorScope : GUI.Scope
         {
