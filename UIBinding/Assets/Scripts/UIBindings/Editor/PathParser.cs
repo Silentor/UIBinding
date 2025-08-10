@@ -16,11 +16,24 @@ namespace UIBindings.Editor
             public int EndIndex { get; set; }
             public Type PropertyType { get; set; }
             public Type SourceType { get; set; } // The type that owns this property
+            public PropertyInfo PropertyInfo { get; set; } // The PropertyInfo for this token, if valid
         }
 
         public IReadOnlyList<TokenInfo> Tokens => _tokens;
         public Type SourceType => _sourceType;
         public string PropertyPath => _propertyPath;
+
+        public PropertyInfo LastProperty
+        {
+            get
+            {
+                if (_tokens.Count == 0)
+                    return null;
+
+                var lastToken = _tokens[^1]; // Get the last token
+                return lastToken.PropertyInfo; // Return the PropertyInfo of the last token
+            }
+        }
 
         
         public PathParser(Type sourceType, string propertyPath)
@@ -59,7 +72,7 @@ namespace UIBindings.Editor
             if (string.IsNullOrEmpty(_propertyPath))
                 return new List<TokenInfo>()
                        {
-                               new (){StartIndex = 0, EndIndex = 0, Token = "", PropertyType = null, SourceType = _sourceType}
+                               new (){StartIndex = 0, EndIndex = 0, Token = "", SourceType = _sourceType}
                        };
 
             var tokens = new List<TokenInfo>();
@@ -72,12 +85,14 @@ namespace UIBindings.Editor
                 int tokenEnd = index + part.Length;
                 Type propertyType = null;
                 Type tokenSourceType = currentType;
+                PropertyInfo propertyInfo = null;
                 if (currentType != null)
                 {
                     var prop = currentType.GetProperty(part, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     if (prop != null)
                     {
                         propertyType = prop.PropertyType;
+                        propertyInfo = prop;
                         currentType = propertyType;
                     }
                     else
@@ -91,7 +106,8 @@ namespace UIBindings.Editor
                     StartIndex = tokenStart,
                     EndIndex = tokenEnd,
                     PropertyType = propertyType,
-                    SourceType = tokenSourceType
+                    SourceType = tokenSourceType,
+                    PropertyInfo = propertyInfo
                 });
                 index += part.Length + 1; // +1 for the dot
             }

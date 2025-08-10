@@ -31,7 +31,8 @@ namespace UIBindings.Editor.Utils
 
             var sourceObjInfo = sourceObject ? $"'{sourceObject.name}'({sourceObject.GetType().Name})" : $"({sourceObjectType.Name})";
 
-            var propInfo = binding.Path != null ? sourceObjectType.GetProperty( binding.Path ) : null;
+            var pathParser = new PathParser( sourceObjectType, binding.Path );
+            var propInfo = pathParser.Tokens.Last().PropertyInfo;
             if( propInfo == null )
             {
                 return $"{sourceObjInfo}.?";
@@ -39,7 +40,7 @@ namespace UIBindings.Editor.Utils
             else
             {
                 var propType = propInfo.PropertyType;
-                return $"{propType.GetPrettyName()} {sourceObjInfo}.{propInfo.Name}";
+                return $"{propType.GetPrettyName()} {sourceObjInfo}.{binding.Path}";
             }
         }
 
@@ -127,7 +128,8 @@ namespace UIBindings.Editor.Utils
             if( string.IsNullOrEmpty( binding.Path ) )
                 return ValidationResult.Valid;
 
-            var propInfo = sourceObjectType.GetProperty( binding.Path );
+            var pathParser = new PathParser( sourceObjectType, binding.Path );
+            var propInfo = pathParser.Tokens.Last().PropertyInfo;
             if( propInfo == null )
                 return ValidationResult.Invalid( $"Property '{binding.Path}' not found in {sourceObjectType.Name}" );
 
@@ -232,12 +234,8 @@ namespace UIBindings.Editor.Utils
             if ( sourceType == null )
                 return null;
 
-            var propertyPath = binding.Path;
-            if ( string.IsNullOrEmpty( propertyPath ) )
-                return null;
-
-            var sourceProperty = sourceType.GetProperty( propertyPath );
-            return sourceProperty;
+            var pathParser = new PathParser( sourceType, binding.Path );
+            return pathParser.LastProperty;
         }
 
         public static (T binding, UnityEngine.Object host) GetBindingObject<T>( SerializedProperty bindingProp ) where T : BindingBase
