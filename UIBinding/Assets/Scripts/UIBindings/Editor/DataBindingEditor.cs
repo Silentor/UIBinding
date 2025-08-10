@@ -115,6 +115,7 @@ namespace UIBindings.Editor
             }
             else
             {
+                position = EditorGUI.PrefixLabel( position, GUIUtility.GetControlID( FocusType.Passive ), new GUIContent( pathProp.displayName ) ) ;
                 GUI.Label( position, "Source not set", Resources.ErrorLabel );
             }
         }
