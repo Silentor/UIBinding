@@ -62,9 +62,8 @@ namespace UIBindings
 
 
             //Here we process deep binding
-            var pathProcessor = new PropertyPathProcessor( SourceObject, Path );
-            pathProcessor.MoveNext();   //Get first property info
-            var firstProperty   = pathProcessor.CurrentPropertyInfo;
+            var pathProcessor = new PathProcessor( SourceObject, Path, IsTwoWay, OnSourcePropertyChangedFromPropertyAdapter );
+            //pathProcessor.MoveNextProperty(out var firstProperty);   //Get first property info
 
             timer.AddMarker( "GetProperty" );
 
@@ -74,46 +73,46 @@ namespace UIBindings
             if ( Converters.Count == 0 )
             {
                 //Check fast pass - direct getter
-                if ( !pathProcessor.IsComplexPath )
-                {
-                    if ( firstProperty.PropertyType == typeof(ViewCollection) )
-                    {
-                        _viewCollectionDirectGetter = (Func<ViewCollection>)Delegate.CreateDelegate( typeof(Func<ViewCollection>), SourceObject, firstProperty.GetGetMethod( true ) );
-                        _isNeedPolling = SourceObject is INotifyPropertyChanged;
-                        timer.AddMarker( "ViewCollectionDirectGetter" );
-                    }
-                    else if( typeof(IEnumerable).IsAssignableFrom( firstProperty.PropertyType ) )
-                    {
-                        _enumerableDirectGetter = (Func<IEnumerable>)Delegate.CreateDelegate( typeof(Func<IEnumerable>), SourceObject, firstProperty.GetGetMethod( true ) );
-                        _isNeedPolling = SourceObject is INotifyPropertyChanged;
-                        var bindingAttribute = firstProperty.GetCustomAttribute<CollectionBindingAttribute>();
-                        if( bindingAttribute != null )
-                        {
-                            if( bindingAttribute.BindMethodName != null )
-                            {
-                                var bindMethodInfo = sourceType.GetMethod( bindingAttribute.BindMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                                if( bindMethodInfo != null )
-                                    _bindMethod = (Action<object, GameObject>)Delegate.CreateDelegate( typeof(Action<object, GameObject>), SourceObject, bindMethodInfo );
-                                var processMethodInfo = sourceType.GetMethod( bindingAttribute.ProcessMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                                if( processMethodInfo != null )
-                                    _processMethod = (Action<List<Object>>)Delegate.CreateDelegate( typeof(Action<List<Object>>), SourceObject, processMethodInfo );
-                            }
-                        }
-                        timer.AddMarker( "IEnumerableDirectGetter" );
-                    }
-                    else
-                    {
-                        throw new NotSupportedException($"CollectionBinding does not support collection type {firstProperty.PropertyType } yet.");
-                    }
-                }
-                else
+                // if ( !pathProcessor.IsComplexPath )
+                // {
+                //     if ( firstProperty.PropertyType == typeof(ViewCollection) )
+                //     {
+                //         _viewCollectionDirectGetter = (Func<ViewCollection>)Delegate.CreateDelegate( typeof(Func<ViewCollection>), SourceObject, firstProperty.GetGetMethod( true ) );
+                //         _isNeedPolling = SourceObject is INotifyPropertyChanged;
+                //         timer.AddMarker( "ViewCollectionDirectGetter" );
+                //     }
+                //     else if( typeof(IEnumerable).IsAssignableFrom( firstProperty.PropertyType ) )
+                //     {
+                //         _enumerableDirectGetter = (Func<IEnumerable>)Delegate.CreateDelegate( typeof(Func<IEnumerable>), SourceObject, firstProperty.GetGetMethod( true ) );
+                //         _isNeedPolling = SourceObject is INotifyPropertyChanged;
+                //         var bindingAttribute = firstProperty.GetCustomAttribute<CollectionBindingAttribute>();
+                //         if( bindingAttribute != null )
+                //         {
+                //             if( bindingAttribute.BindMethodName != null )
+                //             {
+                //                 var bindMethodInfo = sourceType.GetMethod( bindingAttribute.BindMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                //                 if( bindMethodInfo != null )
+                //                     _bindMethod = (Action<object, GameObject>)Delegate.CreateDelegate( typeof(Action<object, GameObject>), SourceObject, bindMethodInfo );
+                //                 var processMethodInfo = sourceType.GetMethod( bindingAttribute.ProcessMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                //                 if( processMethodInfo != null )
+                //                     _processMethod = (Action<List<Object>>)Delegate.CreateDelegate( typeof(Action<List<Object>>), SourceObject, processMethodInfo );
+                //             }
+                //         }
+                //         timer.AddMarker( "IEnumerableDirectGetter" );
+                //     }
+                //     else
+                //     {
+                //         throw new NotSupportedException($"CollectionBinding does not support collection type {firstProperty.PropertyType } yet.");
+                //     }
+                // }
+                // else
                 {
                     Action<object, string> notifyDelegate = OnSourcePropertyChangedFromPropertyAdapter;
-                    do
+                    while( pathProcessor.MoveNext( out var pathAdapter ) )
                     {
-                        _propReader    = pathProcessor.CreatePropertyAdapter( IsTwoWay, notifyDelegate );
+                        _propReader    = pathAdapter;
                         lastDataSource = _propReader;
-                    } while ( pathProcessor.MoveNext() );
+                    }
 
                     //Try to get ViewCollection or IEnumerable from last property adapter
                     if ( lastDataSource is IDataReader<ViewCollection> viewCollectionReader )
@@ -156,7 +155,7 @@ namespace UIBindings
         private          ViewCollection             _sourceCollection;
         private readonly         List<Object>               _processedList = new List<System.Object>();
         private readonly         List<Object>               _processedCopy = new List<System.Object>();
-        private             PropertyAdapter _propReader;
+        private             PathAdapter _propReader;
         private             Boolean _isNeedPolling;
 
         //Source property direct getters
@@ -181,14 +180,14 @@ namespace UIBindings
         {
             if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
             {
-                _sourceChanged = true;
+                _sourceValueChanged = true;
             }
         }
 
         private void OnSourcePropertyChangedFromPropertyAdapter(Object sender, String propertyName )
         {
             //No property name checking, property adapter will check it
-            _sourceChanged = true;
+            _sourceValueChanged = true;
         }
 
         protected override void OnSubscribe( )
@@ -233,7 +232,7 @@ namespace UIBindings
 
         protected override void    CheckChangesInternal( )
         {
-            if( !_isValueInitialized || _isNeedPolling || _sourceChanged  )
+            if( !_isValueInitialized || _isNeedPolling || _sourceValueChanged  )
             {
                 Action<List<object> > processListAction = null;
                 Action<Object, GameObject> bindViewItemAction = null;
@@ -263,7 +262,7 @@ namespace UIBindings
                         bindViewItemAction = _bindMethod;
                         ReadIEnumerableMarker.End();
                     }
-                    _isNeedPolling    = _propReader.IsNeedPolling();
+                    _isNeedPolling    = _propReader.IsNeedPolling;
                 }
                 else
                 {
@@ -306,7 +305,7 @@ namespace UIBindings
                     UpdateTargetMarker.End( );
                 }
 
-                _sourceChanged = false;
+                _sourceValueChanged = false;
             }
         }
 

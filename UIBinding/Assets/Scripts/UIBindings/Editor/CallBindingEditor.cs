@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UIBindings.Editor.Utils;
@@ -87,63 +88,85 @@ namespace UIBindings.Editor
         protected override void DrawPathField( Rect position, SerializedProperty property, BindingBase binding, UnityEngine.Object host )
         {
             var pathProp = property.FindPropertyRelative( nameof(BindingBase.Path) );
-            var pathName = pathProp.stringValue;
-            position = EditorGUI.PrefixLabel( position, new GUIContent( pathProp.displayName ) );
 
-            var (sourceType, _) = BindingUtils.GetSourceTypeAndObject( binding, host ); 
+            var (sourceType, _) = BindingUtils.GetSourceTypeAndObject( binding, host );
             if ( sourceType != null )
             {
-                var compatibleMethods = GetCompartibleMethods( sourceType );
-                var methodInfo = compatibleMethods.FirstOrDefault( mi => mi.Name == pathProp.stringValue );
+                position = EditorGUI.PrefixLabel( position, GUIUtility.GetControlID( FocusType.Keyboard ), new GUIContent( pathProp.displayName ) ) ;
+                var pathString  = pathProp.stringValue;
+                var parser      = new PathParser( sourceType, pathString );
+                var tokens      = parser.Tokens;
+                var isValidPath = tokens.Count > 0 && parser.LastMethod != null;
 
-                //Draw select method button
-                var isSelectPropertyPressed = false;
-                String selectedProperty;
-                if ( methodInfo != null && IsProperMethod( methodInfo ) )
+                GUI.SetNextControlName( "PathTextField" );
+                var isFocused = GUI.GetNameOfFocusedControl() == "PathTextField";
+                String displayPath = pathString;
+                if ( isFocused )
                 {
-                    var displayName = GetPrettyMethodName( methodInfo );
-                    isSelectPropertyPressed = GUI.Button( position, displayName, Resources.TextField );
-                    selectedProperty = pathName;
+                    if ( Event.current.type == EventType.KeyDown )
+                    {
+                        if ( Event.current.keyCode == KeyCode.DownArrow ) //Show suggestions list on arrow down
+                        {
+                            Event.current.Use();  //Prevent further processing of this event
+                            if ( EditorGUIUtils.TryGetCursorPositionInTextField( out var cursorPosition ) &&
+                                 parser.TryGetTokenAtPosition( cursorPosition, out var token )            &&
+                                 token.SourceType != null )
+                            {
+                                //Show suggestion for given source type in the token
+                                var properties = GetCompatibleProperties( token.SourceType );
+                                var methods     = GetCompatibleMethods( token.SourceType );
+                                var menu             = new GenericMenu();
+                                foreach ( var method in methods )
+                                {
+                                    var    isBaseMethod      = method.DeclaringType != token.SourceType;
+                                    string methodDisplayName = isBaseMethod ? $"Base()/{method.Name}()" : $"{method.Name}()";
+                                    string methodName        = method.Name;
+                                    menu.AddItem( new GUIContent( methodDisplayName ), methodName == token.Token, ( ) =>
+                                    {
+                                        token.Token          = methodName;
+                                        pathProp.stringValue = tokens.Select( t => t.Token ).JoinToString( "." );
+                                        pathProp.serializedObject.ApplyModifiedProperties();
+                                    } );
+                                }
+                                foreach ( var prop in properties )
+                                {
+                                    var    isBaseProp      = prop.DeclaringType != token.SourceType;
+                                    string propDisplayName = isBaseProp ? $"Base/{prop.Name}" : prop.Name;
+                                    string propName        = prop.Name;
+                                    menu.AddItem( new GUIContent( propDisplayName ), propName == token.Token, ( ) =>
+                                    {
+                                        token.Token          = propName;
+                                        pathProp.stringValue = tokens.Select( t => t.Token ).JoinToString( "." );
+                                        pathProp.serializedObject.ApplyModifiedProperties();
+                                    } );
+                                }
+
+                                menu.DropDown( position );
+                            }
+                        }
+                        else if ( Event.current.keyCode == KeyCode.KeypadEnter || Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.Escape ) 
+                        {
+                            Event.current.Use();  
+                            GUI.FocusControl( null );
+                        }
+                    }
                 }
                 else
                 {
-                    var displayName = pathName == String.Empty 
-                            ? "(method not set)"
-                            :
-                                methodInfo == null 
-                                    ? $"(missed method {pathName} on Source)"
-                                    : $"(unsupported method {pathName})";
-                    //using ( GUIUtils.ChangeContentColor( Color.red ) )
-                    {
-                        isSelectPropertyPressed = GUI.Button( position, displayName, Resources.ErrorTextField );
-                    }
-                    selectedProperty = null;
-                }
+                    //When not focues, show property type also
+                    if( tokens.Last().PropertyType != null )
+                        displayPath += $" ({tokens.Last().PropertyType.Name})";
+                } 
 
-                //Show select method menu
-                if ( isSelectPropertyPressed )
-                {
-                    var menu             = new GenericMenu();
-                    foreach (var method in compatibleMethods)
-                    {
-                        var isBaseMethod = method.DeclaringType != sourceType;
-                        string propDisplayName = isBaseMethod ? $"Base/{method.Name}" : method.Name;
-                        var capturedName = method.Name;
-                        menu.AddItem(new GUIContent(propDisplayName), capturedName == selectedProperty, () =>
-                        {
-                            pathProp.stringValue = capturedName;
-                            pathProp.serializedObject.ApplyModifiedProperties();
-                        });
-                    }
-                    menu.DropDown(position);
-                }
+                var newValue = GUI.TextField( position, displayPath, isValidPath ? Resources.TextField : Resources.ErrorTextField );
+                if ( isFocused )
+                    pathProp.stringValue = newValue;
+
             }
             else
             {
-                using ( new EditorGUI.DisabledScope() )
-                {
-                    GUI.TextField( position, $"{pathName} (Source not set)", Resources.DisabledTextField );
-                }
+                position = EditorGUI.PrefixLabel( position, GUIUtility.GetControlID( FocusType.Passive ), new GUIContent( pathProp.displayName ) ) ;
+                GUI.Label( position, "Source not set", Resources.ErrorLabel );
             }
         }
 
@@ -160,7 +183,7 @@ namespace UIBindings.Editor
             }
         }
 
-        private static MethodInfo[] GetCompartibleMethods(Type sourceType )
+        public static MethodInfo[] GetCompatibleMethods(Type sourceType )
         {
             return sourceType.GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
                              .Where( mi => mi.DeclaringType != typeof(Object) )
@@ -171,15 +194,22 @@ namespace UIBindings.Editor
                              .ToArray();
         }
 
+        private static PropertyInfo[] GetCompatibleProperties(Type sourceType)
+        {
+            return sourceType.GetProperties( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
+                             .Where( pi => pi.DeclaringType != typeof(Object) )
+                             .Where( pi => pi.GetIndexParameters().Length == 0 ) //Exclude indexed properties
+                             .Where( pi => HasCompatibleMethodsRecursive( pi.PropertyType ) )
+                             .ToArray();
+        }
+
         private static MethodInfo GetSourceMethod( BindingBase binding, UnityEngine.Object host )
         {
             var (sourceType, _) = BindingUtils.GetSourceTypeAndObject( binding, host );
             if ( sourceType != null )
             {
-                var methods = GetCompartibleMethods( sourceType );
-                var methodName = binding.Path;
-                var method = methods.FirstOrDefault( mi => mi.Name == methodName );
-                return method;
+                var pathParser = new PathParser( sourceType, binding.Path );
+                return pathParser.LastMethod;
             }
 
             return null;
@@ -301,6 +331,34 @@ namespace UIBindings.Editor
 
             if ( isChanged )
                 paramsProp.serializedObject.ApplyModifiedProperties();
+        }
+
+        public static bool HasCompatibleMethodsRecursive(Type typeToCheck, HashSet<Type> visitedTypes = null)
+        {
+            if (typeToCheck == null)
+                return false;
+
+            visitedTypes ??= new HashSet<Type>();
+            if (!visitedTypes.Add(typeToCheck))
+                return false; // Prevent infinite recursion
+
+            // 1. Check if this type has compatible methods
+            if (GetCompatibleMethods(typeToCheck).Length > 0)
+                return true;
+
+            // 2. Check properties of this type recursively
+            var properties = typeToCheck.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            foreach (var prop in properties)
+            {
+                var propType = prop.PropertyType;
+                if (propType == typeToCheck)
+                    continue; // Prevent self-recursion
+
+                if (HasCompatibleMethodsRecursive(propType, visitedTypes))
+                    return true;
+            }
+
+            return false;
         }
     }
 }

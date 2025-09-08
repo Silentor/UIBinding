@@ -21,8 +21,10 @@ using Object = System.Object;
 
 namespace UIBindings
 {
-    public class TestMonoBehSource : ObservableBeh//, INotifyPropertyChanged
+    public class TestMonoBehSource : ObservableBehDebug//, INotifyPropertyChanged
     {
+        public string TestStr;
+
         // You can specify an initial query, a search provider and some SearchViewFlags
         //[SearchContext("t:texture filtermode=0", "asset", SearchViewFlags.OpenInBuilderMode | SearchViewFlags.GridView)]
         [SearchContext("t:texture", "adb", SearchViewFlags.OpenInBuilderMode | SearchViewFlags.GridView)]
@@ -107,26 +109,7 @@ namespace UIBindings
 
         public void CallMe( )
         {
-            //var timer = System.Diagnostics.Stopwatch.StartNew();
-            var i = _fastGetter();  //Read enum property directly to int without boxing
-            //timer.Stop();
-            //Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] Getter took {timer.Elapsed.TotalMicroseconds()} mks, value={i}" );
-
-            //timer.Restart();
-            //var j = _boxedGetter();
-            //timer.Stop();
-            //Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] Boxed Getter took {timer.Elapsed.TotalMicroseconds()} mks, value={j}" );
-
-            //Debug.Log( i );
-
-            //throw new OperationCanceledException( "Test exception" );
-            //throw new Exception( "Test exception" );
-
-            var newValue = ((int)_sourceEnum + 1) % 16;
-            _sourceEnum = (EventType)newValue;
-            //Debug.Log( $"[{nameof(TestMonoBehSource)}]-[{nameof(CallMe)}] " );
-
-            OnPropertyChanged( nameof(SourceByte) );
+            Debug.Log( "Call me called" );
         }
 
         public async Awaitable CallMeAsync( )
@@ -434,7 +417,7 @@ namespace UIBindings
     }
 
     //[INotifyPropertyChanged]
-    public partial class TestComplexValue : ObservableObject
+    public partial class TestComplexValue : ObservableObjectDebug
     {
         //public string Value { get; set; } = "42";
 
@@ -455,10 +438,15 @@ namespace UIBindings
         private CameraType _enumValue;
     }
 
-    public partial class TestComplex2 : ObservableObject
+    public partial class TestComplex2 : ObservableObjectDebug
     {
         [ObservableProperty]
         private string _value2;
+
+        public void CallMe( )
+        {
+            Debug.Log( "Call me complex" );
+        }
 
     }
 }

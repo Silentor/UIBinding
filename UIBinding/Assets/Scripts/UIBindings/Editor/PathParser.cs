@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace UIBindings.Editor
@@ -14,9 +15,14 @@ namespace UIBindings.Editor
             public string Token { get; set; }
             public int StartIndex { get; set; }
             public int EndIndex { get; set; }
-            public Type PropertyType { get; set; }
             public Type SourceType { get; set; } // The type that owns this property
+
+            //If token is property
+            public Type PropertyType { get; set; }
             public PropertyInfo PropertyInfo { get; set; } // The PropertyInfo for this token, if valid
+
+            //If token is method
+            public MethodInfo MethodInfo { get; set; } // The MethodInfo for this token, if valid
         }
 
         public IReadOnlyList<TokenInfo> Tokens => _tokens;
@@ -32,6 +38,18 @@ namespace UIBindings.Editor
 
                 var lastToken = _tokens[^1]; // Get the last token
                 return lastToken.PropertyInfo; // Return the PropertyInfo of the last token
+            }
+        }
+
+        public MethodInfo LastMethod
+        {
+            get
+            {
+                if (_tokens.Count == 0)
+                    return null;
+
+                var lastToken = _tokens[^1];
+                return lastToken.MethodInfo;
             }
         }
 
@@ -79,13 +97,14 @@ namespace UIBindings.Editor
             Type currentType = _sourceType;
             string[] parts = _propertyPath.Split('.');
             int index = 0;
-            foreach (var part in parts)
+            foreach ( var part in parts )
             {
-                int tokenStart = index;
-                int tokenEnd = index + part.Length;
-                Type propertyType = null;
-                Type tokenSourceType = currentType;
-                PropertyInfo propertyInfo = null;
+                int          tokenStart      = index;
+                int          tokenEnd        = index + part.Length;
+                Type         propertyType    = null;
+                Type         tokenSourceType = currentType;
+                PropertyInfo propertyInfo    = null;
+                MethodInfo   methodInfo      = null;
                 if (currentType != null)
                 {
                     var prop = currentType.GetProperty(part, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -93,22 +112,31 @@ namespace UIBindings.Editor
                     {
                         propertyType = prop.PropertyType;
                         propertyInfo = prop;
-                        currentType = propertyType;
+                        currentType  = propertyType;
                     }
                     else
                     {
+                        var methods = CallBindingEditor.GetCompatibleMethods( currentType );
+                        var method = methods.FirstOrDefault( mi => mi.Name == part );
+                        if (method != null)
+                        {
+                            methodInfo    = method;
+                        }
+
                         currentType = null;
                     }
                 }
-                tokens.Add(new TokenInfo
-                {
-                    Token = part,
-                    StartIndex = tokenStart,
-                    EndIndex = tokenEnd,
-                    PropertyType = propertyType,
-                    SourceType = tokenSourceType,
-                    PropertyInfo = propertyInfo
-                });
+
+                tokens.Add( new TokenInfo
+                            {
+                                    Token        = part,
+                                    StartIndex   = tokenStart,
+                                    EndIndex     = tokenEnd,
+                                    PropertyType = propertyType,
+                                    SourceType   = tokenSourceType,
+                                    PropertyInfo = propertyInfo,
+                                    MethodInfo   = methodInfo,
+                            } );
                 index += part.Length + 1; // +1 for the dot
             }
             return tokens;

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 using Object = System.Object;
 using Unity.Profiling;
-using Unity.Profiling.LowLevel;
 
 namespace UIBindings
 {
@@ -40,9 +38,9 @@ namespace UIBindings
             }
         }
 
-        protected override void OoInitInfrastructure( Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost )
+        protected override void OoInitInfrastructure( Object source, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost )
         {
-            base.OoInitInfrastructure( source, property, lastConverter, forceOneWay, debugHost );
+            base.OoInitInfrastructure( source, lastConverter, forceOneWay, debugHost );
 
             if( forceOneWay )
             {
@@ -51,16 +49,10 @@ namespace UIBindings
                 return;
             }
 
-            if ( !property.CanWrite )
-            {
-                Debug.LogError($"[{nameof(BindingBase)}] Property {property.DeclaringType.Name}.{property.Name} is read-only and cannot be used for two-way binding.", debugHost);
-                return;
-            }
-
             if( lastConverter is IDataReadWriter<T> twoWayConverter )
                 _lastConverterTargetToSource = twoWayConverter;
-            else
-                _directSetter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), source, property.GetSetMethod( true ) );
+            // else
+            //     _directSetter = (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), source, property.GetSetMethod( true ) );
         }
 
         private Action<T>           _directSetter;

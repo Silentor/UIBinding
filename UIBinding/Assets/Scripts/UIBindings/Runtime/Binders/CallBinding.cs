@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Sisus;
+using UIBindings.Adapters;
 using UIBindings.Runtime;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
@@ -21,7 +22,7 @@ namespace UIBindings
     [Serializable]
     public class CallBinding : BindingBase
     {
-        public SerializableParam[] Params; 
+        public SerializableParam[] Params;                          //To store method's parameters
 
         public bool IsRuntimeValid => _isValid;
 
@@ -86,7 +87,13 @@ namespace UIBindings
             }
 
             var sourceType = SourceObject.GetType();
-            var method     = sourceType.GetMethod( Path );
+
+            //Here we process deep binding TODO here
+            //var pathProcessor = new PropertyPathProcessor( SourceObject, Path );
+
+            //pathProcessor.MoveNextMethod();   //Get first property info
+            //var firstProperty   = pathProcessor.CurrentPropertyInfo;
+            var method     = sourceType.GetMethod( Path );   
 
             if ( method == null )
             {
@@ -98,7 +105,7 @@ namespace UIBindings
 
             if ( method.ReturnType == typeof(void) )
             {
-                //Optimized
+                //Optimized for no params
                 if ( methodParams.Length == 0 )
                 {
                     _delegateCall = (Action)Delegate.CreateDelegate( typeof(Action), SourceObject, method );
@@ -106,7 +113,7 @@ namespace UIBindings
                 }
                 else if ( methodParams.Length == 1 )
                 {
-                    //Optimized
+                    //Optimized for 1 int param
                     if ( methodParams[ 0 ].ParameterType == typeof(int) )
                     {
                         //var timer = Stopwatch.StartNew();
@@ -442,6 +449,22 @@ namespace UIBindings
             // awaitableMethod.GetResultMethod( awaiter );
         }
 
+        // Construct 0 params void result open delegate with given source type
+        private static Action<Object> ConstructAction0Sync( Type sourceType, MethodInfo method )
+        {
+            var convertMethod = typeof(CallBinding).GetMethod( nameof( ConvertAction0Sync ), BindingFlags.NonPublic | BindingFlags.Static );
+            var convertMethodConstructed = convertMethod.MakeGenericMethod( sourceType );
+            var result = (Action<Object>)convertMethodConstructed.Invoke( null, new [] { method } );
+            return result;
+        }
+
+        private static Action<Object> ConvertAction0Sync<TSource>( MethodInfo method )
+        {
+            var strongTypedCall = (Action<TSource>)Delegate.CreateDelegate( typeof(Action<TSource>), method );
+            return WeakTypedCall;
+            void WeakTypedCall(Object p1 ) => strongTypedCall( (TSource)p1 );
+        }
+
         //Construct 1 params instance delegate with boxing
         private static Action<Object> ConstructAction1( Object source, MethodInfo method )
         {
@@ -456,7 +479,7 @@ namespace UIBindings
         private static Action<Object> ConvertAction1<TParam1>( Object source, MethodInfo method )
         {
             var  strong = (Action<TParam1>) Delegate.CreateDelegate( typeof(Action<TParam1>), source, method );
-            Action<Object> weak   = (p1) => strong( (TParam1)p1 );
+            Action<Object> weak = (p1) => strong( (TParam1)p1 );
             return weak;
         }
 

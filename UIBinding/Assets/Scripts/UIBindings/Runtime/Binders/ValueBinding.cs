@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 using UIBindings.Adapters;
 using UIBindings.Converters;
 using UIBindings.Runtime.Utils;
@@ -76,39 +77,35 @@ namespace UIBindings
             }
 
             //Here we process deep binding
-            var pathProcessor = new PropertyPathProcessor( SourceObject, Path );
-            pathProcessor.MoveNext();   //Get first property info
-            var firstProperty   = pathProcessor.CurrentPropertyInfo;
-
+            var pathProcessor = new PathProcessor( SourceObject, Path, IsTwoWay, OnSourcePropertyChangedFromPathAdapter );
             timer.AddMarker( "GetProperty" );
 
             DataProvider lastDataSource = null;
 
             //Check fast pass - direct getter
-            if ( Converters.Count == 0 && !pathProcessor.IsComplexPath && firstProperty.PropertyType == typeof(T) )
+            // if ( Converters.Count == 0 && !pathProcessor.IsComplexPath && firstProperty.PropertyType == typeof(T) )
+            // {
+            //     _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), SourceObject, firstProperty.GetGetMethod( true ) );
+            //     _isNeedPolling = SourceObject is INotifyPropertyChanged;
+            //
+            //     //TODO logic to create open getter. Its support on-the-fly changing of source object because source object its just a parameter of a getter.
+            //     //This also allows to cache the same getter for many source objects of the same type. May be useful for collection items view models.
+            //
+            //     //var convertMethod       = this.GetType().GetMethod( nameof( CreateOpenDelegate ), BindingFlags.NonPublic | BindingFlags.Static );
+            //     //var createdConvertMethod = convertMethod.MakeGenericMethod( _sourceObjectType );
+            //     //var directOpenGetter = (Func<Object, T>) createdConvertMethod.Invoke( null, new Object[]{property.GetGetMethod( true )} );
+            //     //_directGetter = () => directOpenGetter( _sourceObject );
+            //
+            //     timer.AddMarker( "DirectGetter" );
+            // }
+            // else        //Need adapters/converters/etc
             {
-                _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), SourceObject, firstProperty.GetGetMethod( true ) );
-                _isNeedPolling = SourceObject is INotifyPropertyChanged;
-
-                //TODO logic to create open getter. Its support on-the-fly changing of source object because source object its just a parameter of a getter.
-                //This also allows to cache the same getter for many source objects of the same type. May be useful for collection items view models.
-
-                //var convertMethod       = this.GetType().GetMethod( nameof( CreateOpenDelegate ), BindingFlags.NonPublic | BindingFlags.Static );
-                //var createdConvertMethod = convertMethod.MakeGenericMethod( _sourceObjectType );
-                //var directOpenGetter = (Func<Object, T>) createdConvertMethod.Invoke( null, new Object[]{property.GetGetMethod( true )} );
-                //_directGetter = () => directOpenGetter( _sourceObject );
-
-                timer.AddMarker( "DirectGetter" );
-            }
-            else        //Need adapters/converters/etc
-            {
-                Action<object, string> notifyDelegate = OnSourcePropertyChangedFromPropertyAdapter;
-                do
+                while( pathProcessor.MoveNext( out var pathAdapter ) )
                 {
-                    _propReader = pathProcessor.CreatePropertyAdapter( IsTwoWay, notifyDelegate );
+                    _propReader = pathAdapter;
                     timer.AddMarker( "CreateAdapter" );
                     lastDataSource = _propReader;
-                } while ( pathProcessor.MoveNext() );
+                }
 
                 //timer.AddMarker( "CreateAdapter" );
 
@@ -150,13 +147,13 @@ namespace UIBindings
                         Debug.LogError( $"[{nameof(BindingBase)}] Cannot find implicit conversion from last converter {lastDataSource} to {typeof(T)} at binding {GetBindingTargetInfo()}", _debugHost );
                         return;
                     } 
-                    _lastReader = ( IDataReader<T> )lastImplicitConverter;
+                    _lastReader    = ( IDataReader<T> )lastImplicitConverter;
                     lastDataSource = lastImplicitConverter;
                     timer.AddMarker( "ConnectImplicitConverter" );
                 }
             }
             
-            OoInitInfrastructure( SourceObject, firstProperty, lastDataSource, forceOneWay, _debugHost );
+            OoInitInfrastructure( SourceObject, lastDataSource, forceOneWay, _debugHost );
             timer.AddMarker( "AdditionalInit" );
             var report = timer.StopAndGetReport();
 
@@ -170,14 +167,14 @@ namespace UIBindings
 
         public override Boolean IsRuntimeValid => _isValid;
 
-        protected virtual void OoInitInfrastructure(  Object source, PropertyInfo property, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
+        protected virtual void OoInitInfrastructure(  Object source, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
 
         /// <summary>
         /// To get change event at desired time (LateUpdate for example)
         /// </summary>
         protected override void  CheckChangesInternal( )
         {
-            if( !_isValueInitialized || _isNeedPolling || _sourceChanged || _isTweened )
+            if( !_isValueInitialized || _isNeedPolling || _sourceValueChanged || _isTweened )
             {
                 T   value;
                 var isChangedOnSource = true;
@@ -198,7 +195,7 @@ namespace UIBindings
                     var changeStatus = _lastReader.TryGetValue( out value );
                     isChangedOnSource = changeStatus != EResult.NotChanged;
                     _isTweened        = changeStatus == EResult.Tweened;
-                    _isNeedPolling = _propReader.IsNeedPolling();
+                    _isNeedPolling = _propReader.IsNeedPolling;         //todo optimize? do not need to check if value not changed
                     ReadConvertedValueMarker.End();
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
@@ -213,14 +210,14 @@ namespace UIBindings
                     UpdateTargetMarker.End( );
                 }
 
-                _sourceChanged = false;
+                _sourceValueChanged = false;
             }
         }
 
         protected Func<T>        _directGetter;
-        private   PropertyAdapter _propReader;
+        private   PathAdapter   _propReader;    //Last property adapter in the chain
         protected T              _lastValue;
-        protected IDataReader<T> _lastReader;
+        protected IDataReader<T> _lastReader;       //Last reader in the chain (prop adapter or converter)
         private   Boolean        _isTweened;
         private   Boolean        _isNeedPolling;
         private   Type           _sourceObjectType;
@@ -233,7 +230,7 @@ namespace UIBindings
             if ( _directGetter != null )
             {
                 if( !_isNeedPolling )
-                    ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChanged;
+                    ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChangedDirect;
             }
             else
                 _propReader.Subscribe();
@@ -246,24 +243,24 @@ namespace UIBindings
             if ( _directGetter != null )
             {
                 if( !_isNeedPolling )
-                    ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChanged;
+                    ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChangedDirect;
             }
             else
                 _propReader.Unsubscribe();
         }
 
-        private void OnSourcePropertyChanged(Object sender, String propertyName )
+        private void OnSourcePropertyChangedDirect(Object sender, String propertyName )
         {
             if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
             {
-                _sourceChanged = true;
+                _sourceValueChanged = true;
             }
         }
 
-        private void OnSourcePropertyChangedFromPropertyAdapter(Object sender, String propertyName )
+        private void OnSourcePropertyChangedFromPathAdapter(Object sender, String propertyName )
         {
-            //No property name checking, property adapter will check it
-            _sourceChanged = true;
+            //No property name checking needed, property adapter will check it
+            _sourceValueChanged = true;
         }
 
 
@@ -318,5 +315,34 @@ namespace UIBindings
         
             return "?";
         }
+
+        // Special adapter to read source object from Binding in generic way. This allows to freely replace source object in Binding - the pipeline will work correctly.
+        // private class SourceObjectReaderAdapter<TSource> : DataProvider, IDataReader<T>
+        // {
+        //     public SourceObjectReaderAdapter([NotNull] PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( propertyInfo, isTwoWayBinding, notifyPropertyChanged )
+        //     {
+        //     }
+        //
+        //     public override Type InputType => typeof(TSource);
+        //     public override Type OutputType => typeof(TSource);
+        //
+        //     public override EResult TryGetValue(out object value )
+        //     {
+        //         throw new NotImplementedException();
+        //     }
+        //
+        //     public override bool IsNeedPolling( )
+        //     {
+        //         throw new NotImplementedException();
+        //     }
+        //
+        //     public EResult TryGetValue(out T value )
+        //     {
+        //         
+        //     }
+        //
+        //     private TSource _lastSourceObject;
+        //     private bool _isInited;
+        // }
     }
 }

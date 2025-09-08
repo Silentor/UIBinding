@@ -5,8 +5,6 @@ using UIBindings.Runtime.PlayerLoop;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using UnityEngine;
-using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 using Object = System.Object;
 
 namespace UIBindings
@@ -25,9 +23,12 @@ namespace UIBindings
         public       IReadOnlyList<ConverterBase> Converters => _converters.Converters;
         public const String                       ConvertersPropertyName = nameof(_converters) + "." + nameof(ConvertersList.Converters);
 
-        public abstract bool IsCompatibleWith( Type type );
-
         public abstract bool       IsTwoWay { get; }
+
+        /// <summary>
+        /// Is binding can produce value compatible with given type
+        /// </summary>
+        public abstract bool IsCompatibleWith( Type type );
 
         /// <summary>
         /// React to source property changes, either by subscribing to INotifyPropertyChanged or by checking changes periodically.
@@ -90,7 +91,7 @@ namespace UIBindings
         }
 
 
-        protected Boolean                _sourceChanged;
+        protected Boolean                _sourceValueChanged;
         protected bool                   _isValid;
         protected Boolean                _isSubscribed;
         protected bool                   _isValueInitialized;
@@ -125,7 +126,7 @@ namespace UIBindings
             if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
             {
                 Debug.Log( $"[{nameof(DataBinding)}] Source property '{propertyName}' changes detected in binding {_debugTargetBindingInfo}", _debugHost );
-                _sourceChanged = true;
+                _sourceValueChanged = true;
             }
         }
 

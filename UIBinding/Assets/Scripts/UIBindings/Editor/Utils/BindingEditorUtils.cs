@@ -32,7 +32,7 @@ namespace UIBindings.Editor.Utils
             var sourceObjInfo = sourceObject ? $"'{sourceObject.name}'({sourceObject.GetType().Name})" : $"({sourceObjectType.Name})";
 
             var pathParser = new PathParser( sourceObjectType, binding.Path );
-            var propInfo = pathParser.Tokens.Last().PropertyInfo;
+            var propInfo = pathParser.LastProperty;
             if( propInfo == null )
             {
                 return $"{sourceObjInfo}.?";
@@ -51,7 +51,8 @@ namespace UIBindings.Editor.Utils
 
             var sourceObjInfo = sourceObject ? $"'{sourceObject.name}'({sourceObject.GetType().Name})" : $"({sourceObjectType.Name})";
 
-            var methodInfo = binding.Path != null ? sourceObjectType.GetMethod( binding.Path ) : null;
+            var pathParser = new PathParser( sourceObjectType, binding.Path );
+            var methodInfo = pathParser.LastMethod;
             if( methodInfo == null )
             {
                 return $"{sourceObjInfo}.?()";
@@ -62,7 +63,7 @@ namespace UIBindings.Editor.Utils
                 var paramsString = methodInfo.GetParameters().Length > 0
                         ? String.Concat("(", String.Join( ", ", methodInfo.GetParameters().Select( p => p.ParameterType.Name ) ), ")")
                         : "()";
-                return $"{returnType} {sourceObjInfo}.{methodInfo.Name}{paramsString}" ;
+                return $"{returnType} {sourceObjInfo}.{binding.Path}{paramsString}" ;
             }
         }
 
@@ -126,10 +127,10 @@ namespace UIBindings.Editor.Utils
             if( sourceObjectType == null ) return ValidationResult.Invalid( "Source not found" );
 
             if( string.IsNullOrEmpty( binding.Path ) )
-                return ValidationResult.Valid;
+                return ValidationResult.Invalid( "Path is empty" );
 
             var pathParser = new PathParser( sourceObjectType, binding.Path );
-            var propInfo = pathParser.Tokens.Last().PropertyInfo;
+            var propInfo = pathParser.LastProperty;
             if( propInfo == null )
                 return ValidationResult.Invalid( $"Property '{binding.Path}' not found in {sourceObjectType.Name}" );
 
@@ -145,9 +146,10 @@ namespace UIBindings.Editor.Utils
             if( sourceObjectType == null ) return ValidationResult.Invalid( "Source not defined" );
 
             if( string.IsNullOrEmpty( binding.Path ) )
-                return ValidationResult.Valid;
+                return ValidationResult.Invalid( "Path is empty" );
 
-            var methodInfo = sourceObjectType.GetMethod( binding.Path );
+            var pathParser = new PathParser( sourceObjectType, binding.Path );
+            var methodInfo  = pathParser.LastMethod;
             if( methodInfo == null )
                 return ValidationResult.Invalid( $"Method '{binding.Path}()' not found in {sourceObjectType.Name}" );
 
@@ -163,7 +165,7 @@ namespace UIBindings.Editor.Utils
             if( sourceProperty == null )
                 return ValidationResult.Invalid( "Source property not found" );
 
-            var sourcePropertyType = PropertyAdapter.GetAdaptedType( sourceProperty.PropertyType );
+            var sourcePropertyType = PathAdapter.GetAdaptedType( sourceProperty.PropertyType );
             Predicate<Type> isTargetCompatible = binding.IsCompatibleWith;
             var converters = binding.Converters;
             var isTwoWayBinding = binding.IsTwoWay;
@@ -253,7 +255,7 @@ namespace UIBindings.Editor.Utils
         public bool   IsValid;
         public string ErrorMessage;
 
-        public static ValidationResult Valid => new ValidationResult() { IsValid = true, ErrorMessage = string.Empty };
+        public static ValidationResult Valid => new () { IsValid = true, ErrorMessage = string.Empty };
         public static ValidationResult Invalid( string errorMessage )
         {
             return new ValidationResult() { IsValid = false, ErrorMessage = errorMessage };

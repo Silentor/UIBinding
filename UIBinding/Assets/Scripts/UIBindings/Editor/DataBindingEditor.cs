@@ -55,7 +55,7 @@ namespace UIBindings.Editor
                 var pathString  = pathProp.stringValue;
                 var parser      = new PathParser( sourceType, pathString );
                 var tokens      = parser.Tokens;
-                var isValidPath = tokens.Count > 0 && tokens.All( p => p.PropertyType != null );
+                var isValidPath = tokens.Count > 0 && parser.LastProperty != null;
 
                 GUI.SetNextControlName( "PathTextField" );
                 var isFocused = GUI.GetNameOfFocusedControl() == "PathTextField";
@@ -154,7 +154,7 @@ namespace UIBindings.Editor
                 if ( convertersProp.isExpanded )
                 {
                     var sourcePropertyType = BindingEditorUtils.GetSourceProperty( binding, host )?.PropertyType;
-                    var sourceType         = PropertyAdapter.GetAdaptedType( sourcePropertyType );
+                    var sourceType         = PathAdapter.GetAdaptedType( sourcePropertyType );
   
                     //Draw every converter
                     Type prevType = sourceType;
@@ -221,7 +221,7 @@ namespace UIBindings.Editor
         {
             if ( converters.Count > 0 )
                 return GetLastConverterOutputType( converters );
-            return PropertyAdapter.GetAdaptedType( BindingEditorUtils.GetSourceProperty( binding, host )?.PropertyType );
+            return PathAdapter.GetAdaptedType( BindingEditorUtils.GetSourceProperty( binding, host )?.PropertyType );
         }
 
         private static Type GetLastConverterOutputType( IReadOnlyList<ConverterBase> converters )
