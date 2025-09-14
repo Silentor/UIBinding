@@ -17,7 +17,7 @@ namespace Sisus
 	/// </summary>
 	public static class AwaitableUtility
 	{
-		static readonly AwaitableCompletionSource completionSource = new();
+		private static readonly AwaitableCompletionSource CompletionSource = new();
 
 		/// <summary>
 		/// Gets an <see cref="Awaitable"/> that has already <see cref="Awaitable.IsCompleted">completed</see>.
@@ -26,9 +26,9 @@ namespace Sisus
 		{
 			get
 			{
-				completionSource.SetResult();
-				var awaitable = completionSource.Awaitable;
-				completionSource.Reset();
+				CompletionSource.SetResult();
+				var awaitable = CompletionSource.Awaitable;
+				CompletionSource.Reset();
 				return awaitable;
 			}
 		}
@@ -40,9 +40,9 @@ namespace Sisus
 		/// <returns> A faulted awaitable. </returns>
 		public static Awaitable FromException(Exception exception)
 		{
-			completionSource.SetException(exception);
-			var awaitable = completionSource.Awaitable;
-			completionSource.Reset();
+			CompletionSource.SetException(exception);
+			var awaitable = CompletionSource.Awaitable;
+			CompletionSource.Reset();
 			return awaitable;
 		}
 
@@ -52,9 +52,9 @@ namespace Sisus
 		/// <returns> A cancelled awaitable. </returns>
 		public static Awaitable FromCanceled()
 		{
-			completionSource.SetCanceled();
-			var awaitable = completionSource.Awaitable;
-			completionSource.Reset();
+			CompletionSource.SetCanceled();
+			var awaitable = CompletionSource.Awaitable;
+			CompletionSource.Reset();
 			return awaitable;
 		}
 

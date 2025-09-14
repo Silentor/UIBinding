@@ -448,5 +448,10 @@ namespace UIBindings
             Debug.Log( "Call me complex" );
         }
 
+        public void CallMe1( int value )
+        {
+            Debug.Log( $"Call me complex, {value}" );
+        }
+
     }
 }

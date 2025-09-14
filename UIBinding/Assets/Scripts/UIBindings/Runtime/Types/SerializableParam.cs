@@ -19,34 +19,35 @@ namespace UIBindings.Runtime
 
         //public EType Type => ValueType;
 
-        public void SetInt(int value)
+        public static SerializableParam FromInt(int value)
         {
-            Primitive = value;
-            ValueType = EType.Int;
+            var param = new SerializableParam { Primitive = value, ValueType = EType.Int };
+            return param;
         }
 
-        public void SetFloat(float value)
+        public static SerializableParam FromFloat(float value)
         {
-            Primitive = UnsafeUtility.As<float, int>( ref value );
-            ValueType = EType.Float;
+            var encodedValue = UnsafeUtility.As<float, int>( ref value );
+            var param = new SerializableParam { Primitive = encodedValue, ValueType = EType.Float };
+            return param;
         }
 
-        public void SetBool(bool value)
+        public static SerializableParam FromBool(bool value)
         {
-            Primitive = value ? 1 : 0;
-            ValueType = EType.Bool;
+            var param = new SerializableParam { Primitive = value ? 1 : 0, ValueType = EType.Bool };
+            return param;
         }
 
-        public void SetString(string value)
+        public static SerializableParam FromString(string value)
         {
-            String = value;
-            ValueType = EType.String;
+            var param = new SerializableParam { String = value, ValueType = EType.String };
+            return param;
         }
 
-        public void SetObject(UnityEngine.Object value)
+        public static SerializableParam FromObject(UnityEngine.Object value)
         {
-            Object = value;
-            ValueType = EType.Object;
+            var param = new SerializableParam { Object = value, ValueType = EType.Object };
+            return param;
         }
 
         public int GetInt() 

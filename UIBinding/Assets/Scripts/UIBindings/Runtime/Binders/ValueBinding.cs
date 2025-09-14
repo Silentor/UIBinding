@@ -100,12 +100,13 @@ namespace UIBindings
             // }
             // else        //Need adapters/converters/etc
             {
-                while( pathProcessor.MoveNext( out var pathAdapter ) )
+                while( pathProcessor.MoveNext( ) )
                 {
-                    _propReader = pathAdapter;
                     timer.AddMarker( "CreateAdapter" );
-                    lastDataSource = _propReader;
                 }
+
+                _pathAdapter = pathProcessor.Current;
+                lastDataSource = _pathAdapter;
 
                 //timer.AddMarker( "CreateAdapter" );
 
@@ -195,7 +196,7 @@ namespace UIBindings
                     var changeStatus = _lastReader.TryGetValue( out value );
                     isChangedOnSource = changeStatus != EResult.NotChanged;
                     _isTweened        = changeStatus == EResult.Tweened;
-                    _isNeedPolling = _propReader.IsNeedPolling;         //todo optimize? do not need to check if value not changed
+                    _isNeedPolling = _pathAdapter.IsNeedPolling;         //todo optimize? do not need to check if value not changed
                     ReadConvertedValueMarker.End();
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
@@ -215,7 +216,7 @@ namespace UIBindings
         }
 
         protected Func<T>        _directGetter;
-        private   PathAdapter   _propReader;    //Last property adapter in the chain
+        private   PathAdapter   _pathAdapter;    //Last path adapter in the chain. Because path adapters are chained, this is enough to work with whole path
         protected T              _lastValue;
         protected IDataReader<T> _lastReader;       //Last reader in the chain (prop adapter or converter)
         private   Boolean        _isTweened;
@@ -233,7 +234,7 @@ namespace UIBindings
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChangedDirect;
             }
             else
-                _propReader.Subscribe();
+                _pathAdapter.Subscribe();
         }
 
         protected override void OnUnsubscribe( )
@@ -246,7 +247,7 @@ namespace UIBindings
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChangedDirect;
             }
             else
-                _propReader.Unsubscribe();
+                _pathAdapter.Unsubscribe();
         }
 
         private void OnSourcePropertyChangedDirect(Object sender, String propertyName )
@@ -307,9 +308,9 @@ namespace UIBindings
             {
                 return _directGetter()?.ToString() ?? "null";
             }
-            else if ( _propReader != null )
+            else if ( _pathAdapter != null )
             {
-                _propReader.TryGetValue( out var propValue );
+                _pathAdapter.TryGetValue( out var propValue );
                 return propValue?.ToString() ?? "null";
             }
         

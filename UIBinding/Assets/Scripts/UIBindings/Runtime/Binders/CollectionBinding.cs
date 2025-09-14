@@ -107,12 +107,12 @@ namespace UIBindings
                 // }
                 // else
                 {
-                    Action<object, string> notifyDelegate = OnSourcePropertyChangedFromPropertyAdapter;
-                    while( pathProcessor.MoveNext( out var pathAdapter ) )
+                    while( pathProcessor.MoveNext(  ) )
                     {
-                        _propReader    = pathAdapter;
-                        lastDataSource = _propReader;
                     }
+
+                    _propReader = pathProcessor.Current;
+                    lastDataSource = _propReader;
 
                     //Try to get ViewCollection or IEnumerable from last property adapter
                     if ( lastDataSource is IDataReader<ViewCollection> viewCollectionReader )

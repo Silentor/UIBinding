@@ -190,6 +190,38 @@ namespace UIBindings.Adapters
             return result;
         }
 
+        public static PathAdapter GetMethodAdapter( PathAdapter sourceAdapter, MethodInfo methodInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        {
+            var sourceType = methodInfo.DeclaringType;
+            var paramz     = methodInfo.GetParameters();
+            if ( paramz.Length < 3 )
+            {
+                Type adapterType = typeof(CallMethodAdapter<>).MakeGenericType( sourceType );
+                var result = (PathAdapter)Activator.CreateInstance( adapterType, methodInfo, sourceAdapter, isTwoWayBinding, notifyPropertyChanged );
+                return result;
+            }
+            else
+            {
+                throw new NotSupportedException($"Method with {paramz.Length} parameters is not supported");
+            }
+        }
+
+        public static PathAdapter GetMethodAdapter( object sourceObject, MethodInfo methodInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        {
+            var  sourceType   = methodInfo.DeclaringType;
+            var paramz = methodInfo.GetParameters();
+            if ( paramz.Length < 3 )
+            {
+                Type adapterType = typeof(CallMethodAdapter<>).MakeGenericType( sourceType );
+                var result = (PathAdapter)Activator.CreateInstance( adapterType, methodInfo, sourceObject, isTwoWayBinding, notifyPropertyChanged );
+                return result;
+            }
+            else
+            {
+                throw new NotSupportedException($"Method with {paramz.Length} parameters is not supported");
+            }
+        }
+
         // Is value was first time readed after subscribe or source object change
         protected bool      IsInited;
 

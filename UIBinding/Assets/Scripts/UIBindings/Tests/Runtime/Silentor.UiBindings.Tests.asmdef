@@ -4,7 +4,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "UIBindings"
+        "UIBindings",
+        "UniTask"
     ],
     "includePlatforms": [
         "Editor"
@@ -19,6 +20,12 @@
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "2",
+            "define": "UIBINDINGS_UNITASK_SUPPORT"
+        }
+    ],
     "noEngineReferences": false
 }

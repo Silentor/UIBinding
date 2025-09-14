@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using UIBindings.Runtime.Utils;
 using UnityEngine.Assertions;
 
 namespace UIBindings.Adapters
@@ -21,6 +22,10 @@ namespace UIBindings.Adapters
 
         public bool IsLastPart => _end == _propertyPath.Length;
 
+        public bool IsNextToLastPart => _propertyPath.IndexOf( '.', _end + 1 ) == -1;
+
+        public PathAdapter Current => _lastAdapter;
+
         public PathProcessor( object sourceObject, string propertyPath, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             _sourceObject = sourceObject;
@@ -34,13 +39,11 @@ namespace UIBindings.Adapters
             _lastAdapter = null;
         }
 
-        public bool MoveNext( out PathAdapter pathPartAdapter )
+        public bool MoveNext( )
         {
-            if ( _end == _propertyPath.Length )
-            {
-                pathPartAdapter = null;
+            if ( _end >= _propertyPath.Length )
                 return false;
-            }
+
             _start = _end + 1;
             _end   = _propertyPath.IndexOf('.', _start);
             if (_end == -1)
@@ -58,12 +61,22 @@ namespace UIBindings.Adapters
             }
             else
             {
+                var methodInfo =  _currentSourceType.GetMethod( PartName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                if ( methodInfo != null )   //Read value func or call method
+                {
+                    if( _lastAdapter != null )
+                        _lastAdapter = PathAdapter.GetMethodAdapter( _lastAdapter, methodInfo, _isTwoWayBinding, _notifyPropertyChanged );
+                    else
+                        _lastAdapter = PathAdapter.GetMethodAdapter( _sourceObject, methodInfo, _isTwoWayBinding, _notifyPropertyChanged );
+                }
+                else
+                {
+                    Assert.IsNotNull( propertyInfo, $"Member '{PartName}' not found in type '{_currentSourceType}'" );
+                }
+
                 // Process Func<> and fields and indexers
-
-                Assert.IsNotNull( propertyInfo, $"Member '{PartName}' not found in type '{_currentSourceType}'" );
+                
             }
-
-            pathPartAdapter = _lastAdapter;
 
             return _start < _end;
         }

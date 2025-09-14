@@ -16,7 +16,7 @@
     "versionDefines": [
         {
             "name": "com.cysharp.unitask",
-            "expression": "1",
+            "expression": "2",
             "define": "UIBINDINGS_UNITASK_SUPPORT"
         }
     ],
