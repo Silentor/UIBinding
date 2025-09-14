@@ -73,6 +73,27 @@ namespace UIBindings.Tests.Runtime
             Debug.Log( "Completed3" );
 #endif
         }
+
+        [Test]
+        public void TestComplexMethodCall( )
+        {
+            var source = new CallMethodSource() { Internal = new(), };
+
+            var callBinding = new CallBinding();
+            callBinding.Path = "Internal.CallInt1Param";
+            callBinding.Params = new[] { SerializableParam.FromInt( 1 ), };
+            callBinding.Init( source );
+            callBinding.Call();
+            Assert.That( source.InternalReadCount, Is.EqualTo( 1 ) );   //Check that property read once
+            Debug.Assert( source.Internal.IntValue == 1 );
+
+            source.InternalReadCount = 0;
+            callBinding.Call();
+            Assert.That( source.InternalReadCount, Is.EqualTo( 1 ) ); // We should reread owner property on each call
+            
+            //todo make test with INotifyPropertyChanged owner, so property will be read only once
+
+        }
     }
 
     public class CallMethodSource
@@ -81,6 +102,20 @@ namespace UIBindings.Tests.Runtime
         public float FloatValue;
         public string StringValue;
         public Boolean BoolValue;
+
+
+        public int InternalReadCount;
+        private InternalClass _internal;
+
+        public InternalClass Internal
+        {
+            get
+            {
+                InternalReadCount++;
+                return _internal;
+            }
+            set => _internal = value;
+        }
 
         public void CallNoParams()
         {
@@ -97,12 +132,12 @@ namespace UIBindings.Tests.Runtime
             IntValue = value1 + value2;
         }
 
-        public void CallString1Param( string value )
+        protected void CallString1Param( string value )
         {
             StringValue = value;
         }
 
-        public void CallMixedParams( float value1, bool value2 )
+        private void CallMixedParams( float value1, bool value2 )
         {
             FloatValue = value1;
             BoolValue = value2;
@@ -128,6 +163,16 @@ namespace UIBindings.Tests.Runtime
         }
 #endif
 
+        public class InternalClass
+        {
+            public int IntValue;
 
+            public void CallInt1Param( int value )
+            {
+                IntValue = value;
+            }
+        }
     }
+
+
 }
