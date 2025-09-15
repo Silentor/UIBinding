@@ -105,7 +105,7 @@ namespace UIBindings
                     timer.AddMarker( "CreateAdapter" );
                 }
 
-                _pathAdapter = pathProcessor.Current;
+                _pathAdapter = pathProcessor.CurrentAdapter;
                 lastDataSource = _pathAdapter;
 
                 //timer.AddMarker( "CreateAdapter" );

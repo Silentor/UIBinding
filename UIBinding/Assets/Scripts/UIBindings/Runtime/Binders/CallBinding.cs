@@ -84,7 +84,7 @@ namespace UIBindings
                 {
                 }
 
-                if( pathProcessor.Current is not MethodAdapter methodAdapter )
+                if( pathProcessor.CurrentAdapter is not MethodAdapter methodAdapter )
                 {
                     Debug.LogError( $"[{nameof(CallBinding)}] Path '{Path}' at {_debugHost} does not point to a method", _debugHost );
                     return;

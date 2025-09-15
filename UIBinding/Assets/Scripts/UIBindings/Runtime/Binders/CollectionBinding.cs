@@ -23,7 +23,6 @@ namespace UIBindings
         public Action<object, GameObject> BindViewItemMethod { get; private set; }
 
         public override Boolean IsCompatibleWith(Type type ) => typeof(IEnumerable).IsAssignableFrom( type ); 
-            
 
         public override Boolean IsTwoWay => false;
 
@@ -41,8 +40,18 @@ namespace UIBindings
             }
             else
             {
-                AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the inspector", _debugHost );
-                SourceObject = Source;
+                if ( Source )
+                {
+                    SourceObject = Source;
+                }
+                else if( sourceObject != null ) 
+                {
+                    SourceObject = sourceObject;
+                }
+                else
+                {
+                    AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the inspector or from code", _debugHost );
+                }
             }
 
             InitInfrastructure( );
@@ -57,9 +66,6 @@ namespace UIBindings
             AssertWithContext.IsNotEmpty( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer(); 
-
-            var sourceType = SourceObject.GetType();
-
 
             //Here we process deep binding
             var pathProcessor = new PathProcessor( SourceObject, Path, IsTwoWay, OnSourcePropertyChangedFromPropertyAdapter );
@@ -111,14 +117,19 @@ namespace UIBindings
                     {
                     }
 
-                    _propReader = pathProcessor.Current;
-                    lastDataSource = _propReader;
+                    _pathReader = pathProcessor.CurrentAdapter;
+                    lastDataSource = _pathReader;
 
                     //Try to get ViewCollection or IEnumerable from last property adapter
-                    if ( lastDataSource is IDataReader<ViewCollection> viewCollectionReader )
-                        _viewCollectionReader = viewCollectionReader;
-                    else if ( lastDataSource is IDataReader<IEnumerable> enumerableReader )
-                        _enumerableReader = enumerableReader;
+                    if ( typeof(IEnumerable).IsAssignableFrom( pathProcessor.CurrentOutputType ) )
+                    {
+                        // Will read from _pathReader
+                        _sourceType = EDataSourceType.Enumerable;
+                    }
+                    //if ( lastDataSource is IDataReader<ViewCollection> viewCollectionReader )
+                        //_viewCollectionReader = viewCollectionReader;
+                    //else if ( typeof(IEnumerable).ispathProcessor.CurrentOutputType )
+                      //  _enumerableReader = enumerableReader;
                     else
                         throw new NotSupportedException( $"CollectionBinding does not support collection type {lastDataSource.GetType()} yet." );
 
@@ -155,8 +166,9 @@ namespace UIBindings
         private          ViewCollection             _sourceCollection;
         private readonly         List<Object>               _processedList = new List<System.Object>();
         private readonly         List<Object>               _processedCopy = new List<System.Object>();
-        private             PathAdapter _propReader;
-        private             Boolean _isNeedPolling;
+        private             PathAdapter _pathReader;
+        private             Boolean _isNeedPolling = true;
+        private EDataSourceType _sourceType;
 
         //Source property direct getters
         private          Func<ViewCollection>       _viewCollectionDirectGetter;
@@ -164,12 +176,12 @@ namespace UIBindings
 
         //Source property readers
         private         IDataReader<ViewCollection> _viewCollectionReader;
-        private         IDataReader<IEnumerable>    _enumerableReader;
 
         //Collection process methods
         private          Action<object, GameObject> _bindMethod;
         private          Action<List<Object>>       _processMethod;
         
+
 
         protected static readonly ProfilerMarker ReadViewCollectionDirectMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollectionDirect" );
         protected static readonly ProfilerMarker ReadIEnumerableDirectMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerableDirect" );
@@ -200,7 +212,7 @@ namespace UIBindings
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChanged;
             }
             else
-                _propReader.Subscribe();
+                _pathReader.Subscribe();
         }
 
         protected override void OnUnsubscribe( )
@@ -213,7 +225,7 @@ namespace UIBindings
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChanged;
             }
             else
-                _propReader.Unsubscribe();
+                _pathReader.Unsubscribe();
         }
 
         private Boolean IsEqual( IReadOnlyList<object> listA, IReadOnlyList<object> listB )
@@ -239,54 +251,72 @@ namespace UIBindings
                 var isChangedOnSource = true;
                 _processedList.Clear();
 
-                if ( _propReader != null )                                           //Read source collection via data pipeline
+                switch ( _sourceType )
                 {
-                    if ( _viewCollectionReader != null )
-                    {
-                        ReadViewCollectionMarker.Begin( ProfilerMarkerName );
-                        var changeStatus = _viewCollectionReader.TryGetValue( out var viewCollection );
-                        isChangedOnSource = changeStatus != EResult.NotChanged;
-                        _processedList.AddRange( viewCollection );
-                        processListAction  = viewCollection.ProcessList;
-                        bindViewItemAction = viewCollection.BindViewItem;
-                        ReadViewCollectionMarker.End();
-                    }
-                    else if ( _enumerableReader != null )
+                    case EDataSourceType.Enumerable:
                     {
                         ReadIEnumerableMarker.Begin( ProfilerMarkerName );
-                        var changeStatus = _enumerableReader.TryGetValue( out var enumerable );
+                        var changeStatus = _pathReader.TryGetValue( out var obj );
                         isChangedOnSource = changeStatus != EResult.NotChanged;
-                        if ( enumerable != null )                        
-                            _processedList.AddRange( enumerable.Cast<Object>() );
+                        if ( obj != null )                        
+                            _processedList.AddRange( ((IEnumerable)obj).Cast<Object>() );
                         processListAction  = _processMethod;
                         bindViewItemAction = _bindMethod;
+                        _isNeedPolling = _pathReader.IsNeedPolling;
                         ReadIEnumerableMarker.End();
+                        break;
                     }
-                    _isNeedPolling    = _propReader.IsNeedPolling;
+
+                    case EDataSourceType.None: throw new InvalidOperationException("Data source is not initialized");
                 }
-                else
-                {
-                    //Read source collection directly
-                    if ( _viewCollectionDirectGetter != null )
-                    {
-                        ReadViewCollectionDirectMarker.Begin( ProfilerMarkerName );
-                        var viewCollection = _viewCollectionDirectGetter();
-                        _processedList.AddRange( viewCollection );
-                        processListAction  = viewCollection.ProcessList;
-                        bindViewItemAction = viewCollection.BindViewItem;
-                        ReadViewCollectionDirectMarker.End();
-                    }
-                    else if( _enumerableDirectGetter != null )
-                    {
-                        ReadIEnumerableDirectMarker.Begin( ProfilerMarkerName );
-                        var enumerable = _enumerableDirectGetter();
-                        if ( enumerable != null )                        
-                            _processedList.AddRange( enumerable.Cast<Object>() );
-                        processListAction  = _processMethod;
-                        bindViewItemAction = _bindMethod;
-                        ReadIEnumerableDirectMarker.End();
-                    }        
-                }
+                // if ( _pathReader != null )                                           //Read source collection via data pipeline
+                // {
+                //     if ( _viewCollectionReader != null )
+                //     {
+                //         ReadViewCollectionMarker.Begin( ProfilerMarkerName );
+                //         var changeStatus = _viewCollectionReader.TryGetValue( out var viewCollection );
+                //         isChangedOnSource = changeStatus != EResult.NotChanged;
+                //         _processedList.AddRange( viewCollection );
+                //         processListAction  = viewCollection.ProcessList;
+                //         bindViewItemAction = viewCollection.BindViewItem;
+                //         ReadViewCollectionMarker.End();
+                //     }
+                //     else if ( _enumerableReader != null )
+                //     {
+                //         ReadIEnumerableMarker.Begin( ProfilerMarkerName );
+                //         var changeStatus = _enumerableReader.TryGetValue( out var enumerable );
+                //         isChangedOnSource = changeStatus != EResult.NotChanged;
+                //         if ( enumerable != null )                        
+                //             _processedList.AddRange( enumerable.Cast<Object>() );
+                //         processListAction  = _processMethod;
+                //         bindViewItemAction = _bindMethod;
+                //         ReadIEnumerableMarker.End();
+                //     }
+                //     _isNeedPolling    = _pathReader.IsNeedPolling;
+                // }
+                // else
+                // {
+                //     //Read source collection directly
+                //     if ( _viewCollectionDirectGetter != null )
+                //     {
+                //         ReadViewCollectionDirectMarker.Begin( ProfilerMarkerName );
+                //         var viewCollection = _viewCollectionDirectGetter();
+                //         _processedList.AddRange( viewCollection );
+                //         processListAction  = viewCollection.ProcessList;
+                //         bindViewItemAction = viewCollection.BindViewItem;
+                //         ReadViewCollectionDirectMarker.End();
+                //     }
+                //     else if( _enumerableDirectGetter != null )
+                //     {
+                //         ReadIEnumerableDirectMarker.Begin( ProfilerMarkerName );
+                //         var enumerable = _enumerableDirectGetter();
+                //         if ( enumerable != null )                        
+                //             _processedList.AddRange( enumerable.Cast<Object>() );
+                //         processListAction  = _processMethod;
+                //         bindViewItemAction = _bindMethod;
+                //         ReadIEnumerableDirectMarker.End();
+                //     }        
+                // }
 
                 //Check for source collection modifications
                 if( !_isValueInitialized || isChangedOnSource || !IsEqual( _sourceCopy, _processedList ))
@@ -449,6 +479,13 @@ namespace UIBindings
             }
         
             return "?";
+        }
+
+        private enum EDataSourceType
+        {
+            None,
+            ViewCollection,
+            Enumerable
         }
 
     }

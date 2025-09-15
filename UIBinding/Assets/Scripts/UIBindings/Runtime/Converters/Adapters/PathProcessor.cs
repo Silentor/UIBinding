@@ -12,19 +12,20 @@ namespace UIBindings.Adapters
     {
         public Boolean IsComplexPath => _propertyPath.IndexOf( '.' ) >= 0;                         
 
-        /// <summary>
-        /// Current parsed part
-        /// </summary>
-        public string PartName { get; private set; }  
-
-
         public bool IsFirstPart => _start == 0;
 
         public bool IsLastPart => _end == _propertyPath.Length;
 
-        public bool IsNextToLastPart => _propertyPath.IndexOf( '.', _end + 1 ) == -1;
+        public bool IsNextToLastPart => !IsLastPart && _propertyPath.IndexOf( '.', _end + 1 ) == -1;
 
-        public PathAdapter Current => _lastAdapter;
+        /// <summary>
+        /// Current parsed part
+        /// </summary>
+        public string CurrentPartName { get; private set; }  
+
+        public PathAdapter CurrentAdapter => _lastAdapter;
+
+        public Type CurrentOutputType => _lastAdapter?.OutputType;
 
         public PathProcessor( object sourceObject, string propertyPath, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
@@ -35,7 +36,7 @@ namespace UIBindings.Adapters
             _currentSourceType = sourceObject.GetType();
             _start = -1;
             _end  = -1;
-            PartName = string.Empty;
+            CurrentPartName = string.Empty;
             _lastAdapter = null;
         }
 
@@ -49,8 +50,8 @@ namespace UIBindings.Adapters
             if (_end == -1)
                 _end = _propertyPath.Length;
 
-            PartName     = _propertyPath.Substring(_start, _end - _start);
-            var propertyInfo = _currentSourceType.GetProperty( PartName );
+            CurrentPartName     = _propertyPath.Substring(_start, _end - _start);
+            var propertyInfo = _currentSourceType.GetProperty( CurrentPartName );
             if ( propertyInfo != null )
             {
                 if( _lastAdapter != null )
@@ -61,7 +62,7 @@ namespace UIBindings.Adapters
             }
             else
             {
-                var methodInfo =  _currentSourceType.GetMethod( PartName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+                var methodInfo =  _currentSourceType.GetMethod( CurrentPartName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
                 if ( methodInfo != null )   //Read value func or call method
                 {
                     if( _lastAdapter != null )
@@ -71,7 +72,7 @@ namespace UIBindings.Adapters
                 }
                 else
                 {
-                    Assert.IsNotNull( propertyInfo, $"Member '{PartName}' not found in type '{_currentSourceType}'" );
+                    Assert.IsNotNull( propertyInfo, $"Member '{CurrentPartName}' not found in type '{_currentSourceType}'" );
                 }
 
                 // Process Func<> and fields and indexers
