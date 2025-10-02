@@ -177,7 +177,7 @@ namespace UIBindings.Editor.Utils
                     return ValidationResult.Valid;
                 else
                 {
-                    return ValidationResult.Invalid( $"Source type {sourcePropertyType.Name} is not compatible with binding target type." );
+                    return ValidationResult.Invalid( $"Source type {sourcePropertyType.Name} is not compatible with binding target type {binding.GetType().GetPrettyName()}" );
                 }
             }
 

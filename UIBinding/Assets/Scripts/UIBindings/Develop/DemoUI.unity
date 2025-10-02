@@ -423,7 +423,6 @@ MonoBehaviour:
     - rid: 7690191692283510870
       type: {class: ColorTween, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
-        ReverseMode: 0
         From: {r: 1, g: 0, b: 0, a: 1}
         To: {r: 0, g: 1, b: 0, a: 1}
         TweenTime: 1
@@ -486,7 +485,6 @@ MonoBehaviour:
     - rid: 7690191692283510883
       type: {class: SelectVector3Converter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         Values:
         - Key: 0
           Value: {x: 0, y: 0, z: 0}
@@ -496,12 +494,10 @@ MonoBehaviour:
     - rid: 7690191692283510884
       type: {class: Vector3SmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
-        ReverseMode: 0
         SmoothTime: 0.3
     - rid: 7690191692283510887
       type: {class: SelectVector3Converter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         Values:
         - Key: 0
           Value: {x: 0, y: 0, z: -45}
@@ -511,7 +507,6 @@ MonoBehaviour:
     - rid: 7690191692283510888
       type: {class: EulerRotationSmoothDamp, ns: UIBindings.Tweeners, asm: UIBindings}
       data:
-        ReverseMode: 0
         SmoothTime: 0.3
 --- !u!1 &74114146
 GameObject:
@@ -937,8 +932,7 @@ MonoBehaviour:
     RefIds:
     - rid: 7458025021857071162
       type: {class: StringValidator, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
+      data: 
 --- !u!114 &117835689
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2376,7 +2370,6 @@ MonoBehaviour:
     - rid: 7690191678907613250
       type: {class: IntToBoolConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         StepValue: 1
         FalseValue: 0
         TrueValue: 1
@@ -3105,7 +3098,7 @@ MonoBehaviour:
       ScaledTime: 1
     _converters:
       Converters:
-      - rid: 7458025220471783486
+      - rid: 5183705893420400703
   ColorBinding:
     Enabled: 0
     Source: {fileID: 0}
@@ -3121,10 +3114,9 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 7458025220471783486
-      type: {class: EnumToStringConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
+    - rid: 5183705893420400703
+      type: {class: 'EnumToStringConverter`1[[UIBindings.Develop.EClass, UIBindings.Develop]]', ns: UIBindings, asm: UIBindings}
+      data: 
 --- !u!114 &770804282
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4256,7 +4248,6 @@ MonoBehaviour:
     - rid: 7690191598759182412
       type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 1
         StepValue: 0.5
         FalseValue: 1
         TrueValue: 10
@@ -4619,7 +4610,6 @@ MonoBehaviour:
     - rid: 7458025220471783483
       type: {class: IntToStringConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         ValueOnParseError: 0
 --- !u!114 &1183015647
 MonoBehaviour:
@@ -5063,7 +5053,7 @@ MonoBehaviour:
       ScaledTime: 1
     _converters:
       Converters:
-      - rid: 7458025220471783485
+      - rid: 5183705893420400704
   ColorBinding:
     Enabled: 0
     Source: {fileID: 0}
@@ -5079,10 +5069,9 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 7458025220471783485
-      type: {class: EnumToStringConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
+    - rid: 5183705893420400704
+      type: {class: 'EnumToStringConverter`1[[UIBindings.Develop.ERace, UIBindings.Develop]]', ns: UIBindings, asm: UIBindings}
+      data: 
 --- !u!114 &1256106076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6445,6 +6434,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34a9491de0b4cdc4f8dfdfd37ca35fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  TestStr: 
   pixelArtTexture: {fileID: -7997457369567893724, guid: 0000000000000000d000000000000000, type: 0}
   DelayedCanvas: {fileID: 2095982995}
   TestSprite: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
@@ -6918,8 +6908,7 @@ MonoBehaviour:
     RefIds:
     - rid: 7690191633970888768
       type: {class: InvertConverter, ns: UIBindings, asm: UIBindings}
-      data:
-        ReverseMode: 0
+      data: 
 --- !u!1 &1832465113
 GameObject:
   m_ObjectHideFlags: 0
@@ -7887,7 +7876,6 @@ MonoBehaviour:
     - rid: 7690191678907613271
       type: {class: SelectColorConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         Values:
         - Key: 0
           Value: {r: 1, g: 0, b: 0, a: 1}
@@ -7899,7 +7887,6 @@ MonoBehaviour:
     - rid: 7690191678907613272
       type: {class: SelectSpriteConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         Values:
         - Key: 1
           Value: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
@@ -8495,6 +8482,30 @@ MonoBehaviour:
       ScaledTime: 1
     _converters:
       Converters: []
+  Enum2Binding:
+    Enabled: 1
+    Source: {fileID: 0}
+    SourceType: 
+    BindToType: 0
+    Path: 
+    Update:
+      Mode: 2
+      Delay: 0
+      ScaledTime: 1
+    _converters:
+      Converters: []
+  ComplexClassBinding:
+    Enabled: 1
+    Source: {fileID: 0}
+    SourceType: 
+    BindToType: 0
+    Path: 
+    Update:
+      Mode: 2
+      Delay: 0
+      ScaledTime: 1
+    _converters:
+      Converters: []
   WriteEnumValue: 0
   references:
     version: 2
@@ -8502,7 +8513,6 @@ MonoBehaviour:
     - rid: 7690191692283510847
       type: {class: FloatToBoolConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 1
         StepValue: 0.5
         FalseValue: 0
         TrueValue: 10
@@ -8778,14 +8788,12 @@ MonoBehaviour:
     - rid: 7690191598759182411
       type: {class: BoolToStringConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         TrueString: True
         FalseString: False
         ValueOnParseError: 0
     - rid: 7690191678907613275
       type: {class: SelectColorConverter, ns: UIBindings, asm: UIBindings}
       data:
-        ReverseMode: 0
         Values:
         - Key: 0
           Value: {r: 0.27450982, g: 0.3764706, b: 0.4862745, a: 1}
@@ -9087,6 +9095,10 @@ PrefabInstance:
     - target: {fileID: 3505892581349428615, guid: fe9e3484a48af8f41b3ef1d295fef63b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6259381660403082547, guid: fe9e3484a48af8f41b3ef1d295fef63b, type: 3}
+      propertyPath: CallBinding.Path
+      value: Select
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

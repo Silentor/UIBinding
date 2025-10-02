@@ -253,7 +253,7 @@ namespace UIBindings.Editor
                                             ? typeInfo.FullType.MakeGenericType( convertFromType ) 
                                             : typeInfo.FullType;
                         var newIndex     = convertersProp.arraySize;
-                        var newConverter = (ConverterBase)Activator.CreateInstance(converterType);
+                        var newConverter = (ConverterBase)Activator.CreateInstance(converterType );
                         convertersProp.InsertArrayElementAtIndex(newIndex);
                         convertersProp.GetArrayElementAtIndex(newIndex).managedReferenceValue = newConverter;
                         convertersProp.serializedObject.ApplyModifiedProperties();

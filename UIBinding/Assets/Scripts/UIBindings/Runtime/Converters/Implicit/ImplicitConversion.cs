@@ -40,7 +40,7 @@ namespace UIBindings.Converters
         
         public static bool IsConversionSupported( Type inputType, Type convertTo )
         {
-            if ( inputType.IsEnum )
+            if ( inputType.IsEnum && Array.IndexOf( EnumConverterInfo.OutputTypes, convertTo ) >= 0 )
                 return true;
 
             foreach ( var converterInfo in ConverterInfoCache )
@@ -56,7 +56,7 @@ namespace UIBindings.Converters
 
         public static bool IsConversionSupported( Type inputType, Predicate<Type> isSupportedType )
         {
-            if ( inputType.IsEnum )
+            if ( inputType.IsEnum && Array.Exists( EnumConverterInfo.OutputTypes, isSupportedType ) )
                 return true;
 
             foreach ( var converterInfo in ConverterInfoCache )
