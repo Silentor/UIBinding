@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 using UIBindings.Adapters;
 using UIBindings.Converters;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using UnityEngine;
-using UnityEngine.Assertions;
 using Debug = UnityEngine.Debug;
 using Object = System.Object;
 
@@ -114,11 +109,6 @@ namespace UIBindings
                 var converters = _converters.Converters;
                 if ( converters.Length > 0 )
                 {
-                    for ( int i = 0; i < converters.Length; i++ )   //Some converters can be reversed
-                        converters[ i ] = converters[ i ].ReverseMode ? converters[ i ].GetReverseConverter() : converters[ i ];
-
-                    timer.AddMarker( "ReverseConv" );
-
                     //Make each converter know about prev data source
                     for ( var i = 0; i < converters.Length; i++ )
                     {
@@ -131,7 +121,7 @@ namespace UIBindings
                             return;
                         }
                         lastDataSource = currentConverter;
-                        timer.AddMarker( $"InitConv{i}" );
+                        timer.AddMarker( "InitConv" );
                     }
                 }
 

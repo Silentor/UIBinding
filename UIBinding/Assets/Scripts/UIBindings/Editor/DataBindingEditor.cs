@@ -154,7 +154,7 @@ namespace UIBindings.Editor
                 if ( convertersProp.isExpanded )
                 {
                     var sourcePropertyType = BindingEditorUtils.GetSourceProperty( binding, host )?.PropertyType;
-                    var sourceType         = PathAdapter.GetAdaptedType( sourcePropertyType );
+                    var sourceType         = sourcePropertyType;
   
                     //Draw every converter
                     Type prevType = sourceType;
@@ -165,7 +165,7 @@ namespace UIBindings.Editor
                             var converterHeight = DrawConverterField( ref position, i, convertersProp, prevType, binding, host );
                             _convertersFieldHeight += converterHeight;
                             var converter = binding.Converters[ i ];
-                            prevType = converter != null ? ConverterBase.GetConverterTypeInfo( converter ).output : null;
+                            prevType = converter != null ? ConverterBase.GetConverterTypeInfo( converter ).Output : null;
                             //position = position.Translate( new Vector2( 0, converterHeight ) );
                         }
                     }
@@ -193,24 +193,19 @@ namespace UIBindings.Editor
 
 #region Converters stuff
 
-        private static readonly IReadOnlyList<ConverterTypeInfo> AllConverterTypes = PrepareTypeCache();
+        private static readonly IReadOnlyList<ConverterBase.TypeInfo> AllConverterTypes = PrepareTypeCache();
         private float _convertersFieldHeight;
 
-        private static IReadOnlyList<ConverterTypeInfo> PrepareTypeCache( )
+        private static IReadOnlyList<ConverterBase.TypeInfo> PrepareTypeCache( )
         {
-            var allConverters = TypeCache.GetTypesDerivedFrom<ConverterBase>();
-            var result        = new List<ConverterTypeInfo>( allConverters.Count );
+            var allConverters = TypeCache.GetTypesDerivedFrom( typeof(ConverterBase<,>) );  //Only converters with known input/output types, ignore very custom ones (like implicit)
+            var result        = new List<ConverterBase.TypeInfo>( allConverters.Count );
             foreach ( var converter in allConverters )
             {
                 if ( !converter.IsAbstract )
                 {
                     var typeInfo = ConverterBase.GetConverterTypeInfo( converter );
-                    result.Add( new ConverterTypeInfo(
-                            typeInfo.input,
-                            typeInfo.output,
-                            typeInfo.template,
-                            converter
-                    ));
+                    result.Add( typeInfo);
                 }
             }
 
@@ -221,7 +216,7 @@ namespace UIBindings.Editor
         {
             if ( converters.Count > 0 )
                 return GetLastConverterOutputType( converters );
-            return PathAdapter.GetAdaptedType( BindingEditorUtils.GetSourceProperty( binding, host )?.PropertyType );
+            return BindingEditorUtils.GetSourceProperty( binding, host )?.PropertyType;
         }
 
         private static Type GetLastConverterOutputType( IReadOnlyList<ConverterBase> converters )
@@ -229,7 +224,7 @@ namespace UIBindings.Editor
             if ( converters.Count > 0 )
             {
                 var lastConverter = converters[^1];
-                return ConverterBase.GetConverterTypeInfo( lastConverter ).output;
+                return ConverterBase.GetConverterTypeInfo( lastConverter ).Output;
             }
 
             return null;
@@ -252,11 +247,13 @@ namespace UIBindings.Editor
                 var menu = new GenericMenu();
                 foreach (var typeInfo in compatibleTypes)
                 {
-                    menu.AddItem(new GUIContent(typeInfo.TypeInfo.FullType.Name), false, () =>
+                    menu.AddItem(new GUIContent(typeInfo.FullTypeName), false, () =>
                     {
+                        var converterType = typeInfo.IsInputGenericParam 
+                                            ? typeInfo.FullType.MakeGenericType( convertFromType ) 
+                                            : typeInfo.FullType;
                         var newIndex     = convertersProp.arraySize;
-                        var newConverter = (ConverterBase)Activator.CreateInstance(typeInfo.TypeInfo.FullType);
-                        newConverter.ReverseMode = typeInfo.IsReverseMode;
+                        var newConverter = (ConverterBase)Activator.CreateInstance(converterType);
                         convertersProp.InsertArrayElementAtIndex(newIndex);
                         convertersProp.GetArrayElementAtIndex(newIndex).managedReferenceValue = newConverter;
                         convertersProp.serializedObject.ApplyModifiedProperties();
@@ -278,23 +275,22 @@ namespace UIBindings.Editor
             convertersProp.serializedObject.ApplyModifiedProperties();
         }
 
-        private static IReadOnlyList<ConverterType> GetCompatibleConverters ( Type sourceType, bool isTwoWayBinding )
+        private static IReadOnlyList<ConverterBase.TypeInfo> GetCompatibleConverters ( Type sourceType, bool isTwoWayBinding )
         {
-            var result = new List<ConverterType>();
+            var result = new List<ConverterBase.TypeInfo>();
             foreach ( var converter in AllConverterTypes )
             {
-                var isConverterTwoWay = converter.TemplateType == typeof(SimpleConverterTwoWayBase<,>);
-
+                var isConverterTwoWay = converter.Mode == ConverterBase.EMode.TwoWay;
                 if( isTwoWayBinding && !isConverterTwoWay )
                     continue;                       //Skip one way converters in two way binding
 
-                if ( converter.InputType == sourceType || ImplicitConversion.IsConversionSupported( sourceType, converter.InputType ))
+                if ( converter.Input == sourceType || ImplicitConversion.IsConversionSupported( sourceType, converter.Input ))
                 {
-                    result.Add( new ConverterType( converter ) );       //Direct mode
+                    result.Add( converter );       
                 }
-                else if ( isConverterTwoWay && (converter.OutputType == sourceType || ImplicitConversion.IsConversionSupported( sourceType, converter.OutputType )))
+                else if ( converter.IsInputEnumParam && sourceType.IsEnum ) //Generic enum converter support
                 {
-                    result.Add( new ConverterType( converter ) { IsReverseMode = true } );  //Reverse mode
+                    result.Add( converter );
                 }
             }
 
@@ -327,13 +323,10 @@ namespace UIBindings.Editor
             }
 
             var title =  converter.GetType().Name.Replace( "Converter", "" ) ;
-            if( converter.ReverseMode )
-                title += " (R)";
-
             var typeInfo  = ConverterBase.GetConverterTypeInfo( converter );
             var direction = converter.IsTwoWay ? "<->" : "->";
             var isValid = BindingEditorUtils.IsConverterValid( prevType, converter, binding.IsTwoWay );
-            var infoStr = $"{typeInfo.input.Name} {direction} {typeInfo.output.Name}";
+            var infoStr = $"{typeInfo.Input.Name} {direction} {typeInfo.Output.Name}";
             var info = new GUIContent( infoStr, tooltip: !isValid ? isValid.ErrorMessage : null );
         
             EditorGUI.LabelField( position, new GUIContent(title), info, isValid ? Resources.DefaultLabel : Resources.ErrorLabel );
@@ -361,9 +354,6 @@ namespace UIBindings.Editor
                 {
                     do
                     {
-                        //Skip reserved properties
-                        if( insideIterator.name == nameof(ConverterBase.ReverseMode) ) continue;
-
                         EditorGUI.BeginChangeCheck();
                         EditorGUI.PropertyField(position, insideIterator, true);
                         isChanged |= EditorGUI.EndChangeCheck();
@@ -378,34 +368,6 @@ namespace UIBindings.Editor
             }
 
             return converterHeight;
-        }
-
-       
-        public readonly struct ConverterTypeInfo
-        {
-            public readonly Type InputType;
-            public readonly Type OutputType;
-            public readonly Type TemplateType;
-            public readonly Type FullType;
-
-            public ConverterTypeInfo(Type inputType, Type outputType, Type templateType, Type fullType)
-            {
-                InputType    = inputType;
-                OutputType   = outputType;
-                TemplateType = templateType;
-                FullType     = fullType;
-            }
-        }
-
-        public struct ConverterType
-        {
-            public readonly ConverterTypeInfo TypeInfo;
-            public          bool              IsReverseMode;
-
-            public ConverterType( ConverterTypeInfo typeInfo ) : this()
-            {
-                TypeInfo = typeInfo;
-            }
         }
 
 #endregion

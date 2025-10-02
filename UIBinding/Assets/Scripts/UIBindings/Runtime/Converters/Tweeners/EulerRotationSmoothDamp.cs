@@ -14,11 +14,6 @@ namespace UIBindings.Tweeners
 
         public override Boolean IsTwoWay => false;
 
-        public override ConverterBase GetReverseConverter( )
-        {
-            throw new NotImplementedException();
-        }
-
         public EResult TryGetValue(out Vector3 value )
         {
             var result = _prev.TryGetValue( out var sourceValue );

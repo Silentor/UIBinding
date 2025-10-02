@@ -7,6 +7,7 @@ namespace UIBindings.Editor
 {
     /// <summary>
     /// Editor property path parser
+    /// TODO use PathProcessor from runtime, its up to date. PathParser is property-centric
     /// </summary>
     public class PathParser
     {

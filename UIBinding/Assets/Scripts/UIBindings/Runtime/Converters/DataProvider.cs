@@ -3,7 +3,7 @@
 namespace UIBindings
 {
     /// <summary>
-    /// Item of data binding pipeline. Always has one input and possible has many outputs. Always implements at least one <see cref="IDataReader{TOutput}"/>
+    /// Item of data binding pipeline. Always has one input <see cref="InputType"/> and possible has many outputs. Always implements at least one <see cref="IDataReader{TOutput}"/>
     /// </summary>
     public abstract class DataProvider
     {

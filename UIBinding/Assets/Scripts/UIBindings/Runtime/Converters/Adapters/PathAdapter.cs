@@ -14,7 +14,7 @@ namespace UIBindings.Adapters
     /// 2) Property adapter to read Player property from source object
     /// 3) Method adapter to call GetInventory() method on Player object
     /// 4) Property adapter to read Items property from Inventory object
-    /// 5) Collection adapter to read [0] item from Items collection
+    /// 5) Collection adapter to read [0] (or range??) item from Items collection
     /// 6) Property adapter to read ItemName property from Item object
     /// </summary>
     public abstract class PathAdapter : DataProvider
@@ -157,22 +157,18 @@ namespace UIBindings.Adapters
         /// </summary>
         /// <param name="propertyType"></param>
         /// <returns></returns>
-        public static Type GetAdaptedType( Type propertyType )
-        {
-            if ( propertyType == null ) return null;
-            if ( propertyType.IsEnum ) return typeof(StructEnum);
-            return propertyType;
-        }
+        // public static Type GetAdaptedType( Type propertyType )
+        // {
+        //     if ( propertyType == null ) return null;
+        //     //if ( propertyType.IsEnum ) return typeof(StructEnum); TODO go for generic adapter, no need to convert enum to StructEnum (only if Binding<StructEnum> used)
+        //     return propertyType;
+        // }
 
         public static PathAdapter GetPropertyAdapter( PathAdapter sourceAdapter, PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             var  sourceType   = propertyInfo.DeclaringType;
             var  propertyType = propertyInfo.PropertyType;
-            Type complexAdapterType;
-            // if( propertyType.IsEnum )
-            //     complexAdapterType = typeof(StructEnumPropertyAdapter<>).MakeGenericType( sourceType );
-            // else
-                complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
+            var complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
             var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, propertyInfo, sourceAdapter, isTwoWayBinding, notifyPropertyChanged );
             return result;
         }
@@ -181,11 +177,7 @@ namespace UIBindings.Adapters
         {
             var  sourceType   = propertyInfo.DeclaringType;
             var  propertyType = propertyInfo.PropertyType;
-            Type complexAdapterType;
-            // if( propertyType.IsEnum )
-            //     complexAdapterType = typeof(StructEnumPropertyAdapter<>).MakeGenericType( sourceType );
-            // else
-            complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
+            var complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
             var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, propertyInfo, sourceObject, isTwoWayBinding, notifyPropertyChanged );
             return result;
         }

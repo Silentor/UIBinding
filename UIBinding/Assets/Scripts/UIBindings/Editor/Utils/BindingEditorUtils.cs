@@ -165,7 +165,7 @@ namespace UIBindings.Editor.Utils
             if( sourceProperty == null )
                 return ValidationResult.Invalid( "Source property not found" );
 
-            var sourcePropertyType = PathAdapter.GetAdaptedType( sourceProperty.PropertyType );
+            var sourcePropertyType = sourceProperty.PropertyType;
             Predicate<Type> isTargetCompatible = binding.IsCompatibleWith;
             var converters = binding.Converters;
             var isTwoWayBinding = binding.IsTwoWay;
@@ -230,6 +230,7 @@ namespace UIBindings.Editor.Utils
             return ValidationResult.Valid;
         }
 
+        [Obsolete("No property-centrism")]
         public static PropertyInfo GetSourceProperty( DataBinding binding, UnityEngine.Object host )
         {
             var (sourceType, _) = BindingUtils.GetSourceTypeAndObject( binding, host );

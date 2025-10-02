@@ -3,7 +3,7 @@
 namespace UIBindings.Runtime
 {
     /// <summary>
-    /// To pass around any enums without boxing.
+    /// To pass around any enums without boxing and preserve type information
     /// </summary>
     public readonly struct StructEnum : IEquatable<StructEnum>
     {

@@ -162,10 +162,10 @@ namespace UIBindings
         
 
 
-        private readonly List<object>               _sourceCopy = new List<object>();
+        private readonly List<object>               _sourceCopy = new ();
         private          ViewCollection             _sourceCollection;
-        private readonly         List<Object>               _processedList = new List<System.Object>();
-        private readonly         List<Object>               _processedCopy = new List<System.Object>();
+        private readonly         List<Object>               _processedList = new ();
+        private readonly         List<Object>               _processedCopy = new ();
         private             PathAdapter _pathReader;
         private             Boolean _isNeedPolling = true;
         private EDataSourceType _sourceType;

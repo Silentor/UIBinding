@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UIBindings.Runtime;
-using UIBindings.Runtime.Utils;
 
 namespace UIBindings.Converters
 {
     public static class ImplicitConversion
     {
         /// <summary>
-        /// Get converter to convert source output to given type
+        /// Get converter to convert source output to given type. It's for implicit conversions, without user specifying converter explicitly.
         /// </summary>
         /// <param name="source"></param>
         /// <param name="convertTo"></param>
@@ -17,6 +15,18 @@ namespace UIBindings.Converters
         public static DataProvider GetConverter( DataProvider source, Type convertTo )    
         {
             var sourceType = source.GetType();
+            if(sourceType.IsGenericType )
+            {
+                // Special case for enum, we cannot prepare converters for all enum types.
+                var enumType = GetOutputTypes( sourceType ).FirstOrDefault( t => t.IsEnum ); 
+                if ( enumType != null && Array.IndexOf( EnumConverterInfo.OutputTypes, convertTo ) >= 0 )
+                {
+                    var enumConverterTypeDef = typeof(ImplicitEnumConverter<>);
+                    var enumConverterType    = enumConverterTypeDef.MakeGenericType( enumType );
+                    var instance             = (DataProvider)Activator.CreateInstance( enumConverterType, source );
+                    return instance;
+                }
+            }
             foreach ( var converterInfo in ConverterInfoCache )
             {
                 if( converterInfo.DataReaderType.IsAssignableFrom( sourceType ) && Array.IndexOf( converterInfo.OutputTypes, convertTo ) >= 0 )
@@ -28,11 +38,14 @@ namespace UIBindings.Converters
             return null;
         }
         
-        public static bool IsConversionSupported( Type sourceType, Type convertTo )
+        public static bool IsConversionSupported( Type inputType, Type convertTo )
         {
+            if ( inputType.IsEnum )
+                return true;
+
             foreach ( var converterInfo in ConverterInfoCache )
             {
-                if( converterInfo.InputType == sourceType && Array.IndexOf( converterInfo.OutputTypes, convertTo ) >= 0 )
+                if( converterInfo.InputType == inputType && Array.IndexOf( converterInfo.OutputTypes, convertTo ) >= 0 )
                 {
                     return true;
                 }
@@ -41,11 +54,14 @@ namespace UIBindings.Converters
             return false;
         }
 
-        public static bool IsConversionSupported( Type sourceType, Predicate<Type> isSupportedType )
+        public static bool IsConversionSupported( Type inputType, Predicate<Type> isSupportedType )
         {
+            if ( inputType.IsEnum )
+                return true;
+
             foreach ( var converterInfo in ConverterInfoCache )
             {
-                if( converterInfo.InputType == sourceType && Array.Exists( converterInfo.OutputTypes, isSupportedType ) )
+                if( converterInfo.InputType == inputType && Array.Exists( converterInfo.OutputTypes, isSupportedType ) )
                 {
                     return true;
                 }
@@ -62,6 +78,7 @@ namespace UIBindings.Converters
         }
 
         private static readonly ImplicitConverterInfo[] ConverterInfoCache = InitTypeCache();
+        private static readonly EnumImplicitConverterInfo EnumConverterInfo = new ( typeof(ImplicitEnumConverter<>) );
 
         private static ImplicitConverterInfo[] InitTypeCache( )
         {
@@ -73,7 +90,6 @@ namespace UIBindings.Converters
                            new ImplicitConverterInfo( typeof(byte), typeof(ImplicitByteConverter),  static inp => new ImplicitByteConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(double), typeof(ImplicitDoubleConverter),  static inp => new ImplicitDoubleConverter( inp ) ),
                            new ImplicitConverterInfo( typeof(long), typeof(ImplicitLongConverter), static inp => new ImplicitLongConverter( inp ) ),
-                           new ImplicitConverterInfo( typeof(StructEnum), typeof(ImplicitEnumConverter), static inp => new ImplicitEnumConverter( inp ) ),
                    };
         }
 
@@ -90,6 +106,16 @@ namespace UIBindings.Converters
                 DataReaderType = typeof(IDataReader<>).MakeGenericType( inputType );
                 OutputTypes = GetOutputTypes( converterType ).ToArray();
                 ConverterFactory = converterFactory;
+            }
+        }
+
+        private readonly struct EnumImplicitConverterInfo
+        {
+            public readonly Type[] OutputTypes;
+
+            public EnumImplicitConverterInfo( Type converterType )
+            {
+                OutputTypes = GetOutputTypes( converterType ).ToArray();
             }
         }
     }

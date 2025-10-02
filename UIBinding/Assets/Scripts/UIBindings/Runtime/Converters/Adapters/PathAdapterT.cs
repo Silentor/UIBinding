@@ -6,7 +6,7 @@ using Unity.Profiling;
 namespace UIBindings.Adapters
 {
     /// <summary>
-    /// Path adapter to read value from some source
+    /// Path adapter to read some value from some source object or from previous PathAdapter.
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TValue"></typeparam>
@@ -35,7 +35,7 @@ namespace UIBindings.Adapters
         /// <returns></returns>
         public EResult TryGetValue(out TValue value )
         {
-            ReadPropertyMarker.Begin( NameofTypes );
+            ReadPropertyMarker.Begin( ParameterTypes );
 
             TSource sourceObject;
 
@@ -90,7 +90,7 @@ namespace UIBindings.Adapters
         {
             Assert.IsTrue( IsTwoWay );
 
-            WritePropertyMarker.Begin( NameofTypes );
+            WritePropertyMarker.Begin( ParameterTypes );
 
             TSource sourceObject;
             if ( _sourceAdapter == null )   //First adapter mode, source object is explicit
@@ -107,6 +107,8 @@ namespace UIBindings.Adapters
             WritePropertyMarker.End();
         }
 
+        public override string ToString( ) => $"{GetType().Name}{ParameterTypes} (IsTwoWay: {IsTwoWay})";
+
         // Typed source adapter (base.SourceAdapter is untyped)
         private readonly IDataReader<TSource> _sourceAdapter;
         private readonly IDataReadWriter<TSource> _targetToSourceAdapter;
@@ -117,7 +119,7 @@ namespace UIBindings.Adapters
         // To detect value changes
         private TValue  _lastValue;
 
-        private static readonly string NameofTypes = $"<{typeof(TSource).Name},{typeof(TValue).Name}>";
+        private static readonly string ParameterTypes = $"<{typeof(TSource).Name},{typeof(TValue).Name}>";
 
         protected abstract TValue GetValue( TSource sourceObject);
         protected abstract void SetValue( TSource sourceObject, TValue value );

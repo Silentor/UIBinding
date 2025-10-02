@@ -6,22 +6,22 @@ using UnityEngine;
 
 namespace UIBindings
 {
-    public class EnumToStringConverter : SimpleConverterOneWayBase<StructEnum, string>
+    public class EnumToStringConverter<TEnum> : SimpleConverterOneWayBase<TEnum, string> where TEnum : struct, Enum
     {
-        public override string Convert(StructEnum value)
+        public override string Convert(TEnum value)
         {
-            if ( _cachedValues.TryGetValue( value.Value, out var strValue ) )
+            if ( _cachedValues.TryGetValue( value, out var strValue ) )
                 return strValue;
 
-            var convertedValue = Enum.GetName( value.EnumType, value.Value );
+            var convertedValue = Enum.GetName( typeof(TEnum), value );
             if ( convertedValue == null )
             {
-                convertedValue = value.Value.ToString( CultureInfo.InvariantCulture );       
+                convertedValue = value.ToString( );       
             }
-            _cachedValues.Add( value.Value, convertedValue );
+            _cachedValues.Add( value, convertedValue );
             return convertedValue;
         }
 
-        private readonly Dictionary<int, string> _cachedValues = new ();
+        private readonly Dictionary<TEnum, string> _cachedValues = new ();
     }
 }

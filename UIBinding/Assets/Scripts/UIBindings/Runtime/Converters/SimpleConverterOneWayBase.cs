@@ -13,11 +13,6 @@ namespace UIBindings
 
         public abstract TOutput Convert( TInput value );
 
-        public override ConverterBase GetReverseConverter( )
-        {
-            throw new NotImplementedException( "Not supported for one way converters" );
-        }
-
         public virtual EResult TryGetValue( out TOutput value )
         {
             var result = _prev.TryGetValue( out var prevValue );

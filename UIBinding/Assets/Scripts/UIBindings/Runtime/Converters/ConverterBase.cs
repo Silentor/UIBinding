@@ -11,9 +11,6 @@ namespace UIBindings
     [Serializable]
     public abstract class ConverterBase : DataProvider
     {
-        //Two way converters can  be used output->input if needed
-        public bool ReverseMode;          //todo consider this
-        
         public abstract Type OutputType { get; }
 
         /// <summary>
@@ -25,30 +22,33 @@ namespace UIBindings
         /// <returns>False if attach failed</returns>
         public abstract Boolean InitAttachToSource(  DataProvider prevConverter, Boolean isTwoWay, Boolean unscaledTime );
 
-        public abstract ConverterBase GetReverseConverter( );
-
-        public static (Type input, Type output, Type template) GetConverterTypeInfo( ConverterBase converter )
+        public static TypeInfo GetConverterTypeInfo( ConverterBase converter )
         {
             var rawInfo = GetConverterTypeInfo( converter.GetType() );
-            if ( converter.ReverseMode )
-                return new ValueTuple<Type, Type, Type>( rawInfo.output, rawInfo.input, rawInfo.template );
             return rawInfo;
         }
 
-        public static (Type input, Type output, Type template) GetConverterTypeInfo( Type converterType )
+        public static TypeInfo GetConverterTypeInfo( Type converterType )
         {
             Assert.IsTrue( typeof(ConverterBase).IsAssignableFrom( converterType ) );
 
+            var originalType = converterType;
             while (converterType.BaseType != null)
             {
                 converterType = converterType.BaseType;
-                if (converterType.IsGenericType 
-                    && (converterType.GetGenericTypeDefinition() == typeof(SimpleConverterOneWayBase<,>) || converterType.GetGenericTypeDefinition() == typeof(SimpleConverterTwoWayBase<,>) || converterType.GetGenericTypeDefinition() == typeof(ConverterBase<,>)))
+                if (converterType.IsGenericType && converterType.GetGenericTypeDefinition() == typeof(SimpleConverterTwoWayBase<,>))
                 {
                     var inputType  = converterType.GetGenericArguments()[0];
                     var outputType = converterType.GetGenericArguments()[1];
                     var template   = converterType.GetGenericTypeDefinition();
-                    return ( inputType, outputType, template );
+                    return new TypeInfo( inputType, outputType, template, originalType, EMode.TwoWay );
+                }
+                if (converterType.IsGenericType && converterType.GetGenericTypeDefinition() == typeof(ConverterBase<,>))
+                {
+                    var inputType  = converterType.GetGenericArguments()[0];
+                    var outputType = converterType.GetGenericArguments()[1];
+                    var template   = converterType.GetGenericTypeDefinition();
+                    return new TypeInfo( inputType, outputType, template, originalType, EMode.OneWay );
                 }
             }
             throw new InvalidOperationException("Base type was not found");
@@ -57,6 +57,56 @@ namespace UIBindings
         public override String ToString( )
         {
             return $"{GetType().Name} (Input: {InputType.Name}, Output: {OutputType.Name}, IsTwoWay: {IsTwoWay})";
+        }
+
+        public enum EMode
+        {
+            OneWay,
+            TwoWay,
+        }
+
+        /// <summary>
+        /// Editor only, so allocations is not a big deal
+        /// </summary>
+        public readonly struct TypeInfo 
+        {
+            public Type  Input    { get; }
+            public bool  IsInputGenericParam { get; } //If Input is generic parameter
+            public bool  IsInputEnumParam { get; }  //If Input is generic parameter and has Enum constraint
+            public Type  Output   { get; }
+            public Type  Template { get; }
+            public Type  FullType { get; }
+            public string FullTypeName { get; }
+            public EMode Mode      { get; }
+
+            public TypeInfo( Type input, Type output, Type template, Type fullType, EMode mode )
+            {
+                Input    = input;
+                IsInputGenericParam = false;
+                IsInputEnumParam = false;
+                Output   = output;
+                Template = template;
+                FullType = fullType;
+                Mode         = mode;
+
+                if ( Input.IsGenericTypeParameter )
+                {
+                    IsInputGenericParam = true;
+                    var constraints = Input.GetGenericParameterConstraints();             
+                    IsInputEnumParam = Array.Exists( constraints, c => c == typeof(Enum) );
+                }
+
+                if ( FullType.IsGenericType )
+                {
+                    var backtickIndex = FullType.Name.IndexOf('`');
+                    if ( backtickIndex > 0 )
+                        FullTypeName = FullType.Name[ .. backtickIndex ];
+                    else
+                        FullTypeName = FullType.Name;
+                }
+                else
+                    FullTypeName = FullType.Name;
+            }
         }
     }
 
@@ -67,7 +117,7 @@ namespace UIBindings
         public override Type OutputType => typeof(TOutput);
 
         //Returns false if attach to source failed, probably incompatible types
-        public override Boolean InitAttachToSource(   [NotNull] DataProvider prevConverter, Boolean isTwoWay, Boolean unscaledTime )
+        public override Boolean InitAttachToSource( [NotNull] DataProvider prevConverter, Boolean isTwoWay, Boolean unscaledTime )
         {
             if ( prevConverter == null ) throw new ArgumentNullException( nameof(prevConverter) );
             if ( prevConverter is IDataReader<TInput> properSource )

@@ -828,10 +828,11 @@ PlayerSettings:
     Android: 0
     Standalone: 0
   il2cppCodeGeneration:
-    Android: 1
+    Android: 0
     Standalone: 1
   il2cppStacktraceInformation: {}
-  managedStrippingLevel: {}
+  managedStrippingLevel:
+    Android: 3
   incrementalIl2cppBuild: {}
   suppressCommonWarnings: 1
   allowUnsafeCode: 0
