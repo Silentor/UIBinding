@@ -23,7 +23,7 @@ namespace UIBindings.Runtime
     /// <typeparam name="TItem"></typeparam>
     public class CollectionItemViewModel<TItem> : CollectionItemViewModel
     {
-        public TItem Source { get; private set; }
+        public TItem SourceItem { get; private set; }
 
         /// <summary>
         /// Initializes the ViewModel with the given item.
@@ -31,7 +31,7 @@ namespace UIBindings.Runtime
         /// <param name="collectionItem">The item to use.</param>
         public override void Initialize( Object collectionItem)
         {
-            Source = (TItem)Convert.ChangeType( collectionItem, typeof(TItem) );
+            SourceItem = (TItem)Convert.ChangeType( collectionItem, typeof(TItem) );
             OnPropertyChangedAll();
         }
 
@@ -40,7 +40,7 @@ namespace UIBindings.Runtime
         /// </summary>
         public void Clear()
         {
-            Source = default;
+            SourceItem = default;
         }
     }
 }

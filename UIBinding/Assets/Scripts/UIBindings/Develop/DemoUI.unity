@@ -6651,7 +6651,7 @@ MonoBehaviour:
     Source: {fileID: 1133634722}
     SourceType: 
     BindToType: 0
-    Path: Heroes
+    Path: HeroesManager.Heroes
     Update:
       Mode: 2
       Delay: 0

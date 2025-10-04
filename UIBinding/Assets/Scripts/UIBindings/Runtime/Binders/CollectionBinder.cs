@@ -65,6 +65,7 @@ namespace UIBindings
         private void OnItemChanged(CollectionBinding sender, Int32 changedItemIndex, System.Object changedObject )
         {
             var viewItem = _visibleViews[changedItemIndex];
+            TryToInjectViewModel( viewItem, changedObject );
             if( sender.BindViewItemMethod != null )
                 sender.BindViewItemMethod( changedObject, viewItem );
         }

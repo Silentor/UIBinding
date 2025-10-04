@@ -1,27 +1,30 @@
-using System;
 using UIBindings.Runtime;
 using UnityEngine;
-using Object = System.Object;
 
 namespace UIBindings.Develop
 {
     public class HeroPortraitVM : CollectionItemViewModel<Hero>
     {
         private PartyWindowVM _partyWindowVM;
-        public Sprite Portrait => Source.RaceStats.Portrait;
-        public string Name => Source.Name;
+        public Sprite Portrait => SourceItem.RaceStats.Portrait;
+        public string Name => SourceItem.Name;
 
-        public bool IsSelected => _partyWindowVM.SelectedHero == Source;
+        public bool IsSelected => _partyWindowVM.SelectedHero == SourceItem;
 
         public void Select( )
         {
-            _partyWindowVM.SelectedHero = Source;
-            Debug.Log( $"Selected {Source.Name}" );
+            _partyWindowVM.SelectedHero = SourceItem;
+            Debug.Log( $"Selected {SourceItem.Name}" );
         }
 
         private void Awake( )
         {
             _partyWindowVM = GetComponentInParent<PartyWindowVM>();
+            _partyWindowVM.PropertyChanged += ( sender, propertyName ) =>
+            {
+                if ( propertyName == nameof( PartyWindowVM.SelectedHero ) )                    
+                    OnPropertyChanged( nameof( IsSelected ) );
+            };
         }
     }
 }
