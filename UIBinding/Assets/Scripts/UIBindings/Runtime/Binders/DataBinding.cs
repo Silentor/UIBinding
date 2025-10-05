@@ -37,7 +37,7 @@ namespace UIBindings
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public void Subscribe( int updateOrder = 0 )
         {
-            if( !Enabled || !_isValid || _isSubscribed ) return;
+            if( !Enabled || !_isInited || _isSubscribed ) return;
 
             switch ( Update.Mode )
             {
@@ -51,7 +51,6 @@ namespace UIBindings
 
             _currentUpdateMode = Update.Mode;
             _isValueInitialized = false;        //Source can change while we are not subscribed, so we need to re-read it
-
             _isSubscribed = true;
 
             OnSubscribe();
@@ -63,7 +62,7 @@ namespace UIBindings
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public void Unsubscribe()
         {
-            if( !Enabled || !_isValid || !_isSubscribed ) return;
+            if( !Enabled || !_isInited || !_isSubscribed ) return;
 
             switch ( _currentUpdateMode )
             {
@@ -85,14 +84,14 @@ namespace UIBindings
         /// </summary>
         public void ManuallyCheckChanges( )
         {
-            if ( !Enabled || !_isValid || !_isSubscribed ) return;
+            if ( !Enabled || !_isInited || !_isSubscribed ) return;
 
             CheckChangesInternal( );
         }
 
 
         protected Boolean                _sourceValueChanged;
-        protected bool                   _isValid;
+        protected bool                   _isInited;
         protected Boolean                _isSubscribed;
         protected bool                   _isValueInitialized;
         private   EUpdateMode            _currentUpdateMode = EUpdateMode.Manual;
@@ -196,7 +195,7 @@ namespace UIBindings
             }
         }
 
-        public abstract bool   IsRuntimeValid { get; }
+        public abstract bool   IsInited { get; }
 
         public override String GetFullRuntimeInfo( )
         {

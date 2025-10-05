@@ -26,7 +26,7 @@ namespace UIBindings.Adapters
                         property.GetSetMethod( true ) );
         }
 
-        public PropertyAdapter(PropertyInfo property, object sourceObject, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObject, isTwoWayBinding, notifyPropertyChanged )
+        public PropertyAdapter(PropertyInfo property, Type sourceObjectType, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObjectType, isTwoWayBinding, notifyPropertyChanged )
         {
             Assert.IsTrue( property.PropertyType  == typeof(TProperty) );
             MemberName = property.Name;

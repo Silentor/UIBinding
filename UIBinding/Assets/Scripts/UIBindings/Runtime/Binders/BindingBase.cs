@@ -10,18 +10,43 @@ namespace UIBindings
     [Serializable]
     public abstract class BindingBase
     {
-        public        Boolean                   Enabled             = true;                        //Checked once on start!
+        //Is binding works at all, checked once on start
+        public        Boolean                   Enabled             = true;                        
 
-        //Reference to Unity source object (if BindToType is false)
+        //Reference to Unity source object
         public        UnityEngine.Object        Source;
-        //Type of source object (if BindToType is true)
+        //Type of source object (if no Unity source object reference provided)
         public        String                    SourceType;
-        //If true, binding will need to be inited with instance of type SourceType
+        //If true, get binding type from <see cref="SourceType"/>, otherwise from <see cref="Source"/>
         public        Boolean                   BindToType;
         //Path to bindable property or method
         public        String                    Path;
 
-        public object  SourceObject { get; protected set; } 
+        public object  SourceObject
+        {
+            get => _sourceObject;
+            set
+            {
+                if ( _sourceObject != value )
+                {
+                    var oldValue = _sourceObject;
+                    _sourceObject = value;
+                    OnSetSourceObject( oldValue, value );
+                }
+            }
+        }
+
+        private object _sourceObject;
+
+        /// <summary>
+        /// Make sure binding correctly changes source object
+        /// </summary>
+        protected abstract void OnSetSourceObject( object oldValue, object value );
+
+        protected void SetSourceObjectWithoutNotify( object value )
+        {
+            _sourceObject = value;
+        }
 
 #region Runtime debug stuff
 
@@ -76,6 +101,7 @@ namespace UIBindings
         protected MonoBehaviour _debugHost;                 //Host of binder that contains this binding, for debug purposes
         protected string        _debugBindingName            ;  //Name of binding property, for debug purposes
         protected string        _debugTargetBindingInfo;
+        
 
         public override String ToString( )
         {

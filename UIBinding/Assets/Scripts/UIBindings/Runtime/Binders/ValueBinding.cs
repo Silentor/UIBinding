@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using UIBindings.Adapters;
 using UIBindings.Converters;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Debug = UnityEngine.Debug;
 using Object = System.Object;
 
@@ -16,42 +18,45 @@ namespace UIBindings
     {
         public override Boolean IsTwoWay => false;
 
+        public override Boolean IsInited => _isInited;
+
         public override Boolean IsCompatibleWith(Type type ) => type == typeof(T);
 
         public void Init( object sourceObject = null, bool forceOneWay = false )
         {
             if ( !Enabled )   
                 return;
-          
-            if ( BindToType )
+
+            Type sourceType = null;
+            if(sourceObject != null )                   // Parameter has highest priority (as well as SourceObject property)
+                sourceType = sourceObject.GetType();
+            else if ( !BindToType && Source )
             {
-                if ( sourceObject == null )
-                {
-                    Debug.LogError( $"[{nameof(ValueBinding<T>)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the code. Assigned object must be {SourceType} type", _debugHost );
-                    return;
-                }
-                SourceObject = sourceObject;
+                sourceType = Source.GetType();
+                sourceObject = Source;
             }
-            else
+            else if ( BindToType && !string.IsNullOrEmpty( SourceType ) )
             {
-                if ( !Source )
-                {
-                    var unityObjectSource = sourceObject as UnityEngine.Object;
-                    if( !unityObjectSource )
-                    {
-                        Debug.LogError( $"[{nameof(ValueBinding<T>)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the Inspector", _debugHost );
-                        return;
-                    }
-                    SourceObject = unityObjectSource;
-                }
-                else
-                    SourceObject = Source;
+                sourceType = Type.GetType( SourceType, throwOnError: false );
+                // sourceObject is null, but its okay, so binding will returns default value. Only type is crucial for init
             }
 
-            InitInfrastructure( forceOneWay );
+            if ( sourceType == null )
+            {
+                if(BindToType)
+                    Debug.LogError( $"[{nameof(ValueBinding<T>)}] Failed to get source type, binding not inited. Provide correct type in property SourceType or set sourceObject parameter of method Init(). Binding: {GetBindingTargetInfo()}", _debugHost );
+                else
+                    Debug.LogError( $"[{nameof(ValueBinding<T>)}] Failed to get source type, binding not inited. Provide correct source object reference in property Source or set sourceObject parameter of method Init(). Binding: {GetBindingTargetInfo()}", _debugHost );
+                return;
+            }
+
+            InitInfrastructure( sourceType, sourceObject, forceOneWay );
+            SetSourceObjectWithoutNotify( sourceObject );
         }
 
-        private void  InitInfrastructure( bool forceOneWay = false )
+        public event Action<Object, T> SourceChanged;
+
+        private void InitInfrastructure( Type sourceType, object sourceObject, bool forceOneWay = false )
         {
             if ( !Enabled )   
                 return;
@@ -60,40 +65,22 @@ namespace UIBindings
 
             var timer = ProfileUtils.GetTraceTimer( );
 
-            if ( BindToType )
-            {
-                _sourceObjectType = SourceObject.GetType();
-                AssertWithContext.IsTrue( _sourceObjectType.IsInstanceOfType( SourceObject ),
-                    $"[{nameof(ValueBinding<T>)}] Source object {SourceObject.GetType().Name}  is not compartible with declared source object type '{_sourceObjectType.Name}' at {GetBindingTargetInfo()}", _debugHost );
-            }
-            else
-            {
-                _sourceObjectType = SourceObject.GetType();
-            }
-
             //Here we process deep binding
-            var pathProcessor = new PathProcessor( SourceObject, Path, IsTwoWay, OnSourcePropertyChangedFromPathAdapter );
+            var pathProcessor = new PathProcessor( sourceType, Path, IsTwoWay, OnSourcePropertyChangedFromPathAdapter );
             timer.AddMarker( "GetProperty" );
 
             DataProvider lastDataSource = null;
 
-            //Check fast pass - direct getter
-            // if ( Converters.Count == 0 && !pathProcessor.IsComplexPath && firstProperty.PropertyType == typeof(T) )
-            // {
-            //     _directGetter = (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), SourceObject, firstProperty.GetGetMethod( true ) );
-            //     _isNeedPolling = SourceObject is INotifyPropertyChanged;
-            //
-            //     //TODO logic to create open getter. Its support on-the-fly changing of source object because source object its just a parameter of a getter.
-            //     //This also allows to cache the same getter for many source objects of the same type. May be useful for collection items view models.
-            //
-            //     //var convertMethod       = this.GetType().GetMethod( nameof( CreateOpenDelegate ), BindingFlags.NonPublic | BindingFlags.Static );
-            //     //var createdConvertMethod = convertMethod.MakeGenericMethod( _sourceObjectType );
-            //     //var directOpenGetter = (Func<Object, T>) createdConvertMethod.Invoke( null, new Object[]{property.GetGetMethod( true )} );
-            //     //_directGetter = () => directOpenGetter( _sourceObject );
-            //
-            //     timer.AddMarker( "DirectGetter" );
-            // }
-            // else        //Need adapters/converters/etc
+            //Check fast pass - direct getter from property of source object
+            PropertyInfo firstProperty;
+            if ( Converters.Count == 0 && !pathProcessor.IsComplexPath && (firstProperty = pathProcessor.PeekNextPropertyInfo()).PropertyType == typeof(T) )
+            {
+                _directGetter = CreateDirectGetter( sourceObject, firstProperty );
+                _isSupportNotify = typeof(INotifyPropertyChanged).IsAssignableFrom( sourceType );
+                _directPropertyInfo = firstProperty;
+                timer.AddMarker( "DirectGetter" );
+            }
+            else        //Need adapters/converters/etc
             {
                 while( pathProcessor.MoveNext( ) )
                 {
@@ -102,8 +89,8 @@ namespace UIBindings
 
                 _pathAdapter = pathProcessor.CurrentAdapter;
                 lastDataSource = _pathAdapter;
-
-                //timer.AddMarker( "CreateAdapter" );
+                if( sourceObject != null )
+                    _pathAdapter.SetSourceObject( sourceObject );
 
                 //Prepare conversion chain
                 var converters = _converters.Converters;
@@ -144,28 +131,51 @@ namespace UIBindings
                 }
             }
             
-            OoInitInfrastructure( SourceObject, lastDataSource, forceOneWay, _debugHost );
+            OnInitInfrastructure( sourceObject, lastDataSource, forceOneWay, _debugHost );
             timer.AddMarker( "AdditionalInit" );
             var report = timer.StopAndGetReport();
 
             _isValueInitialized = false;
-            _isValid = true;
+            _isInited = true;
             
-            Debug.Log( $"Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}. Profile {report}", _debugHost );
+            Debug.Log( $"[{nameof(ValueBinding<T>)}].[{nameof(InitInfrastructure)}] Inited {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}. Profile {report}", _debugHost );
         }
 
-        public event Action<Object, T> SourceChanged;
+        protected virtual void OnInitInfrastructure(  Object source, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
 
-        public override Boolean IsRuntimeValid => _isValid;
+        protected override void OnSetSourceObject( object oldValue, Object value )
+        {
+            if(!_isInited)
+                throw new InvalidOperationException("Cannot set source object before binding is inited. Call Init() first.");
 
-        protected virtual void OoInitInfrastructure(  Object source, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
+            if(_directGetter != null)
+            {
+                if( _isSupportNotify )
+                {
+                    if ( oldValue is INotifyPropertyChanged oldNotify )
+                        oldNotify.PropertyChanged -= OnSourcePropertyChangedDirect;
+
+                    if ( value is INotifyPropertyChanged newNotify )
+                        newNotify.PropertyChanged += OnSourcePropertyChangedDirect;
+                }
+
+                _directGetter = CreateDirectGetter( value, _directPropertyInfo );
+            }
+            else
+            {
+                Assert.IsNotNull( _pathAdapter );
+                _pathAdapter.SetSourceObject( value );
+            }
+
+            _isValueInitialized = false;
+        }
 
         /// <summary>
         /// To get change event at desired time (LateUpdate for example)
         /// </summary>
         protected override void  CheckChangesInternal( )
         {
-            if( !_isValueInitialized || _isNeedPolling || _sourceValueChanged || _isTweened )
+            if( !_isValueInitialized || !_isSupportNotify || _sourceValueChanged || _isTweened )
             {
                 T   value;
                 var isChangedOnSource = true;
@@ -186,7 +196,7 @@ namespace UIBindings
                     var changeStatus = _lastReader.TryGetValue( out value );
                     isChangedOnSource = changeStatus != EResult.NotChanged;
                     _isTweened        = changeStatus == EResult.Tweened;
-                    _isNeedPolling = _pathAdapter.IsNeedPolling;         //todo optimize? do not need to check if value not changed
+                    _isSupportNotify = _pathAdapter.IsSupportNotify;         //todo optimize? do not need to check if value not changed
                     ReadConvertedValueMarker.End();
                     //Debug.Log( $"Frame {Time.frameCount} checking changes for {GetType().Name} at {_hostName}" );
                 }
@@ -205,12 +215,18 @@ namespace UIBindings
             }
         }
 
+        // Direct getter uses if path is just one property and no converters are used
         protected Func<T>        _directGetter;
+        protected PropertyInfo _directPropertyInfo; //For recreating delegate if source object changes
+        private static readonly Func<T> DefaultGetter = () => default; 
+                                       
+        // All other cases uses path adapter(s) as source of data
         private   PathAdapter   _pathAdapter;    //Last path adapter in the chain. Because path adapters are chained, this is enough to work with whole path
+
         protected T              _lastValue;
         protected IDataReader<T> _lastReader;       //Last reader in the chain (prop adapter or converter)
         private   Boolean        _isTweened;
-        private   Boolean        _isNeedPolling;
+        private   Boolean        _isSupportNotify;
         private   Type           _sourceObjectType;
         //private   Action<object, string> _sourceNotifyFromPropertyAdapterDelegate;
 
@@ -220,7 +236,7 @@ namespace UIBindings
 
             if ( _directGetter != null )
             {
-                if( !_isNeedPolling )
+                if( _isSupportNotify )
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChangedDirect;
             }
             else
@@ -233,7 +249,7 @@ namespace UIBindings
 
             if ( _directGetter != null )
             {
-                if( !_isNeedPolling )
+                if( _isSupportNotify )
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChangedDirect;
             }
             else
@@ -254,14 +270,14 @@ namespace UIBindings
             _sourceValueChanged = true;
         }
 
-
-        //Create open delegate for getter. Source object is passed as parameter.
-        // private static Func<Object, T> CreateOpenDelegate<TSource>( MethodInfo method )
-        // {
-        //     var            strongTyped = (Func<TSource, T>) Delegate.CreateDelegate( typeof(Func<TSource, T>), method );
-        //     Func<Object, T> weakTyped   = (sourceObj) => strongTyped( (TSource)sourceObj );
-        //     return weakTyped;
-        // }
+        private Func<T> CreateDirectGetter( object sourceObject, PropertyInfo propertyInfo )
+        {
+            if ( sourceObject != null )
+                return (Func<T>)Delegate.CreateDelegate( typeof(Func<T>), sourceObject,
+                        propertyInfo.GetGetMethod( true ) );
+            else
+                return DefaultGetter;
+        }
 
         public override void SetDebugInfo( MonoBehaviour host, String bindingName )
         {
@@ -275,7 +291,7 @@ namespace UIBindings
         {
             if( !Enabled )
                 return "Disabled";
-            if( !_isValid )
+            if( !_isInited )
                 return "Invalid";
             if( !_isValueInitialized )
                 return "Not initialized";

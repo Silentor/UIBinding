@@ -26,7 +26,7 @@ namespace UIBindings.Adapters
             SetupDelegates( method );
         }
 
-        public CallMethodAdapter(MethodInfo method, object sourceObject, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObject, isTwoWayBinding, notifyPropertyChanged )
+        public CallMethodAdapter(MethodInfo method, Type sourceObjectType, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObjectType, isTwoWayBinding, notifyPropertyChanged )
         {
             MemberName = method.Name;
             SetupDelegates( method );
@@ -244,7 +244,7 @@ namespace UIBindings.Adapters
         public void CallSync( IReadOnlyList<SerializableParam> paramz )
         {
             TSource sourceObject = default;
-            if ( SourceObject != null )
+            if ( SourceObjectType != null )
             {
                 sourceObject = (TSource)SourceObject;
             }
@@ -266,7 +266,7 @@ namespace UIBindings.Adapters
         public override Awaitable CallAsync( IReadOnlyList<SerializableParam> paramz )
         {
             TSource sourceObject = default;
-            if ( SourceObject != null )
+            if ( SourceObjectType != null )
             {
                 sourceObject = (TSource)SourceObject;
             }

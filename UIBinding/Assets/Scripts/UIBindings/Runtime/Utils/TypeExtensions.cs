@@ -4,6 +4,12 @@ namespace UIBindings.Runtime.Utils
 {
     public static class TypeExtensions
     {
+        /// <summary>
+        /// Similar to Type.IsAssignableFrom but works also with generic types
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="baseType"></param>
+        /// <returns></returns>
         public static bool IsDerivedFrom( this Type type, Type baseType )
         {
             if ( type == null || baseType == null )
@@ -15,7 +21,7 @@ namespace UIBindings.Runtime.Utils
             if ( type.IsGenericType && type.GetGenericTypeDefinition() == baseType )
                 return true;
 
-            return type.IsSubclassOf( baseType );
+            return baseType.IsAssignableFrom( type );
         }
 
         public static bool IsNotAssigned( this object plainOrUnityObject )

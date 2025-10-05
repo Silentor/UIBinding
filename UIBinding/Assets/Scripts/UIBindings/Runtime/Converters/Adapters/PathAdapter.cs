@@ -26,6 +26,16 @@ namespace UIBindings.Adapters
         public abstract string MemberName { get; }
 
         /// <summary>
+        /// If return true, there is no way to detect property changes.
+        /// So binding system will need to poll this adapter periodically to detect changes.
+        /// If any one Path Adapter in chain is need polling, whole binding will be polled.
+        /// </summary>
+        /// <returns></returns>
+        public virtual Boolean IsSupportNotify => SourceAdapter != null 
+                ? SourceAdapter.IsSupportNotify && IsSupportNotifySelf 
+                : IsSupportNotifySelf;
+
+        /// <summary>
         /// Connect this adapter to another adapter.
         /// </summary>
         /// <param name="sourceAdapter"></param>
@@ -43,19 +53,19 @@ namespace UIBindings.Adapters
         /// <summary>
         /// Connect this adapter to source object.
         /// </summary>
-        /// <param name="sourceObject"></param>
+        /// <param name="sourceObjectType"></param>
         /// <param name="isTwoWayBinding"></param>
         /// <param name="notifyPropertyChanged"></param>
-        protected PathAdapter( object sourceObject, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        protected PathAdapter( Type sourceObjectType, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             NotifyPropertyChanged = notifyPropertyChanged;
             IsTwoWay              = isTwoWayBinding;
-            SourceObject          = sourceObject;
+            SourceObjectType          = sourceObjectType;
             DoSourcePropertyChangedDelegate = DoSourcePropertyChanged;
         }
 
         /// <summary>
-        /// Property adapter will be detect his property changing by subscribing to INotifyPropertyChanged of source object.
+        /// Property adapter will detect his property changing by subscribing to INotifyPropertyChanged of source object.
         /// If source object does not support INotifyPropertyChanged, method will do nothing.
         /// </summary>
         public virtual void Subscribe( )
@@ -64,23 +74,23 @@ namespace UIBindings.Adapters
                 return;
 
             IsSubscribed = true;
-            IsInited = false;
+            IsValueInited = false;
 
             if ( SourceAdapter == null )
             {
                 if( SourceObject is INotifyPropertyChanged notifySourceObject )
                 {
                     notifySourceObject.PropertyChanged += DoSourcePropertyChangedDelegate;
-                    IsNeedPollingSelf =  false;
+                    IsSupportNotifySelf =  true;
                 }
                 else
-                    IsNeedPollingSelf = true; 
+                    IsSupportNotifySelf = false; 
             }
             else
             {
-                //Do not subscribe right now, actually subscribe at TryGetValue because we need to get source object first
+                //Actually subscribe at TryGetValue because we need to get source object first
                 SourceAdapter.Subscribe( );
-                IsNeedPollingSelf = true; //Didn't know for sure, better to poll one time
+                IsSupportNotifySelf = false; //Didn't know for sure, better to poll one time
             }
 
             OnSubscribed();
@@ -109,15 +119,7 @@ namespace UIBindings.Adapters
         }
 
         /// <summary>
-        /// If return true, there is no way to detect property changes.
-        /// So binding system will need to poll this adapter periodically to detect changes.
-        /// If any one Path Adapter in chain is need polling, whole binding will be polled.
-        /// </summary>
-        /// <returns></returns>
-        public virtual Boolean IsNeedPolling => SourceAdapter != null ? SourceAdapter.IsNeedPolling || IsNeedPollingSelf : IsNeedPollingSelf;
-
-        /// <summary>
-        /// Change source object, applicable to first adapter in chain only.
+        /// Change source object
         /// </summary>
         /// <param name="sourceObject"></param>
         public void SetSourceObject( object sourceObject )
@@ -132,15 +134,11 @@ namespace UIBindings.Adapters
                 if ( SourceObject != sourceObject )
                 {
                     var wasSubscribed = IsSubscribed;
-
                     Unsubscribe();
-
                     SourceObject = sourceObject;
-
-                    if ( wasSubscribed )
-                    {
+                    if ( wasSubscribed )                        
                         Subscribe();
-                    }
+                    OnSetSourceObject( sourceObject );
                 }
             }
         }
@@ -152,18 +150,6 @@ namespace UIBindings.Adapters
         /// <returns></returns>
         public abstract EResult TryGetValue(out object value );
 
-        /// <summary>
-        /// Sometimes we need to adapt type of property to some other type, for example, if it is enum we want to use StructEnum
-        /// </summary>
-        /// <param name="propertyType"></param>
-        /// <returns></returns>
-        // public static Type GetAdaptedType( Type propertyType )
-        // {
-        //     if ( propertyType == null ) return null;
-        //     //if ( propertyType.IsEnum ) return typeof(StructEnum); TODO go for generic adapter, no need to convert enum to StructEnum (only if Binding<StructEnum> used)
-        //     return propertyType;
-        // }
-
         public static PathAdapter GetPropertyAdapter( PathAdapter sourceAdapter, PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             var  sourceType   = propertyInfo.DeclaringType;
@@ -173,12 +159,12 @@ namespace UIBindings.Adapters
             return result;
         }
 
-        public static PathAdapter GetPropertyAdapter( object sourceObject, PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        public static PathAdapter GetPropertyAdapter( Type sourceObjectType, PropertyInfo propertyInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             var  sourceType   = propertyInfo.DeclaringType;
             var  propertyType = propertyInfo.PropertyType;
             var complexAdapterType = typeof(PropertyAdapter<,>).MakeGenericType( sourceType, propertyType );
-            var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, propertyInfo, sourceObject, isTwoWayBinding, notifyPropertyChanged );
+            var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, propertyInfo, sourceObjectType, isTwoWayBinding, notifyPropertyChanged );
             return result;
         }
 
@@ -198,14 +184,14 @@ namespace UIBindings.Adapters
             }
         }
 
-        public static PathAdapter GetMethodAdapter( object sourceObject, MethodInfo methodInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        public static PathAdapter GetMethodAdapter( Type sourceObjectType, MethodInfo methodInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             var  sourceType   = methodInfo.DeclaringType;
             var paramz = methodInfo.GetParameters();
             if ( paramz.Length < 3 )
             {
                 Type adapterType = typeof(CallMethodAdapter<>).MakeGenericType( sourceType );
-                var result = (PathAdapter)Activator.CreateInstance( adapterType, methodInfo, sourceObject, isTwoWayBinding, notifyPropertyChanged );
+                var result = (PathAdapter)Activator.CreateInstance( adapterType, methodInfo, sourceObjectType, isTwoWayBinding, notifyPropertyChanged );
                 return result;
             }
             else
@@ -215,15 +201,16 @@ namespace UIBindings.Adapters
         }
 
         // Is value was first time readed after subscribe or source object change
-        protected bool      IsInited;
+        protected bool      IsValueInited;
 
-        protected bool IsNeedPollingSelf = true;
+        protected bool IsSupportNotifySelf;
 
         // Previous adapter in chain
         protected readonly PathAdapter SourceAdapter;
 
         // Source object (for the first adapter in chain only)
         protected object SourceObject;
+        protected readonly Type SourceObjectType;
 
         protected          bool                   IsSubscribed;
         private readonly Action<object, string>   NotifyPropertyChanged;
@@ -232,7 +219,7 @@ namespace UIBindings.Adapters
         protected static readonly ProfilerMarker ReadPropertyMarker  = new ( ProfilerCategory.Scripts,  $"Binding.{nameof(PathAdapter)}.ReadValue" );
         protected static readonly ProfilerMarker WritePropertyMarker = new ( ProfilerCategory.Scripts,  $"Binding.{nameof(PathAdapter)}.WriteValue" );
 
-        protected void DoSourcePropertyChanged( object sender, String propertyName )
+        private void DoSourcePropertyChanged( object sender, String propertyName )
         {
             if( String.IsNullOrEmpty( propertyName ) || propertyName == MemberName )
             {
@@ -242,6 +229,6 @@ namespace UIBindings.Adapters
 
         protected virtual void OnSubscribed( ) { }
         protected virtual void OnUnsubscribed( ) { }
-
+        protected virtual void OnSetSourceObject( object sourceObject) { }
     }
 }

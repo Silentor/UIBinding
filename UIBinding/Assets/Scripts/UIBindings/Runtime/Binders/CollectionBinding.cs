@@ -26,50 +26,92 @@ namespace UIBindings
 
         public override Boolean IsTwoWay => false;
 
-        public override    Boolean IsRuntimeValid => _isValid;
+        public override    Boolean IsInited => _isInited;
 
-        public void Init( object sourceObject = null )
+        public void Init( object sourceObject = null, bool forceOneWay = false )
         {
             if ( !Enabled )   
                 return;
 
-            if ( BindToType )
+            Type sourceType = null;
+            if(sourceObject != null )                   // Parameter has highest priority (as well as SourceObject property)
+                sourceType = sourceObject.GetType();
+            else if ( !BindToType && Source )
             {
-                AssertWithContext.IsNotNull( sourceObject, $"[{nameof(CollectionBinding)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the code. Assigned object must be {SourceType} type", _debugHost );
-                SourceObject = sourceObject;
+                sourceType   = Source.GetType();
+                sourceObject = Source;
             }
-            else
+            else if ( BindToType && !string.IsNullOrEmpty( SourceType ) )
             {
-                if ( Source )
-                {
-                    SourceObject = Source;
-                }
-                else if( sourceObject != null ) 
-                {
-                    SourceObject = sourceObject;
-                }
-                else
-                {
-                    AssertWithContext.IsNotNull( Source, $"[{nameof(CollectionBinding)}] Source object must be assigned for binding {_debugTargetBindingInfo} from the inspector or from code", _debugHost );
-                }
+                sourceType = Type.GetType( SourceType, throwOnError: false );
+                // sourceObject is null, but its okay, so binding will returns default value. Only type is crucial for init
             }
 
-            InitInfrastructure( );
+            if ( sourceType == null )
+            {
+                if(BindToType)
+                    Debug.LogError( $"[{nameof(CollectionBinding)}] Failed to get source type, binding not inited. Provide correct type in property SourceType or set sourceObject parameter of method Init(). Binding: {GetBindingTargetInfo()}", _debugHost );
+                else
+                    Debug.LogError( $"[{nameof(CollectionBinding)}] Failed to get source type, binding not inited. Provide correct source object reference in property Source or set sourceObject parameter of method Init(). Binding: {GetBindingTargetInfo()}", _debugHost );
+                return;
+            }
+
+            InitInfrastructure( sourceType, sourceObject );
+
+            SetSourceObjectWithoutNotify( sourceObject );
         }
 
-        private void InitInfrastructure( )
+        public event Action<CollectionBinding, int, object>                            ItemAdded;
+        public event Action<CollectionBinding, int, object>                            ItemRemoved;
+        public event Action<CollectionBinding, int, object>                            ItemChanged;
+        /// <summary>
+        /// Item moved from oldIndex to newIndex, object is the item itself
+        /// </summary>
+        public event Action<CollectionBinding, int, int, object>                       ItemMoved;
+        /// <summary>
+        /// Dramatic changes, its better just rebuild entire collection
+        /// </summary>
+        public event Action<CollectionBinding, IReadOnlyList<object>>                  CollectionChanged;   
+        
+
+
+        private readonly List<object>               _sourceCopy = new ();
+        private          ViewCollection             _sourceCollection;
+        private readonly         List<Object>               _processedList = new ();
+        private readonly         List<Object>               _processedCopy = new ();
+        private             PathAdapter _pathReader;
+        private             Boolean _isSupportNotify;
+        private EDataSourceType _sourceType;
+
+        //Source property direct getters
+        private          Func<ViewCollection>       _viewCollectionDirectGetter;
+        private          Func<IEnumerable>          _enumerableDirectGetter;
+
+        //Source property readers
+        private         IDataReader<ViewCollection> _viewCollectionReader;
+
+        //Collection process methods
+        private          Action<object, GameObject> _bindMethod;
+        private          Action<List<Object>>       _processMethod;
+        
+
+
+        protected static readonly ProfilerMarker ReadViewCollectionDirectMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollectionDirect" );
+        protected static readonly ProfilerMarker ReadIEnumerableDirectMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerableDirect" );
+        protected static readonly ProfilerMarker ReadViewCollectionMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollection" );
+        protected static readonly ProfilerMarker ReadIEnumerableMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerable" );
+
+        private void InitInfrastructure( Type sourceType, object sourceObject )
         {
             if ( !Enabled )   
                 return;
 
-            AssertWithContext.IsNotNull( SourceObject, $"[{nameof(CollectionBinding)}] Source is not assigned at {_debugTargetBindingInfo}", _debugHost );
             AssertWithContext.IsNotEmpty( Path, $"[{nameof(CollectionBinding)}] Path is not assigned at {_debugTargetBindingInfo}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer(); 
 
             //Here we process deep binding
-            var pathProcessor = new PathProcessor( SourceObject, Path, IsTwoWay, OnSourcePropertyChangedFromPropertyAdapter );
-            //pathProcessor.MoveNextProperty(out var firstProperty);   //Get first property info
+            var pathProcessor = new PathProcessor( sourceType, Path, IsTwoWay, OnSourcePropertyChangedFromPropertyAdapter );
 
             timer.AddMarker( "GetProperty" );
 
@@ -115,6 +157,7 @@ namespace UIBindings
                 {
                     while( pathProcessor.MoveNext(  ) )
                     {
+                        timer.AddMarker( "CreateAdapter" );
                     }
 
                     _pathReader = pathProcessor.CurrentAdapter;
@@ -123,7 +166,6 @@ namespace UIBindings
                     //Try to get ViewCollection or IEnumerable from last property adapter
                     if ( typeof(IEnumerable).IsAssignableFrom( pathProcessor.CurrentOutputType ) )
                     {
-                        // Will read from _pathReader
                         _sourceType = EDataSourceType.Enumerable;
                     }
                     //if ( lastDataSource is IDataReader<ViewCollection> viewCollectionReader )
@@ -142,51 +184,17 @@ namespace UIBindings
             }
 
             var report = timer.StopAndGetReport();
-             
-            _isValid = true;
+
+            _isValueInitialized = false;
+            _isInited = true;
             
             Debug.Log( $"[{nameof(CollectionBinding)}] Awaked {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}: {report}" );
         }
 
-        public event Action<CollectionBinding, int, object>                            ItemAdded;
-        public event Action<CollectionBinding, int, object>                            ItemRemoved;
-        public event Action<CollectionBinding, int, object>                            ItemChanged;
-        /// <summary>
-        /// Item moved from oldIndex to newIndex, object is the item itself
-        /// </summary>
-        public event Action<CollectionBinding, int, int, object>                       ItemMoved;
-        /// <summary>
-        /// Dramatic changes, its better just rebuild entire collection
-        /// </summary>
-        public event Action<CollectionBinding, IReadOnlyList<object>>                  CollectionChanged;   
-        
-
-
-        private readonly List<object>               _sourceCopy = new ();
-        private          ViewCollection             _sourceCollection;
-        private readonly         List<Object>               _processedList = new ();
-        private readonly         List<Object>               _processedCopy = new ();
-        private             PathAdapter _pathReader;
-        private             Boolean _isNeedPolling = true;
-        private EDataSourceType _sourceType;
-
-        //Source property direct getters
-        private          Func<ViewCollection>       _viewCollectionDirectGetter;
-        private          Func<IEnumerable>          _enumerableDirectGetter;
-
-        //Source property readers
-        private         IDataReader<ViewCollection> _viewCollectionReader;
-
-        //Collection process methods
-        private          Action<object, GameObject> _bindMethod;
-        private          Action<List<Object>>       _processMethod;
-        
-
-
-        protected static readonly ProfilerMarker ReadViewCollectionDirectMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollectionDirect" );
-        protected static readonly ProfilerMarker ReadIEnumerableDirectMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerableDirect" );
-        protected static readonly ProfilerMarker ReadViewCollectionMarker  = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadViewCollection" );
-        protected static readonly ProfilerMarker ReadIEnumerableMarker     = new ( ProfilerCategory.Scripts,  $"{nameof(CollectionBinding)}.ReadIEnumerable" );
+        protected override void OnSetSourceObject(object oldValue, object value )
+        {
+            throw new NotImplementedException();
+        }
 
         private void OnSourcePropertyChanged(Object sender, String propertyName )
         {
@@ -208,7 +216,7 @@ namespace UIBindings
 
             if ( _viewCollectionDirectGetter != null || _enumerableDirectGetter != null )
             {
-                if( !_isNeedPolling )
+                if( _isSupportNotify )
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged += OnSourcePropertyChanged;
             }
             else
@@ -221,7 +229,7 @@ namespace UIBindings
 
             if ( _viewCollectionDirectGetter != null || _enumerableDirectGetter != null )
             {
-                if( !_isNeedPolling )
+                if( _isSupportNotify )
                     ((INotifyPropertyChanged)SourceObject).PropertyChanged -= OnSourcePropertyChanged;
             }
             else
@@ -244,7 +252,7 @@ namespace UIBindings
 
         protected override void    CheckChangesInternal( )
         {
-            if( !_isValueInitialized || _isNeedPolling || _sourceValueChanged  )
+            if( !_isValueInitialized || !_isSupportNotify || _sourceValueChanged  )
             {
                 Action<List<object> > processListAction = null;
                 Action<Object, GameObject> bindViewItemAction = null;
@@ -262,7 +270,7 @@ namespace UIBindings
                             _processedList.AddRange( ((IEnumerable)obj).Cast<Object>() );
                         processListAction  = _processMethod;
                         bindViewItemAction = _bindMethod;
-                        _isNeedPolling = _pathReader.IsNeedPolling;
+                        _isSupportNotify = _pathReader.IsSupportNotify;
                         ReadIEnumerableMarker.End();
                         break;
                     }
@@ -437,6 +445,7 @@ namespace UIBindings
             CollectionChanged?.Invoke( this, newList );
         }
 
+
         public override void SetDebugInfo( MonoBehaviour host, String bindingName )
         {
             base.SetDebugInfo( host, bindingName );
@@ -448,7 +457,7 @@ namespace UIBindings
         {
             if( !Enabled )
                 return "Disabled";
-            if( !_isValid )
+            if( !_isInited )
                 return "Invalid";
             if( !_isValueInitialized )
                 return "Not initialized";

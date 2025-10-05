@@ -13,7 +13,7 @@ namespace UIBindings
 
         public void SetValue( T value )
         {
-            if( !Enabled || !_isValid || !_isSubscribed )
+            if( !Enabled || !_isInited || !_isSubscribed )
             {
                 return;
             }
@@ -38,9 +38,9 @@ namespace UIBindings
             }
         }
 
-        protected override void OoInitInfrastructure( Object source, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost )
+        protected override void OnInitInfrastructure( Object source, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost )
         {
-            base.OoInitInfrastructure( source, lastConverter, forceOneWay, debugHost );
+            base.OnInitInfrastructure( source, lastConverter, forceOneWay, debugHost );
 
             if( forceOneWay )
             {

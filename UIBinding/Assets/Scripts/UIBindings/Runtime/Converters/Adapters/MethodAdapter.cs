@@ -11,7 +11,7 @@ namespace UIBindings.Adapters
         {
         }
 
-        protected MethodAdapter(object sourceObject, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObject, isTwoWayBinding, notifyPropertyChanged )
+        protected MethodAdapter(Type sourceObjectType, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObjectType, isTwoWayBinding, notifyPropertyChanged )
         {
         }
 

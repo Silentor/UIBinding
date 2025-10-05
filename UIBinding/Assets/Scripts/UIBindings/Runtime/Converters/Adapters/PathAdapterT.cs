@@ -19,10 +19,9 @@ namespace UIBindings.Adapters
             Assert.IsNotNull( _sourceAdapter );
         }
 
-        protected PathAdapterT(object sourceObject, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) :
-                base( sourceObject, isTwoWayBinding, notifyPropertyChanged )
+        protected PathAdapterT(Type sourceObjectType, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) :
+                base( sourceObjectType, isTwoWayBinding, notifyPropertyChanged )
         {
-            _sourceObject = (TSource)sourceObject;
         }
 
         public override Type InputType => typeof(TSource);
@@ -53,22 +52,23 @@ namespace UIBindings.Adapters
                     if( _sourceObject is INotifyPropertyChanged oldNotifySourceObject )
                     {
                         oldNotifySourceObject.PropertyChanged -= DoSourcePropertyChangedDelegate; 
-                        IsNeedPollingSelf = true;
                     }
                     _sourceObject = sourceObject;
                     if ( sourceObject is INotifyPropertyChanged newNotifySourceObject )
                     {
                         newNotifySourceObject.PropertyChanged += DoSourcePropertyChangedDelegate; 
-                        IsNeedPollingSelf = false;
+                        IsSupportNotifySelf = true;
                     }
+                    else
+                        IsSupportNotifySelf = false;
                 }
             }
             
             var newValue = sourceObject != null ? GetValue( sourceObject ) : default;
-            if( !IsInited || !EqualityComparer<TValue>.Default.Equals( newValue, _lastValue ) )        //TODO Check performance of EqualityComparer, consider using custom property adapter for some primitive types
+            if( !IsValueInited || !EqualityComparer<TValue>.Default.Equals( newValue, _lastValue ) )        //TODO Check performance of EqualityComparer, consider using custom property adapter for some primitive types
             {
                 _lastValue = newValue;
-                IsInited  = true;
+                IsValueInited  = true;
                 value      = newValue;
                 ReadPropertyMarker.End();
                 return EResult.Changed;
@@ -124,6 +124,12 @@ namespace UIBindings.Adapters
         protected abstract TValue GetValue( TSource sourceObject);
         protected abstract void SetValue( TSource sourceObject, TValue value );
 
+        protected override void OnSetSourceObject( object sourceObject )
+        {
+            base.OnSetSourceObject( sourceObject );
+            _sourceObject = (TSource)sourceObject;
+        }
+
         protected override void OnUnsubscribed( )
         {
             base.OnUnsubscribed();
@@ -132,6 +138,5 @@ namespace UIBindings.Adapters
             if( _sourceAdapter != null && _sourceObject is INotifyPropertyChanged notifySourceObject )                
                 notifySourceObject.PropertyChanged -= DoSourcePropertyChangedDelegate;
         }
-
     }
 }

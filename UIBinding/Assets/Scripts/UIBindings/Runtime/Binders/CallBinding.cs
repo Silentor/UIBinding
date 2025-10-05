@@ -17,12 +17,12 @@ namespace UIBindings
     {
         public SerializableParam[] Params;                          //To store method's parameters
 
-        public bool IsRuntimeValid => _isValid;
+        public bool IsRuntimeValid => _isInited;
 
         //All call delegates lives here
         private Delegate _delegateCall;
 
-        private Boolean _isValid;
+        private Boolean _isInited;
         private ParameterInfo[] _methodParams;
 
         private MethodAdapter _methodAdapter;
@@ -32,44 +32,49 @@ namespace UIBindings
             if ( !Enabled )   
                 return;
 
-            if ( BindToType )
+            Type sourceType = null;
+            if(sourceObject != null )                   // Parameter has highest priority (as well as SourceObject property)
+                sourceType = sourceObject.GetType();
+            else if ( !BindToType && Source )
             {
-                if ( sourceObject == null )
-                {
-                    Debug.LogError( $"[{nameof(CallBinding)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the code. Assigned object must be {SourceType} type", _debugHost );
-                    _isValid = false;
-                    return;
-                }
-                SourceObject = sourceObject;
+                sourceType   = Source.GetType();
+                sourceObject = Source;
             }
-            else
+            else if ( BindToType && !string.IsNullOrEmpty( SourceType ) )
             {
-                if ( !Source )
-                {
-                    if ( sourceObject != null )
-                        SourceObject = sourceObject;
-                    else
-                    {
-                        Debug.LogError( $"[{nameof(CallBinding)}] Source object must be assigned for binding {GetBindingTargetInfo()} from the Inspector or from the code.", _debugHost );
-                        _isValid = false;
-                        return;
-                    }
-                }
+                sourceType = Type.GetType( SourceType, throwOnError: false );
+                // sourceObject is null, but its okay, so binding will returns default value. Only type is crucial for init
+            }
+
+            if ( sourceType == null )
+            {
+                if(BindToType)
+                    Debug.LogError( $"[{nameof(CallBinding)}] Failed to get source type, binding not inited. Provide correct type in property SourceType or set sourceObject parameter of method Init(). Binding: {GetBindingTargetInfo()}", _debugHost );
                 else
-                    SourceObject = Source;
-            }
-
-            InitInfrastructure();
-        }
-
-        private void InitInfrastructure( )
-        {
-            if ( SourceObject == null )
-            {
-                Debug.LogError( $"[{nameof(BindingBase)}] Source is not assigned at {_debugHost}", _debugHost );
+                    Debug.LogError( $"[{nameof(CallBinding)}] Failed to get source type, binding not inited. Provide correct source object reference in property Source or set sourceObject parameter of method Init(). Binding: {GetBindingTargetInfo()}", _debugHost );
                 return;
             }
 
+            InitInfrastructure( sourceType );
+            SetSourceObjectWithoutNotify( sourceObject );
+        }
+
+        public Awaitable Call( )
+        {
+            if( !Enabled || !_isInited )
+                return AwaitableUtility.CompletedAwaitable;
+
+            CallMarker.Begin( ProfilerMarkerName );
+
+            var task = _methodAdapter.CallAsync( Params );
+
+            CallMarker.End();
+
+            return task;
+        }
+
+        private void InitInfrastructure( Type sourceObjectType )
+        {
             if ( String.IsNullOrEmpty( Path ) )
             {
                 Debug.LogError( $"[{nameof(BindingBase)}] Path is not assigned at {_debugHost}", _debugHost );
@@ -77,7 +82,7 @@ namespace UIBindings
             }
 
             //Here we process deep binding
-            var pathProcessor = new PathProcessor( SourceObject, Path, false, null );
+            var pathProcessor = new PathProcessor( sourceObjectType, Path, false, null );
             //if ( pathProcessor.IsComplexPath )
             {
                 while ( pathProcessor.MoveNext( ) )
@@ -93,52 +98,19 @@ namespace UIBindings
                     _methodAdapter = methodAdapter;
             }
 
-            _isValid      = true;
+            _isInited      = true;
         }
 
-        public Awaitable Call( )
+        protected override void OnSetSourceObject( object oldValue, object value )
         {
-            if( !Enabled || !_isValid )
-                return AwaitableUtility.CompletedAwaitable;
-
-            CallMarker.Begin( ProfilerMarkerName );
-
-            var task = _methodAdapter.CallAsync( Params );
-
-            CallMarker.End();
-
-            return task;
+             _methodAdapter.SetSourceObject( value );
         }
-
-
-        // private AwaitableAction GetAwaitableWrapper( MethodInfo method )
-        // {
-        //     var awaitableType = method.ReturnType;
-        //     var getAwaiterMethod = awaitableType.GetMethod( "GetAwaiter" );
-        //     if ( getAwaiterMethod == null )
-        //         return default;
-        //
-        //     AwaitableAction result;
-        //     result.AwaitableType = awaitableType;
-        //     result.GetAwaitableMethod = (Func<Object>)Delegate.CreateDelegate( typeof(Func<Object>), Source, method );
-        //     result.AwaiterType = getAwaiterMethod.ReturnType;
-        //     result.GetAwaiterMethod = (Func<Object, Object>)Delegate.CreateDelegate( typeof(Func<Object, Object>), getAwaiterMethod );
-        //     var isCompletedProperty = result.AwaiterType.GetProperty( "IsCompleted" );
-        //     if ( isCompletedProperty == null || isCompletedProperty.PropertyType != typeof(bool) || isCompletedProperty.GetMethod == null )
-        //         return default;
-        //     result.IsCompletedProperty = (Func<Object, Boolean>)Delegate.CreateDelegate( typeof(Func<Object, Boolean>), isCompletedProperty.GetMethod );
-        //     var getResultMethod = result.AwaiterType.GetMethod( "GetResult" );
-        //     if( getResultMethod == null )
-        //         return default;
-        //     result.GetResultMethod = (Action<Object>)Delegate.CreateDelegate( typeof(Action<Object>), getResultMethod );
-        //
-        //     return result;
-        // }
 
 #region Debug stuff
 
         protected static readonly ProfilerMarker CallMarker = new ( ProfilerCategory.Scripts,  $"{nameof(CallBinding)}.Call", MarkerFlags.Script );
         protected string ProfilerMarkerName = String.Empty;
+
 
         public override void SetDebugInfo( MonoBehaviour host, String bindingName )
         {
@@ -187,7 +159,7 @@ namespace UIBindings
         {
             if ( !Enabled )
                 return "Disabled";
-            if ( !_isValid )
+            if ( !_isInited )
                 return "Invalid";
 
             //var state = $"{_awaitType} {_paramsType} {_delegateCall.GetType().Name}";
