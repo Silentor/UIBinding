@@ -244,7 +244,7 @@ namespace UIBindings.Adapters
         public void CallSync( IReadOnlyList<SerializableParam> paramz )
         {
             TSource sourceObject = default;
-            if ( SourceObjectType != null )
+            if ( SourceObject != null )
             {
                 sourceObject = (TSource)SourceObject;
             }
@@ -266,7 +266,7 @@ namespace UIBindings.Adapters
         public override Awaitable CallAsync( IReadOnlyList<SerializableParam> paramz )
         {
             TSource sourceObject = default;
-            if ( SourceObjectType != null )
+            if ( SourceObject != null )
             {
                 sourceObject = (TSource)SourceObject;
             }

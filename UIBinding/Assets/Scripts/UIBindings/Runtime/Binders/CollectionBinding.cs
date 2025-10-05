@@ -162,6 +162,8 @@ namespace UIBindings
 
                     _pathReader = pathProcessor.CurrentAdapter;
                     lastDataSource = _pathReader;
+                    if( sourceObject != null )
+                        _pathReader.SetSourceObject( sourceObject );
 
                     //Try to get ViewCollection or IEnumerable from last property adapter
                     if ( typeof(IEnumerable).IsAssignableFrom( pathProcessor.CurrentOutputType ) )
@@ -193,7 +195,17 @@ namespace UIBindings
 
         protected override void OnSetSourceObject(object oldValue, object value )
         {
-            throw new NotImplementedException();
+            if(!_isInited)
+                throw new InvalidOperationException("Cannot set source object before binding is inited. Call Init() first.");
+
+            if(_pathReader != null )
+                _pathReader.SetSourceObject( value );
+            else
+            {
+                throw new NotImplementedException("Support for direct getters is not implemented yet.");
+            }
+
+            _isValueInitialized = false;
         }
 
         private void OnSourcePropertyChanged(Object sender, String propertyName )

@@ -55,7 +55,7 @@ namespace UIBindings
                 return;
             }
 
-            InitInfrastructure( sourceType );
+            InitInfrastructure( sourceType, sourceObject );
             SetSourceObjectWithoutNotify( sourceObject );
         }
 
@@ -73,7 +73,7 @@ namespace UIBindings
             return task;
         }
 
-        private void InitInfrastructure( Type sourceObjectType )
+        private void InitInfrastructure( Type sourceObjectType, object sourceObject )
         {
             if ( String.IsNullOrEmpty( Path ) )
             {
@@ -95,7 +95,11 @@ namespace UIBindings
                     return;
                 }
                 else
+                {
                     _methodAdapter = methodAdapter;
+                    if( sourceObject != null )
+                        _methodAdapter.SetSourceObject( sourceObject );
+                }
             }
 
             _isInited      = true;
