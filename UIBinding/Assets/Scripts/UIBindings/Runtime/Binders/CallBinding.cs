@@ -17,7 +17,7 @@ namespace UIBindings
     {
         public SerializableParam[] Params;                          //To store method's parameters
 
-        public bool IsRuntimeValid => _isInited;
+        public bool IsInited => _isInited;
 
         //All call delegates lives here
         private Delegate _delegateCall;
@@ -61,7 +61,7 @@ namespace UIBindings
 
         public Awaitable Call( )
         {
-            if( !Enabled || !_isInited )
+            if( !Enabled || !_isInited || SourceObject == null )
                 return AwaitableUtility.CompletedAwaitable;
 
             CallMarker.Begin( ProfilerMarkerName );
