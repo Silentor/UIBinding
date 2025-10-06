@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
-using UIBindings.Runtime.Utils;
+using System.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace UIBindings.Adapters
@@ -51,21 +52,28 @@ namespace UIBindings.Adapters
                 _end = _path.Length;
 
             CurrentPartName     = _path.Substring(_start, _end - _start);
-            var propertyInfo = _currentSourceType.GetProperty( CurrentPartName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-            if ( propertyInfo != null )
+            if ( TryGetPropertyInfo(  _currentSourceType, CurrentPartName, out var propertyInfo ) )
             {
                 if( _lastAdapter != null )
                     _lastAdapter = PathAdapter.GetPropertyAdapter( _lastAdapter, propertyInfo, _isTwoWayBinding, _notifyPropertyChanged );
                 else
-                {
-                    _lastAdapter = PathAdapter.GetPropertyAdapter( _sourceObjectType, propertyInfo, _isTwoWayBinding, _notifyPropertyChanged );
-                }
+                    _lastAdapter = PathAdapter.GetPropertyAdapter( _sourceObjectType, propertyInfo, _isTwoWayBinding,
+                            _notifyPropertyChanged );
                 _currentSourceType = propertyInfo.PropertyType;
             }
-            else
+            else if ( TryGetFieldInfo( _currentSourceType, CurrentPartName, out var fieldInfo ) )
             {
-                var methodInfo =  _currentSourceType.GetMethod( CurrentPartName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
-                if ( methodInfo != null )   //Read value func or call method
+                if( _lastAdapter != null )
+                    _lastAdapter = PathAdapter.GetFieldAdapter( _lastAdapter, fieldInfo, _isTwoWayBinding, _notifyPropertyChanged );
+                else
+                    _lastAdapter = PathAdapter.GetFieldAdapter( _sourceObjectType, fieldInfo, _isTwoWayBinding, _notifyPropertyChanged );
+                _currentSourceType = fieldInfo.FieldType;
+            }
+            else if ( TryGetMethodInfo( _currentSourceType, CurrentPartName, out var methodInfo ) )
+            {
+                // There are 2 cases: call method (void or some task) or func to read some value (readonly)
+                var returnType = methodInfo.ReturnType;
+                if ( returnType == typeof(void) || IsSupportedTaskType( returnType ) )
                 {
                     if( _lastAdapter != null )
                         _lastAdapter = PathAdapter.GetMethodAdapter( _lastAdapter, methodInfo, _isTwoWayBinding, _notifyPropertyChanged );
@@ -74,11 +82,17 @@ namespace UIBindings.Adapters
                 }
                 else
                 {
-                    Assert.IsNotNull( propertyInfo, $"Member '{CurrentPartName}' not found in type '{_currentSourceType}'" );
+                    if( _lastAdapter != null )
+                        _lastAdapter = PathAdapter.GetFunctionAdapter( _lastAdapter, methodInfo, _isTwoWayBinding, _notifyPropertyChanged );
+                    else
+                        _lastAdapter = PathAdapter.GetFunctionAdapter( _sourceObjectType, methodInfo, _isTwoWayBinding, _notifyPropertyChanged );
                 }
 
-                // Process Func<> and fields and indexers
-                
+                // Process also indexers
+            }
+            else
+            {
+                Assert.IsNotNull( propertyInfo, $"Member '{CurrentPartName}' not found in type '{_currentSourceType}'" );
             }
 
             return _start < _end;
@@ -109,5 +123,42 @@ namespace UIBindings.Adapters
         private Type _currentSourceType;
 
         private PathAdapter _lastAdapter;
+
+        private static bool TryGetPropertyInfo(  Type sourceType, string propertyName, out PropertyInfo propertyInfo )
+        {
+            propertyInfo = sourceType.GetProperty( propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+            return propertyInfo != null;
+        }
+
+        private static bool TryGetFieldInfo(  Type sourceType, string fieldName, out FieldInfo fieldInfo )
+        {
+            fieldInfo = sourceType.GetField( fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+            return fieldInfo != null;
+        }
+
+        private static bool TryGetMethodInfo(  Type sourceType, string methodName, out MethodInfo methodInfo )
+        {
+            methodInfo = sourceType.GetMethod( methodName,
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+            return methodInfo != null;
+        }
+
+        private static bool IsSupportedTaskType( Type type )
+        {
+            return
+                    type == typeof(Task)
+                    || ( type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>) )
+                    || type == typeof(ValueTask)
+                    || ( type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ValueTask<>) )
+                    || type == typeof(Awaitable)
+                    || ( type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Awaitable<>) )
+#if  UIBINDINGS_UNITASK_SUPPORT
+                    || type == typeof(Cysharp.Threading.Tasks.UniTask)
+                    || ( type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Cysharp.Threading.Tasks.UniTask<>) )
+                    || type == typeof(Cysharp.Threading.Tasks.UniTaskVoid)
+#endif
+                    ;
+
+        }
     }
 }

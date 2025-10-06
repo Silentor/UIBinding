@@ -168,6 +168,42 @@ namespace UIBindings.Adapters
             return result;
         }
 
+        public static PathAdapter GetFieldAdapter( PathAdapter sourceAdapter, FieldInfo fieldInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        {
+            var  sourceType   = fieldInfo.DeclaringType;
+            var  fieldType = fieldInfo.FieldType;
+            var complexAdapterType = typeof(FieldAdapter<,>).MakeGenericType( sourceType, fieldType );
+            var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, fieldInfo, sourceAdapter, isTwoWayBinding, notifyPropertyChanged );
+            return result;
+        }
+
+        public static PathAdapter GetFieldAdapter( Type sourceObjectType, FieldInfo fieldInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        {
+            var  sourceType   = fieldInfo.DeclaringType;
+            var  fieldType = fieldInfo.FieldType;
+            var complexAdapterType = typeof(FieldAdapter<,>).MakeGenericType( sourceType, fieldType );
+            var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, fieldInfo, sourceObjectType, isTwoWayBinding, notifyPropertyChanged );
+            return result;
+        }
+
+        public static PathAdapter GetFunctionAdapter( PathAdapter sourceAdapter, MethodInfo function, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        {
+            var  sourceType   = function.DeclaringType;
+            var  resultType = function.ReturnType;
+            var complexAdapterType = typeof(FuncAdapter<,>).MakeGenericType( sourceType, resultType );
+            var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, function, sourceAdapter, isTwoWayBinding, notifyPropertyChanged );
+            return result;
+        }
+
+        public static PathAdapter GetFunctionAdapter( Type sourceObjectType, MethodInfo function, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
+        {
+            var  sourceType   = function.DeclaringType;
+            var  resultType = function.ReturnType;
+            var complexAdapterType = typeof(FuncAdapter<,>).MakeGenericType( sourceType, resultType );
+            var result = (PathAdapter)Activator.CreateInstance( complexAdapterType, function, sourceObjectType, isTwoWayBinding, notifyPropertyChanged );
+            return result;
+        }
+
         public static PathAdapter GetMethodAdapter( PathAdapter sourceAdapter, MethodInfo methodInfo, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged )
         {
             var sourceType = methodInfo.DeclaringType;

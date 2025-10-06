@@ -73,7 +73,7 @@ namespace UIBindings
 
             //Check fast pass - direct getter from property of source object
             PropertyInfo firstProperty;
-            if ( Converters.Count == 0 && !pathProcessor.IsComplexPath && (firstProperty = pathProcessor.PeekNextPropertyInfo()).PropertyType == typeof(T) )
+            if ( Converters.Count == 0 && !pathProcessor.IsComplexPath && (firstProperty = pathProcessor.PeekNextPropertyInfo())?.PropertyType == typeof(T) )
             {
                 _directGetter = CreateDirectGetter( sourceObject, firstProperty );
                 _isSupportNotify = typeof(INotifyPropertyChanged).IsAssignableFrom( sourceType );

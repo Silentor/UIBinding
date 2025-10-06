@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace UIBindings.Tests.Runtime
 {
-    public class CallMethodTests
+    public class CallMethodBindingTests
     {
         [Test]
         public void TestSimpleSyncMethodCall( )
