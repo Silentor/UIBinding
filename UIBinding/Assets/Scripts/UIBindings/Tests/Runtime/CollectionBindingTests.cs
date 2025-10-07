@@ -153,6 +153,86 @@ namespace UIBindings.Tests.Runtime
             TestCollectionAdd( list, binding, () => UnityEngine.Random.onUnitSphere );
         }
 
+        [Test]
+        public void TestCollectionSourceSwap_SimplePath( )
+        {
+            var source1 = new TestSource();
+            var binding = new CollectionBinding();
+            binding.Path = nameof(TestSource.StructsList);
+            binding.Init( source1 ); binding.Subscribe(  );
+            source1.SubscribeChanges( binding );
+            Assert.That( binding.IsInited, Is.True );
+
+            //Initial empty collection
+            Assert.That( source1._addedCount, Is.EqualTo( 0 ) );
+            Assert.That( source1._removedCount, Is.EqualTo( 0 ) );
+            Assert.That( source1._changedCount, Is.EqualTo( 0 ) );
+            Assert.That( source1._movedCount, Is.EqualTo( 0 ) );
+            Assert.That( source1._resetCount, Is.EqualTo( 0 ) );
+
+            //Test binding update
+            source1.StructsList.Add( Vector3.one );
+            binding.ManuallyCheckChanges();
+            // Any change from empty to non-empty collection should be collection reset (reconsider?) 0 -> 1 item it's just an add
+            Assert.That( source1._resetCount, Is.EqualTo( 1 ) );
+
+            //Swap to source2
+            source1.UnsubscribeChanges( binding );
+            var source2 = new TestSource();
+            source2.StructsList.Add( Vector3.up );
+            source2.StructsList.Add( Vector3.down );
+            source2.SubscribeChanges( binding );
+            binding.SourceObject = source2;
+            binding.ManuallyCheckChanges();
+
+            // Should be -1 old item +2 new items = collection reset
+            Assert.That( source2._addedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._removedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._changedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._movedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._resetCount, Is.EqualTo( 1 ) ); 
+
+            //Swap to null
+            binding.SourceObject = null;
+            binding.ManuallyCheckChanges();
+
+            // Should be -2 old items, another reset
+            Assert.That( source2._addedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._removedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._changedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._movedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._resetCount, Is.EqualTo( 2 ) ); 
+        }
+
+        [Test]
+        public void TestNullSourceReturnsEmptyCollection( )
+        {
+            var source = new TestSource();
+            var binding = new CollectionBinding();
+            binding.Path = nameof(TestSource.ObjectsList);
+            binding.BindToType = true;
+            binding.SourceType = typeof(TestSource).AssemblyQualifiedName;
+            binding.Init(  );
+            binding.Subscribe(  );
+            source.SubscribeChanges( binding );
+            Assert.That( binding.IsInited, Is.True );
+
+            Assert.That( source._addedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._removedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._changedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._movedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._resetCount, Is.EqualTo( 0 ) );
+
+            binding.ManuallyCheckChanges();
+
+            // No exceptions, just empty collection
+            Assert.That( source._addedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._removedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._changedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._movedCount, Is.EqualTo( 0 ) );
+            Assert.That( source._resetCount, Is.EqualTo( 0 ) );
+        }
+
         private void TestCollectionChange<T>(List<T> list, CollectionBinding binding, Func<T> getNewValue)
         {
             // Change one element
@@ -294,7 +374,8 @@ namespace UIBindings.Tests.Runtime
             _testable = new TestSource();
             var binding = new CollectionBinding();
             binding.Path = nameof(TestSource.ObjectsList);
-            PrepareBinding( binding, _testable, _testable );
+            binding.Init( _testable ); binding.Subscribe(  );
+            _testable.SubscribeChanges( binding );
             _testable.ClearState();
 
             return (_testable.ObjectsList, binding);
@@ -307,7 +388,8 @@ namespace UIBindings.Tests.Runtime
             _testable = outer.Internal;
             var binding = new CollectionBinding();
             binding.Path = $"{nameof(TestSource.Internal)}.{nameof(TestSource.ObjectsList)}";
-            PrepareBinding( binding, outer, _testable );
+            binding.Init( outer ); binding.Subscribe(  );
+            _testable.SubscribeChanges( binding );
             _testable.ClearState();
 
             return (_testable.ObjectsList, binding);
@@ -318,8 +400,9 @@ namespace UIBindings.Tests.Runtime
         {
             _testable = new TestSource();
             var binding = new CollectionBinding();
-            binding.Path              =  nameof(TestSource.StructsList);
-            PrepareBinding( binding, _testable, _testable );
+            binding.Path  =  nameof(TestSource.StructsList);
+            binding.Init( _testable ); binding.Subscribe(  );
+            _testable.SubscribeChanges( binding );
             _testable.ClearState();
 
             return (_testable.StructsList, binding);
@@ -332,22 +415,11 @@ namespace UIBindings.Tests.Runtime
             _testable      = outer.Internal;
             var binding = new CollectionBinding();
             binding.Path = $"{nameof(TestSource.Internal)}.{nameof(TestSource.StructsList)}";
-            PrepareBinding( binding, outer, _testable );
+            binding.Init( outer ); binding.Subscribe(  );
+            _testable.SubscribeChanges( binding );
             _testable.ClearState();
 
             return (_testable.StructsList, binding);
-        }
-
-
-        private void PrepareBinding(CollectionBinding binding, TestSource source, Testable testable )
-        {
-            binding.ItemAdded         += (sender, index, item) => { testable._addedCount++; testable._addedIndex = index; testable._addedItem = item; };
-            binding.ItemRemoved       += (sender, index, item) => { testable._removedCount++; };
-            binding.ItemMoved         += (sender, index, index2, item) => { testable._movedCount++; testable._movedFromIndex = index; testable._movedToIndex = index2; testable._movedItem = item; };
-            binding.ItemChanged       += (sender, index, item) => { testable._changedCount++; testable._changedIndex = index; testable._changedItem = item; };
-            binding.CollectionChanged += (sender, list) => { testable._resetCount++; };
-            binding.Init( source );
-            binding.Subscribe();
         }
     }
 
@@ -366,6 +438,56 @@ namespace UIBindings.Tests.Runtime
         public object _changedItem;
         public int    _resetCount = 0;
 
+        public void SubscribeChanges(CollectionBinding binding )
+        {
+            binding.ItemAdded         += OnBindingOnItemAdded;
+            binding.ItemRemoved       += OnBindingOnItemRemoved;
+            binding.ItemMoved         += OnBindingOnItemMoved;
+            binding.ItemChanged       += OnBindingOnItemChanged;
+            binding.CollectionChanged += OnBindingOnCollectionChanged;
+        }
+
+        public void UnsubscribeChanges(CollectionBinding binding)
+        {
+            binding.ItemAdded         -= OnBindingOnItemAdded;
+            binding.ItemRemoved       -= OnBindingOnItemRemoved;
+            binding.ItemMoved         -= OnBindingOnItemMoved;
+            binding.ItemChanged       -= OnBindingOnItemChanged;
+            binding.CollectionChanged -= OnBindingOnCollectionChanged;
+        }
+
+        private void OnBindingOnItemAdded(CollectionBinding sender, int index, object item )
+        {
+            _addedCount++;
+            _addedIndex = index;
+            _addedItem  = item;
+        }
+
+        private void OnBindingOnItemRemoved(CollectionBinding sender, int index, object item )
+        {
+            _removedCount++;
+        }
+
+        private void OnBindingOnItemMoved(CollectionBinding sender, int index, int index2, object item )
+        {
+            _movedCount++;
+            _movedFromIndex = index;
+            _movedToIndex   = index2;
+            _movedItem      = item;
+        }
+
+        private void OnBindingOnItemChanged(CollectionBinding sender, int index, object item )
+        {
+            _changedCount++;
+            _changedIndex = index;
+            _changedItem  = item;
+        }
+
+        private void OnBindingOnCollectionChanged(CollectionBinding sender, IReadOnlyList<object> list )
+        {
+            _resetCount++;
+        }
+
         public void ClearState( )
         {
             _addedCount     = 0;
@@ -381,8 +503,6 @@ namespace UIBindings.Tests.Runtime
             _changedItem    = null;
             _resetCount     = 0;
         }
-
-
     }
 
     public class TestSource : Testable
