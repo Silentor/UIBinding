@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace UIBindings.Tests.Runtime
 {
-    public class CallMethodBindingTests
+    public class CallMethodBindingTests          
     {
         [Test]
         public void TestSimpleSyncMethodCall( )
@@ -63,6 +63,12 @@ namespace UIBindings.Tests.Runtime
             await callBinding.Call();
             Assert.AreEqual( source.FloatValue, 2.71f );
 
+            callBinding.Path   = "CallValueTask1Params";
+            callBinding.Params = new[] { SerializableParam.FromInt( 33 ), };
+            callBinding.Init( source );
+            await callBinding.Call();
+            Assert.AreEqual( source.IntValue, 33 );
+
 #if UIBINDINGS_UNITASK_SUPPORT
             callBinding.Path   = "CallUniTaskMixed2Params";
             callBinding.Params = new[] { SerializableParam.FromInt( 123 ), SerializableParam.FromString( "World" ), };
@@ -93,6 +99,74 @@ namespace UIBindings.Tests.Runtime
             
             //todo make test with INotifyPropertyChanged owner, so property will be read only once
 
+        }
+
+        [Test]
+        public void TestBindingByTypeChangeSource_SimplePath( )
+        {
+            var testBindingByType = new CallBinding()
+                                 {
+                                         BindToType = true,
+                                         SourceType = typeof(VolatileSourceObject).AssemblyQualifiedName,
+                                         Path       = nameof(VolatileSourceObject.Call)
+                                 };
+
+            //Init without actual source object
+            testBindingByType.Init(  );
+            Assert.That( testBindingByType.IsInited, Is.True );
+            testBindingByType.Call();
+            // Nothing happens because source object is not set
+
+            var sourceObject = new VolatileSourceObject(){ValueInt = 1};
+            testBindingByType.SourceObject = sourceObject;
+            testBindingByType.Call();
+            Assert.That( sourceObject.ValueInt, Is.EqualTo( 2 ) ); // Because call method increments ValueInt
+
+            var sObject2 = new VolatileSourceObject(){ValueInt = 10};
+            testBindingByType.SourceObject = sObject2;
+            testBindingByType.Call();
+            Assert.That( sObject2.ValueInt, Is.EqualTo( 11 ) );
+            Assert.That( sourceObject.ValueInt, Is.EqualTo( 2 ) ); // No changes to first object
+
+            testBindingByType.SourceObject = null;
+            testBindingByType.Call();
+            // Nothing happens because source object is null
+            Assert.That( sObject2.ValueInt, Is.EqualTo( 11 ) );
+            Assert.That( sourceObject.ValueInt, Is.EqualTo( 2 ) ); // No changes to first object
+        }
+
+        [Test]
+        public void TestBindingByTypeChangeSource_ComplexPath( )
+        {
+            var testBindingByType = new CallBinding()
+                                 {
+                                         BindToType = true,
+                                         SourceType = typeof(VolatileSourceObject).AssemblyQualifiedName,
+                                         Path       = "Inner.Call"
+                                 };
+
+            //Init without actual source object
+            testBindingByType.Init(  );
+            Assert.That( testBindingByType.IsInited, Is.True );
+            testBindingByType.Call();
+            // Nothing happens because source object is not set
+
+            var sourceObject = new VolatileSourceObject(){Inner = new VolatileSourceObject(){ValueInt = 1}};
+            testBindingByType.SourceObject = sourceObject;
+            testBindingByType.Call();
+            Assert.That( sourceObject.Inner.ValueInt, Is.EqualTo( 2 ) ); // Because call method increments ValueInt
+
+            var sObject2 = new VolatileSourceObject(){Inner = new VolatileSourceObject(){ValueInt = 10}};
+            testBindingByType.SourceObject = sObject2;
+            testBindingByType.Call();
+            Assert.That( sObject2.Inner.ValueInt, Is.EqualTo( 11 ) );
+            Assert.That( sourceObject.Inner.ValueInt, Is.EqualTo( 2 ) ); // No changes to first object
+
+            testBindingByType.SourceObject = null;
+            testBindingByType.Call();
+            // Nothing happens because source object is null
+            Assert.That( sObject2.Inner.ValueInt, Is.EqualTo( 11 ) );
+            Assert.That( sourceObject.Inner.ValueInt, Is.EqualTo( 2 ) ); // No changes to first object
         }
     }
 
@@ -148,6 +222,12 @@ namespace UIBindings.Tests.Runtime
             return Task.Delay( 1 ).ContinueWith( _ => IntValue += 1 );
         }
 
+        public async ValueTask CallValueTask1Params( int value)
+        {
+            await Task.Delay( 1 );
+            IntValue = value;
+        } 
+
         public async Awaitable CallAwaitableFloat1Param( float value )
         {
             await Task.Delay( 1 );     //Awaitable delay need some editor pumping, it's not handy
@@ -174,5 +254,17 @@ namespace UIBindings.Tests.Runtime
         }
     }
 
+    public class VolatileSourceObject
+    {
+        public string ValueString { get; set; }
+        public int    ValueInt    { get; set; }
+
+        public VolatileSourceObject Inner { get; set; }
+
+        public void Call( )
+        {
+            ValueInt += 1;
+        }
+    }
 
 }

@@ -154,6 +154,54 @@ namespace UIBindings.Tests.Runtime
             Assert.That( _targetValue, Is.EqualTo( 0 ) );
         }
 
+        [Test]
+        public void TestNullSourceReturnsDefaultValue( )
+        {
+            _targetValue = 42;
+            var binding = new ValueBinding<int>( );
+            binding.SourceChanged += ( sender, value ) => { _targetValue = value; };
+            binding.Path          =  nameof(TestClass.GetIntValue);
+            binding.BindToType    =  true;
+            binding.SourceType    =  typeof(TestClass).AssemblyQualifiedName;
+            binding.Init(  );
+            binding.Subscribe(  );
+            binding.ManuallyCheckChanges();
+            Assert.That( _targetValue, Is.EqualTo( 0 ) );
+        }
+
+        [Test]
+        public void TestNullIntermediateReturnsDefaultValue( )
+        {
+            _targetValue = 42;
+            var testObject = new TestClass( ) { IntValue = 42, Inner = null };
+            var binding    = new ValueBinding<int>( );
+            binding.SourceChanged += ( sender, value ) => { _targetValue = value; };
+            binding.Path          =  nameof(TestClass.GetInner) + "." + nameof(TestClass.GetIntValue);
+            binding.Init( testObject );
+            binding.Subscribe(  );
+            binding.ManuallyCheckChanges();
+            Assert.That( _targetValue, Is.EqualTo( 0 ) );
+        }
+
+        [Test]
+        public void TestSimplePathWriteValue( )
+        {
+            var testObject = new TestClass( ) { IntValue = 42 };
+            var binding    = new ValueBindingRW<int>( );
+            binding.Path  = nameof(TestClass.GetIntValue);
+            binding.Init( testObject );
+            Assert.That( binding.IsInited, Is.True );
+            Assert.That( binding.IsTwoWay, Is.False );  // Because func adapter is one-way only
+            binding.Subscribe(  );
+ 
+            Assert.That( testObject.IntValue, Is.EqualTo( 42 ) );
+
+            binding.SetValue( 100 );
+            Assert.That( testObject.IntValue, Is.EqualTo( 100 ) );
+
+            binding.SetValue( 200 );
+            Assert.That( testObject.IntValue, Is.EqualTo( 200 ) );
+        }
 
         public class TestClass
         {

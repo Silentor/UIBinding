@@ -2,7 +2,7 @@
 
 namespace UIBindings.Tests.Runtime
 {
-    public class FieldValueBindingTests
+    public class PropertyValueBindingTests
     {
         private int _targetValue;
 
@@ -238,9 +238,9 @@ namespace UIBindings.Tests.Runtime
 
         public class TestClass
         {
-            public int IntValue;
+            public int IntValue { get; set; }
 
-            public TestClass Inner;
+            public TestClass Inner { get; set; }
         }
     }
 }
