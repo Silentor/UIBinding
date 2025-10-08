@@ -1,5 +1,4 @@
-﻿
-
+﻿using System;
 using NUnit.Framework;
 
 namespace UIBindings.Tests.Runtime
@@ -187,20 +186,37 @@ namespace UIBindings.Tests.Runtime
         public void TestSimplePathWriteValue( )
         {
             var testObject = new TestClass( ) { IntValue = 42 };
-            var binding    = new ValueBindingRW<int>( );
+            var binding    = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.TwoWay;
             binding.Path  = nameof(TestClass.GetIntValue);
+
+            //Should throw as we cannot write to a function
+            Assert.Throws<InvalidOperationException>( ( ) =>
+            {
+                binding.Init( testObject );
+            });
+        }
+
+        [Test]
+        public void TestComplexPathWriteValue_WhenFuncIsInnerAdapter( )
+        {
+            var testObject = new TestClass( ) { Inner = new TestClass() { IntValue = 100 } };
+            var binding    = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.TwoWay;
+            binding.Path          = $"{nameof(TestClass.GetInner)}.{nameof(TestClass.IntValue)}";
             binding.Init( testObject );
-            Assert.That( binding.IsInited, Is.True );
-            Assert.That( binding.IsTwoWay, Is.False );  // Because func adapter is one-way only
             binding.Subscribe(  );
- 
-            Assert.That( testObject.IntValue, Is.EqualTo( 42 ) );
 
-            binding.SetValue( 100 );
-            Assert.That( testObject.IntValue, Is.EqualTo( 100 ) );
+            //Just in case check the read
+            int targetValue = 0;
+            binding.SourceChanged += ( sender, value ) => { targetValue = value; };
+            binding.ManuallyCheckChanges();
+            Assert.That( targetValue, Is.EqualTo( 100 ) );
 
-            binding.SetValue( 200 );
-            Assert.That( testObject.IntValue, Is.EqualTo( 200 ) );
+            binding.SetValue( 500 );
+
+            // Should work as the function is inner adapter, so it don't actually write value, only provides access to inner object
+            Assert.That( testObject.Inner.IntValue, Is.EqualTo( 500 ) );
         }
 
         public class TestClass

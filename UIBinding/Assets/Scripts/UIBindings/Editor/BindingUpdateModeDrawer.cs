@@ -15,25 +15,44 @@ namespace UIBindings.Editor
             position = EditorGUI.PrefixLabel( position, label );
 
             var modeProp = property.FindPropertyRelative( nameof(DataBinding.UpdateMode.Mode) );
+            var timingProp = property.FindPropertyRelative( nameof(DataBinding.UpdateMode.Timing) );
             var delayProp = property.FindPropertyRelative( nameof(DataBinding.UpdateMode.Delay) );
             var scaledTimeProp = property.FindPropertyRelative( nameof(DataBinding.UpdateMode.ScaledTime) );
 
+            if(delayProp.floatValue < 0) delayProp.floatValue = 0;
+
             using ( EditorGUIUtils.ZeroIndent() )
             {
-                if ( ((DataBinding.EUpdateMode)modeProp.intValue) != DataBinding.EUpdateMode.Manual )
+                var showPollingSettings = !((DataBinding.EMode)modeProp.intValue     == DataBinding.EMode.OneTime ||
+                                            (DataBinding.ETiming)timingProp.intValue == DataBinding.ETiming.Manual);
+                var showScaledTimeCheckbox = delayProp.floatValue > 0;
+                
+                if ( showPollingSettings )
                 {
-                    var rects = EditorGUIUtils.GetHorizontalRects( position, 1, 0, 60, 40 );
-                    EditorGUI.PropertyField( rects.Item1, modeProp, GUIContent.none );
-                     var delayRects = EditorGUIUtils.GetHorizontalRects( rects.Item2, 1, 20, 40 );
-                     GUI.Label( delayRects.Item1, Resources.DelayLabel, Resources.RightAlignedLabel );
-                    EditorGUI.PropertyField( delayRects.Item2, delayProp, GUIContent.none );
-                     var unscaledRects = EditorGUIUtils.GetHorizontalRects( rects.Item3,  1, 20, 20 );
-                     GUI.Label( unscaledRects.Item1, Resources.UnscaledTimeLabel, Resources.RightAlignedLabel );
-                     EditorGUI.PropertyField( unscaledRects.Item2, scaledTimeProp, GUIContent.none );
+                    var (modeRect, timingRect, pollingRect) = EditorGUIUtils.GetHorizontalRects( position, 1, 0, 0, position.width > 250 ? showScaledTimeCheckbox ? 120 : 60 : 1 );
+                    EditorGUI.PropertyField( modeRect, modeProp, GUIContent.none );
+                    EditorGUI.PropertyField( timingRect, timingProp, GUIContent.none );
+                    if ( showScaledTimeCheckbox )
+                    {
+                        var (labelRect, delayRect, unscaledRect) = EditorGUIUtils.GetHorizontalRects( pollingRect, 1, 50, 0, 15 );
+                        var labelContent = Resources.DelayAndScaledLabel;
+                        labelContent.text = scaledTimeProp.boolValue ? "dT scl" : "dT unscl";
+                        GUI.Label( labelRect, labelContent, Resources.RightAlignedLabel );
+                        EditorGUI.PropertyField( delayRect, delayProp, GUIContent.none );
+                        EditorGUI.PropertyField( unscaledRect, scaledTimeProp, GUIContent.none );
+                    }
+                    else
+                    {
+                        var (labelRect, delayRect) = EditorGUIUtils.GetHorizontalRects( pollingRect, 1, 20, 0 );
+                        GUI.Label( labelRect, Resources.DelayLabel, Resources.RightAlignedLabel );
+                        EditorGUI.PropertyField( delayRect, delayProp, GUIContent.none );
+                    }
                 }
                 else
                 {
-                    EditorGUI.PropertyField( position, modeProp, GUIContent.none );
+                    var (modeRect, timingRect) = EditorGUIUtils.GetHorizontalRects( position, 1, 0, 0 );
+                    EditorGUI.PropertyField( modeRect, modeProp, GUIContent.none );
+                    EditorGUI.PropertyField( timingRect, timingProp, GUIContent.none );
                 }
             }
 
@@ -44,7 +63,7 @@ namespace UIBindings.Editor
         {
             public static readonly GUIStyle   RightAlignedLabel = new ( GUI.skin.label ) { alignment = TextAnchor.MiddleRight, margin = new RectOffset(2, 1, 1, 1), padding = new RectOffset( 0, 0, 0, 0 ) };
             public static readonly GUIContent DelayLabel        = new ( "dT", "The delay in seconds between updates." );
-            public static readonly GUIContent UnscaledTimeLabel = new ( "scl", "If true, the binding will use scaled time for the delay." );
+            public static readonly GUIContent DelayAndScaledLabel = new ( "dT unscl", "The delay in seconds between updates. Checkbox: if true, the binding will use scaled time for the delay." );
         }
     }
 }

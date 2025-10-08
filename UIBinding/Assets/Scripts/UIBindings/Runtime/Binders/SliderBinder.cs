@@ -9,7 +9,7 @@ namespace UIBindings
     public class SliderBinder : BinderBase
     {
         public Slider Slider;
-        public ValueBindingRW<float>     ValueBinding;
+        public ValueBinding<float>       ValueBinding;
         public ValueBinding<float>       MinValueBinding;     //Optional
         public ValueBinding<float>       MaxValueBinding;     //Optional
 
@@ -51,6 +51,7 @@ namespace UIBindings
 #if UNITY_EDITOR
         private void Reset( )
         {
+            ValueBinding.Settings.Mode = DataBinding.EMode.TwoWay;
             MinValueBinding.Enabled = false;
             MaxValueBinding.Enabled = false;
         }

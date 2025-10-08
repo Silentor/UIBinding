@@ -10,7 +10,7 @@ namespace UIBindings
     public class DropdownBinder : BinderBase
     {
         public TMP_Dropdown             Dropdown;
-        public ValueBindingRW<int>      ValueBinding; 
+        public ValueBinding<int>        ValueBinding; 
         public CollectionBinding        OptionsBinding;
 
         protected void Awake( )
@@ -67,6 +67,7 @@ namespace UIBindings
 #if UNITY_EDITOR
         private void Reset( )
         {
+            ValueBinding.Settings.Mode = DataBinding.EMode.TwoWay;
             OptionsBinding.Enabled = false;
         }
 #endif

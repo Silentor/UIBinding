@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UI;
 using Object = System.Object;
@@ -9,7 +8,7 @@ namespace UIBindings
     public class ToggleBinder : BinderBase
     {
         public Toggle Toggle;
-        public ValueBindingRW<bool> ValueBinding; 
+        public ValueBinding<bool> ValueBinding = new (){Settings = new DataBinding.UpdateMode(){Mode = DataBinding.EMode.TwoWay, Timing = DataBinding.ETiming.AfterLateUpdate}}; 
 
         protected void Awake( )
         {

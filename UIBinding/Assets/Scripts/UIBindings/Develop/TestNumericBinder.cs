@@ -9,9 +9,9 @@ namespace UIBindings
 {
     public class TestNumericBinder : MonoBehaviour
     {
-        public ValueBindingRW<int>     IntBinding;
+        public ValueBinding<int>     IntBinding;
         public ValueBinding<float>         FloatBinding;
-        public ValueBindingRW<StructEnum>     EnumBinding;
+        public ValueBinding<StructEnum>     EnumBinding;
         public ValueBinding<CameraType>     Enum2Binding;
         public ValueBinding<TestComplex2> ComplexClassBinding;
 

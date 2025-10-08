@@ -185,7 +185,8 @@ namespace UIBindings.Tests.Runtime
         public void TestSimplePathWriteValue( )
         {
             var testObject = new TestClass( ) { IntValue = 42 };
-            var binding = new ValueBindingRW<int>( );
+            var binding = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.TwoWay;
             binding.Path  = nameof(TestClass.IntValue);
             binding.Init( testObject );
             Assert.That( binding.IsInited, Is.True );
@@ -205,7 +206,8 @@ namespace UIBindings.Tests.Runtime
         public void TestComplexPathWriteValue( )
         {
             var testObject = new TestClass( ) { IntValue = 42, Inner = new TestClass( ) { IntValue = 100 } };
-            var binding = new ValueBindingRW<int>( );
+            var binding = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.TwoWay;
             binding.Path  = nameof(TestClass.Inner) + "." + nameof(TestClass.IntValue);
             binding.Init( testObject );
             Assert.That( binding.IsInited, Is.True );
@@ -224,7 +226,8 @@ namespace UIBindings.Tests.Runtime
         [Test]
         public void TestSimplePathWriteToNullSource( )
         {
-            var binding = new ValueBindingRW<int>( );
+            var binding = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.TwoWay;
             binding.Path  = nameof(TestClass.IntValue);
             binding.BindToType = true;
             binding.SourceType = typeof(TestClass).AssemblyQualifiedName;

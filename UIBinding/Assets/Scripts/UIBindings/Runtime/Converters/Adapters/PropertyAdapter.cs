@@ -11,10 +11,13 @@ namespace UIBindings.Adapters
     /// <typeparam name="TProperty"></typeparam>
     public class PropertyAdapter<TSource, TProperty> : PathAdapterT<TSource, TProperty>
     {
+        public override bool IsTwoWay => base.IsTwoWay && _setter != null;
+
         public override string MemberName { get; }
 
         private readonly Func<TSource, TProperty> _getter;
         private readonly Action<TSource, TProperty> _setter;
+        private bool _actualIsTwoWay;
 
         public PropertyAdapter(PropertyInfo property, PathAdapter sourceAdapter, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceAdapter, isTwoWayBinding, notifyPropertyChanged )
         {
@@ -22,8 +25,13 @@ namespace UIBindings.Adapters
             MemberName = property.Name;
             _getter = (Func<TSource, TProperty>)Delegate.CreateDelegate( typeof(Func<TSource, TProperty>), property.GetGetMethod( true ) );
             if ( isTwoWayBinding )
-                _setter = (Action<TSource, TProperty>)Delegate.CreateDelegate( typeof(Action<TSource, TProperty>),
-                        property.GetSetMethod( true ) );
+            {
+                var setMethod = property.GetSetMethod( true );
+                if ( setMethod != null )
+                {
+                    _setter = (Action<TSource, TProperty>)Delegate.CreateDelegate( typeof(Action<TSource, TProperty>), property.GetSetMethod( true ) );
+                }
+            }
         }
 
         public PropertyAdapter(PropertyInfo property, Type sourceObjectType, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObjectType, isTwoWayBinding, notifyPropertyChanged )
@@ -32,8 +40,13 @@ namespace UIBindings.Adapters
             MemberName = property.Name;
             _getter = (Func<TSource, TProperty>)Delegate.CreateDelegate( typeof(Func<TSource, TProperty>), property.GetGetMethod( true ) );
             if ( isTwoWayBinding )
-                _setter = (Action<TSource, TProperty>)Delegate.CreateDelegate( typeof(Action<TSource, TProperty>),
-                        property.GetSetMethod( true ) );
+            {
+                var setMethod = property.GetSetMethod( true );
+                if ( setMethod != null )
+                {
+                    _setter = (Action<TSource, TProperty>)Delegate.CreateDelegate( typeof(Action<TSource, TProperty>), property.GetSetMethod( true ) );
+                }
+            }
         }
 
         protected override TProperty GetValue(TSource sourceObject )

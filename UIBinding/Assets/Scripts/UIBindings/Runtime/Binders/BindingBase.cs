@@ -12,7 +12,6 @@ namespace UIBindings
     {
         //Is binding works at all, checked once on start
         public        Boolean                   Enabled             = true;                        
-
         //Reference to Unity source object
         public        UnityEngine.Object        Source;
         //Type of source object (if no Unity source object reference provided)

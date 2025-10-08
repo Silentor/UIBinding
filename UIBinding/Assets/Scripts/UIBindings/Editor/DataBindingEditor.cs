@@ -125,7 +125,7 @@ namespace UIBindings.Editor
             base.DrawAdditionalFields( position, property, binding, host );
 
             position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );
-            var updateProp = property.FindPropertyRelative( nameof(UIBindings.DataBinding.Update) );
+            var updateProp = property.FindPropertyRelative( nameof(UIBindings.DataBinding.Settings) );
             EditorGUI.PropertyField( position, updateProp );
 
             position = position.Translate( new Vector2( 0, Resources.LineHeightWithMargin ) );

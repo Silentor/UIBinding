@@ -9,7 +9,7 @@ namespace UIBindings
     {
         public TMP_InputField           InputField;
 
-        public ValueBindingRW<string>   ValueBinding;
+        public ValueBinding<string>     ValueBinding;
         public ValueBinding<bool>       InteractableBinding;
         public ValueBinding<bool>       ReadonlyBinding;
 
@@ -51,6 +51,7 @@ namespace UIBindings
 #if UNITY_EDITOR
         private void Reset( )
         {
+            ValueBinding.Settings.Mode  = DataBinding.EMode.TwoWay;
             InteractableBinding.Enabled = false;
             ReadonlyBinding.Enabled = false;
         }

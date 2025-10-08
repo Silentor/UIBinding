@@ -16,7 +16,7 @@ namespace UIBindings
     [Serializable]
     public class ValueBinding<T> : DataBinding
     {
-        public override Boolean IsTwoWay => false;
+        public override Boolean IsTwoWay => Settings.Mode == EMode.TwoWay;
 
         public override Boolean IsInited => _isInited;
 
@@ -30,10 +30,15 @@ namespace UIBindings
             Type sourceType = null;
             if(sourceObject != null )                   // Parameter has highest priority (as well as SourceObject property)
                 sourceType = sourceObject.GetType();
+            else if ( SourceObject != null )
+            {
+                sourceObject = SourceObject;
+                sourceType = sourceObject.GetType();
+            }
             else if ( !BindToType && Source )
             {
-                sourceType = Source.GetType();
                 sourceObject = Source;
+                sourceType = sourceObject.GetType();
             }
             else if ( BindToType && !string.IsNullOrEmpty( SourceType ) )
             {
@@ -52,6 +57,37 @@ namespace UIBindings
 
             InitInfrastructure( sourceType, sourceObject, forceOneWay );
             SetSourceObjectWithoutNotify( sourceObject );
+        }
+
+        public void SetValue( T value )
+        {
+            if(SourceObject == null || !_isInited || !_isSubscribed)
+                return;
+
+            if ( !IsTwoWay )
+            {
+                Debug.LogError( $"Trying to set value to one-way binding {this}. Ignored", _debugHost );
+                return;
+            }
+
+            if ( !_isValueInitialized || !EqualityComparer<T>.Default.Equals( value, _lastValue ) )
+            {
+                _isValueInitialized = true;
+                _lastValue          = value;
+
+                if( _lastWriter != null )
+                {
+                    WriteConvertedValueMarker.Begin( ProfilerMarkerName );
+                    _lastWriter.SetValue( value );
+                    WriteConvertedValueMarker.End();
+                }
+                else
+                {
+                    WriteDirectValueMarker.Begin( ProfilerMarkerName );
+                    _directSetter( value );
+                    WriteDirectValueMarker.End();
+                }
+            }
         }
 
         public event Action<Object, T> SourceChanged;
@@ -79,6 +115,12 @@ namespace UIBindings
                 _isSupportNotify = typeof(INotifyPropertyChanged).IsAssignableFrom( sourceType );
                 _directPropertyInfo = firstProperty;
                 timer.AddMarker( "DirectGetter" );
+
+                if ( IsTwoWay )
+                {
+                    _directSetter = CreateDirectSetter( sourceObject, firstProperty );
+                    timer.AddMarker( "DirectSetter" );
+                }
             }
             else        //Need adapters/converters/etc
             {
@@ -92,6 +134,9 @@ namespace UIBindings
                 if( sourceObject != null )
                     _pathAdapter.SetSourceObject( sourceObject );
 
+                if ( IsTwoWay && !_pathAdapter.IsTwoWay )
+                    throw new InvalidOperationException($"Trying to create two-way binding {this} with one-way path adapter {_pathAdapter}.");
+
                 //Prepare conversion chain
                 var converters = _converters.Converters;
                 if ( converters.Length > 0 )
@@ -101,7 +146,7 @@ namespace UIBindings
                     {
                         var currentConverter = converters[i];
 
-                        var result = currentConverter.InitAttachToSource( lastDataSource, IsTwoWay, !Update.ScaledTime );
+                        var result = currentConverter.InitAttachToSource( lastDataSource, IsTwoWay, !Settings.ScaledTime );
                         if ( !result )
                         {
                             Debug.LogError( $"[{nameof(BindingBase)}] Converter {currentConverter} cannot be attached to previous data source {lastDataSource} at binding {GetBindingTargetInfo()}", _debugHost );
@@ -115,6 +160,7 @@ namespace UIBindings
                 if ( lastDataSource is IDataReader<T> compatibleConverter )
                 {
                     _lastReader = compatibleConverter;
+                    _lastWriter = compatibleConverter as IDataReadWriter<T>;
                     timer.AddMarker( "Connect" );           //Data pipeline is completed
                 }
                 else
@@ -126,13 +172,12 @@ namespace UIBindings
                         return;
                     } 
                     _lastReader    = ( IDataReader<T> )lastImplicitConverter;
+                    _lastWriter   = lastImplicitConverter as IDataReadWriter<T>;
                     lastDataSource = lastImplicitConverter;
                     timer.AddMarker( "ConnectImplicitConverter" );
                 }
             }
             
-            OnInitInfrastructure( sourceObject, lastDataSource, forceOneWay, _debugHost );
-            timer.AddMarker( "AdditionalInit" );
             var report = timer.StopAndGetReport();
 
             _isValueInitialized = false;
@@ -141,12 +186,10 @@ namespace UIBindings
             Debug.Log( $"[{nameof(ValueBinding<T>)}].[{nameof(InitInfrastructure)}] Inited {timer.Elapsed.TotalMicroseconds()} mks, {GetBindingTargetInfo()}, is two way {IsTwoWay}. Profile {report}", _debugHost );
         }
 
-        protected virtual void OnInitInfrastructure(  Object source, DataProvider lastConverter, bool forceOneWay, MonoBehaviour debugHost  ) { }
-
         protected override void OnSetSourceObject( object oldValue, Object value )
         {
             if(!_isInited)
-                throw new InvalidOperationException("Cannot set source object before binding is inited. Call Init() first.");
+                return;     //Will be processed in Init
 
             if(_directGetter != null)
             {
@@ -160,6 +203,8 @@ namespace UIBindings
                 }
 
                 _directGetter = CreateDirectGetter( value, _directPropertyInfo );
+                if(IsTwoWay)
+                    _directSetter = CreateDirectSetter( value, _directPropertyInfo );
             }
             else
             {
@@ -217,18 +262,20 @@ namespace UIBindings
 
         // Direct getter uses if path is just one property and no converters are used
         protected Func<T>        _directGetter;
+        private Action<T>           _directSetter;
         protected PropertyInfo _directPropertyInfo; //For recreating delegate if source object changes
-        private static readonly Func<T> DefaultGetter = () => default; 
+        private static readonly Func<T> DefaultGetter = () => default;
+        private static readonly Action<T> DefaultSetter =  _  => { };
                                        
         // All other cases uses path adapter(s) as source of data
         private   PathAdapter   _pathAdapter;    //Last path adapter in the chain. Because path adapters are chained, this is enough to work with whole path
+        protected IDataReader<T>     _lastReader;       //Last reader in the chain (prop adapter or converter)
+        protected IDataReadWriter<T> _lastWriter;   //Last writer in the chain (prop adapter or converter)
 
         protected T              _lastValue;
-        protected IDataReader<T> _lastReader;       //Last reader in the chain (prop adapter or converter)
         private   Boolean        _isTweened;
         private   Boolean        _isSupportNotify;
         private   Type           _sourceObjectType;
-        //private   Action<object, string> _sourceNotifyFromPropertyAdapterDelegate;
 
         protected override void OnSubscribe( )
         {
@@ -277,6 +324,14 @@ namespace UIBindings
                         propertyInfo.GetGetMethod( true ) );
             else
                 return DefaultGetter;
+        }
+
+        private Action<T> CreateDirectSetter( object sourceObject, PropertyInfo propertyInfo )
+        {
+            if ( sourceObject != null )
+                return (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), sourceObject, propertyInfo.GetSetMethod( true ) );
+            else
+                return DefaultSetter;
         }
 
         public override void SetDebugInfo( MonoBehaviour host, String bindingName )

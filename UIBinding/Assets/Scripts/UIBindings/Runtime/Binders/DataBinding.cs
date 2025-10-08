@@ -5,6 +5,7 @@ using UIBindings.Runtime.PlayerLoop;
 using UIBindings.Runtime.Utils;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Object = System.Object;
 
 namespace UIBindings
@@ -15,8 +16,8 @@ namespace UIBindings
     [Serializable]
     public abstract class DataBinding : BindingBase
     {
-        //How often and when to check for changes in source property
-        public          UpdateMode Update = new (){Mode = EUpdateMode.AfterLateUpdate, ScaledTime = true};
+        //Update direction and timings
+        [FormerlySerializedAs( "Update" )] public          UpdateMode Settings = new (){Mode = EMode.OneWay, Timing = ETiming.AfterLateUpdate, ScaledTime = false};
 
         [SerializeField]
         protected ConvertersList _converters = new (){Converters = Array.Empty<ConverterBase>()};
@@ -39,17 +40,17 @@ namespace UIBindings
         {
             if( !Enabled || !_isInited || _isSubscribed ) return;
 
-            switch ( Update.Mode )
+            switch ( Settings.Timing )
             {
-                case EUpdateMode.AfterLateUpdate:  UpdateManager.RegisterAfterLateUpdate( DoUpdate, updateOrder ); break;
-                case EUpdateMode.BeforeLateUpdate: UpdateManager.RegisterBeforeLateUpdate( DoUpdate, updateOrder ); break;
-                case EUpdateMode.AfterUpdate:      UpdateManager.RegisterUpdate( DoUpdate, updateOrder ); break;
-                case EUpdateMode.Manual:           break;
+                case ETiming.AfterLateUpdate:  UpdateManager.RegisterAfterLateUpdate( DoUpdate, updateOrder ); break;
+                case ETiming.BeforeLateUpdate: UpdateManager.RegisterBeforeLateUpdate( DoUpdate, updateOrder ); break;
+                case ETiming.AfterUpdate:      UpdateManager.RegisterUpdate( DoUpdate, updateOrder ); break;
+                case ETiming.Manual:           break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
 
-            _currentUpdateMode = Update.Mode;
+            _timing = Settings.Timing;
             _isValueInitialized = false;        //Source can change while we are not subscribed, so we need to re-read it
             _isSubscribed = true;
 
@@ -57,19 +58,19 @@ namespace UIBindings
         }
 
         /// <summary>
-        /// Do not react to source changes
+        /// Do not react to source changes (or target set calls)
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public void Unsubscribe()
         {
             if( !Enabled || !_isInited || !_isSubscribed ) return;
 
-            switch ( _currentUpdateMode )
+            switch ( _timing )
             {
-                case EUpdateMode.AfterLateUpdate:  UpdateManager.UnregisterAfterLateUpdate( DoUpdate ); break;
-                case EUpdateMode.BeforeLateUpdate: UpdateManager.UnregisterBeforeLateUpdate( DoUpdate ); break;
-                case EUpdateMode.AfterUpdate:      UpdateManager.UnregisterUpdate( DoUpdate ); break;
-                case EUpdateMode.Manual:           break;
+                case ETiming.AfterLateUpdate:  UpdateManager.UnregisterAfterLateUpdate( DoUpdate ); break;
+                case ETiming.BeforeLateUpdate: UpdateManager.UnregisterBeforeLateUpdate( DoUpdate ); break;
+                case ETiming.AfterUpdate:      UpdateManager.UnregisterUpdate( DoUpdate ); break;
+                case ETiming.Manual:           break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -94,7 +95,7 @@ namespace UIBindings
         protected bool                   _isInited;
         protected Boolean                _isSubscribed;
         protected bool                   _isValueInitialized;
-        private   EUpdateMode            _currentUpdateMode = EUpdateMode.Manual;
+        private   ETiming                _timing = ETiming.Manual;
         protected float                  _lastUpdateTime;
 
         [Serializable]
@@ -107,17 +108,28 @@ namespace UIBindings
         [Serializable]
         public struct UpdateMode
         {
-            public EUpdateMode Mode;
+            public EMode Mode;
+            [FormerlySerializedAs( "Mode" )] public ETiming     Timing;
             public float       Delay;
             public bool        ScaledTime;
         }
 
-        public enum EUpdateMode
+        public enum EMode
         {
-            AfterUpdate,
-            BeforeLateUpdate,
-            AfterLateUpdate,
-            Manual
+            OneWay,
+            TwoWay,
+            OneTime,
+        }
+
+        public enum ETiming
+        {
+            //BeforeFixedUpdate = 0,
+            //AfterFixedUpdate = 1,
+            //BeforeUpdate = 2,
+            AfterUpdate = 3,
+            BeforeLateUpdate = 4,
+            AfterLateUpdate = 5,
+            Manual = 100,
         }
 
         private void OnSourcePropertyChanged(Object sender, String propertyName )
@@ -132,14 +144,14 @@ namespace UIBindings
         
         private void CheckChangesPeriodically( )
         {
-            if ( Update.Delay == 0 )
+            if ( Settings.Delay == 0 )
             {
                 CheckChangesInternal( );
             }
             else
             {
-                var time = Update.ScaledTime ? Time.time : Time.unscaledTime;
-                if( time - _lastUpdateTime >= Update.Delay )
+                var time = Settings.ScaledTime ? Time.time : Time.unscaledTime;
+                if( time - _lastUpdateTime >= Settings.Delay )
                 {
                     _lastUpdateTime = time;
                     CheckChangesInternal( );

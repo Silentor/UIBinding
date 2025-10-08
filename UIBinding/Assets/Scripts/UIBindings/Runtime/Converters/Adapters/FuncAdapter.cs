@@ -12,6 +12,8 @@ namespace UIBindings.Adapters
     /// <typeparam name="TResult"></typeparam>
     public class FuncAdapter<TSource, TResult> : PathAdapterT<TSource, TResult>
     {
+        public override bool IsTwoWay => false;
+
         public override string MemberName { get; }
 
         private readonly Func<TSource, TResult> _getter;
@@ -22,8 +24,6 @@ namespace UIBindings.Adapters
             Assert.IsTrue( function.ReturnType  == typeof(TResult) );
             MemberName = function.Name;
             _getter = (Func<TSource, TResult>)Delegate.CreateDelegate( typeof(Func<TSource, TResult>), function );
-            if ( isTwoWayBinding )
-                throw new InvalidOperationException("FuncAdapter does not support two-way binding"); //Actual only for last part of path
         }
 
         public FuncAdapter(MethodInfo function, Type sourceObjectType, bool isTwoWayBinding, Action<object, string> notifyPropertyChanged ) : base( sourceObjectType, isTwoWayBinding, notifyPropertyChanged )
@@ -31,8 +31,6 @@ namespace UIBindings.Adapters
             Assert.IsTrue( function.ReturnType  == typeof(TResult) );
             MemberName = function.Name;
             _getter = (Func<TSource, TResult>)Delegate.CreateDelegate( typeof(Func<TSource, TResult>), function );
-            if ( isTwoWayBinding )
-                throw new InvalidOperationException("FuncAdapter does not support two-way binding"); //Actual only for last part of path
         }
 
         protected override TResult GetValue(TSource sourceObject )
