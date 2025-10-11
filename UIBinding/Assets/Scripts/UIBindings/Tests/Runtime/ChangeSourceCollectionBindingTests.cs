@@ -22,8 +22,7 @@ namespace UIBindings.Tests.Runtime
 
             //Init without actual source object
             testBindingByType.Init(  );
-            testBindingByType.CollectionChanged += (o, s) => _testStringsValue = s.Cast<string>().ToList();
-            testBindingByType.ItemChanged += (sender, i, o) => { _testStringsValue[i] = o as string; };
+            testBindingByType.SourceChanged += (o, s) => _testStringsValue = s.Cast<string>().ToList();
             Assert.That( testBindingByType.IsInited, Is.True );
             testBindingByType.ManuallyCheckChanges();
             Assert.That( _testStringsValue, Is.Null ); //Because we not subscribed yet
@@ -65,8 +64,7 @@ namespace UIBindings.Tests.Runtime
 
             //Init without actual source object
             testBindingByType.Init(  );
-            testBindingByType.CollectionChanged += (o, i) => _testIntsValue = i.Cast<int>().ToList();
-            testBindingByType.ItemChanged += (sender, i, o) => { _testIntsValue[i] = (int)o; };
+            testBindingByType.SourceChanged += (o, i) => _testIntsValue = i.Cast<int>().ToList();
             Assert.That( testBindingByType.IsInited, Is.True );
             testBindingByType.ManuallyCheckChanges();
             Assert.That( _testIntsValue, Is.Null ); //Field is not inited because we not subscribed yet

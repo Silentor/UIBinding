@@ -1,4 +1,7 @@
-﻿using NUnit.Framework;
+﻿using System.Text.RegularExpressions;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace UIBindings.Tests.Runtime
 {
@@ -255,12 +258,66 @@ namespace UIBindings.Tests.Runtime
             Assert.That( targetValue, Is.EqualTo( 42 ) );
         }
 
+        [Test]
+        public void TestOneTimeBinding( )
+        {
+            _targetValue = 0;
+            var testObject = new TestClass( ) { IntValue = 42 };
+            var binding    = new ValueBinding<int>( );
+            binding.Settings.Mode =  DataBinding.EMode.OneTime;
+            binding.SourceChanged += ( sender, value ) => { _targetValue = value; };
+            binding.Path          =  nameof(TestClass.IntValue);
+            binding.Init( testObject );
+            binding.Subscribe(  );
+
+            //First time it works
+            binding.ManuallyCheckChanges();
+            Assert.That( _targetValue, Is.EqualTo( 42 ) );
+
+            testObject.IntValue = 100;
+            binding.ManuallyCheckChanges();
+            //No change after that
+            Assert.That( _targetValue, Is.EqualTo( 42 ) );
+
+            // After re-subscribing it works again
+            binding.Unsubscribe();
+            binding.Subscribe(  );
+            binding.ManuallyCheckChanges();
+            Assert.That( _targetValue, Is.EqualTo( 100 ) );
+        }
+
+        [Test]
+        public void TestTwoWayBindingOnReadOnlyProperty( )
+        {
+            var testObject = new TestClass( ) { };
+            var binding    = new ValueBinding<int>( );
+            binding.Settings.Mode  = DataBinding.EMode.TwoWay;
+            binding.Path  = nameof(TestClass.ReadOnlyIntValue);
+
+            //Will be error messages in log, but no exception
+            LogAssert.Expect( LogType.Error, new Regex(".*Trying to create two-way binding.*") );
+            binding.Init( testObject );
+            Assert.That( binding.IsInited, Is.True );
+            Assert.That( binding.IsTwoWay, Is.False );
+            binding.Subscribe(  );
+
+            //Read its ok
+            binding.ManuallyCheckChanges();
+            Assert.That( testObject.ReadOnlyIntValue, Is.EqualTo( 123 ) );
+
+            //Write no ok, but no exception
+            LogAssert.Expect( LogType.Error, new Regex(".*Trying to set value to one-way binding.*") );
+            binding.SetValue( 100 );
+        }
+
 
         public class TestClass
         {
             public int IntValue { get; set; }
 
             public TestClass Inner { get; set; }
+
+            public int ReadOnlyIntValue => 123;
         }
     }
 }

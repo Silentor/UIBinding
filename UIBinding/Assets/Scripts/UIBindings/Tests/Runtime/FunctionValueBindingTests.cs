@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace UIBindings.Tests.Runtime
 {
@@ -190,11 +193,11 @@ namespace UIBindings.Tests.Runtime
             binding.Settings.Mode = DataBinding.EMode.TwoWay;
             binding.Path  = nameof(TestClass.GetIntValue);
 
-            //Should throw as we cannot write to a function
-            Assert.Throws<InvalidOperationException>( ( ) =>
-            {
-                binding.Init( testObject );
-            });
+            //No exception, but error message in log and OneWay mode
+            LogAssert.Expect( LogType.Error, new Regex(".*Trying to create two-way binding.*") );
+            binding.Init( testObject );
+            Assert.That( binding.IsInited, Is.True );
+            Assert.That( binding.IsTwoWay, Is.False );
         }
 
         [Test]

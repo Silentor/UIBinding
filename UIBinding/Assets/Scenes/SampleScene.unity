@@ -213,7 +213,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &73728716
 RectTransform:
   m_ObjectHideFlags: 0
@@ -352,10 +352,11 @@ MonoBehaviour:
       PublicKeyToken=null
     BindToType: 0
     Path: TestComplexSource.Inner.Value2
-    Update:
-      Mode: 1
+    Settings:
+      Mode: 0
+      Timing: 5
       Delay: 0
-      ScaledTime: 1
+      ScaledTime: 0
     _converters:
       Converters: []
   ColorBinding:
@@ -364,8 +365,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -399,8 +401,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -413,8 +416,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -427,8 +431,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: 
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -715,8 +720,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceString
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -728,8 +734,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: 
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -1711,8 +1718,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -1937,8 +1945,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -1951,8 +1960,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -1965,8 +1975,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: 
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -2020,8 +2031,9 @@ MonoBehaviour:
       PublicKeyToken=null
     BindToType: 0
     Path: SourceEnum
-    Update:
-      Mode: 1
+    Settings:
+      Mode: 0
+      Timing: 1
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -2033,8 +2045,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -2209,8 +2222,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -2222,8 +2236,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceFloat
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -2548,8 +2563,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceEnum
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -3424,8 +3440,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -3436,8 +3453,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: 
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -3448,8 +3466,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -4522,8 +4541,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: Quests
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -4666,8 +4686,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 10
       ScaledTime: 1
     _converters:
@@ -5075,8 +5096,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5088,8 +5110,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TestComplexSource.Inner.Value2
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5299,8 +5322,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceString
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5311,8 +5335,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: 
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5323,8 +5348,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: 
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5622,8 +5648,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: Quests2
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5788,8 +5815,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceEnum
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5800,8 +5828,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: Options
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5904,8 +5933,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5917,8 +5947,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceInt
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -5930,8 +5961,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: 
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -6440,8 +6472,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceByte
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -6453,8 +6486,9 @@ MonoBehaviour:
       Culture=neutral, PublicKeyToken=null
     BindToType: 0
     Path: TestComplexSource
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -6465,8 +6499,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TestComplexSource.EnumValue
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -6477,8 +6512,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TestComplexSource.EnumValue
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -6489,8 +6525,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TestComplexSource.Inner
-    Update:
+    Settings:
       Mode: 2
+      Timing: 2
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -6745,8 +6782,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: TargetBool
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:
@@ -6758,8 +6796,9 @@ MonoBehaviour:
     SourceType: 
     BindToType: 0
     Path: SourceFloat
-    Update:
+    Settings:
       Mode: 0
+      Timing: 0
       Delay: 0
       ScaledTime: 1
     _converters:

@@ -21,7 +21,7 @@ namespace UIBindings
         {
             Collection.SetDebugInfo( this, nameof(Collection) );
             Collection.Init( GetSource( Collection ) );
-            Collection.CollectionChanged += OnCollectionModified;
+            Collection.ItemsChanged += OnItemsModified;
             Collection.ItemAdded += OnItemAdded;
             Collection.ItemRemoved += OnItemRemoved;
             Collection.ItemMoved += OnItemMoved;
@@ -38,7 +38,7 @@ namespace UIBindings
             Collection.Unsubscribe();
         }
 
-        private void OnCollectionModified( CollectionBinding sender, IReadOnlyList<System.Object> collection )
+        private void OnItemsModified( CollectionBinding sender, IReadOnlyList<System.Object> collection )
         {
             while ( _visibleViews.Count > 0 )
             {

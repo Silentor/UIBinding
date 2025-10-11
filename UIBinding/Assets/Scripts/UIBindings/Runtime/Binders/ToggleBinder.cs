@@ -17,7 +17,7 @@ namespace UIBindings
             Assert.IsTrue( Toggle );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( GetSource(ValueBinding), forceOneWay: !Toggle.interactable );
+            ValueBinding.Init( GetSource(ValueBinding) );
             ValueBinding.SourceChanged += ProcessSourceToTarget;
         }
 

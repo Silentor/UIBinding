@@ -20,7 +20,7 @@ namespace UIBindings
             Assert.IsTrue( Slider );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( GetSource(ValueBinding), forceOneWay: !Slider.interactable );
+            ValueBinding.Init( GetSource(ValueBinding) );
             ValueBinding.SourceChanged += UpdateValue;
 
             MinValueBinding.SetDebugInfo( this, nameof(MinValueBinding) );

@@ -42,7 +42,7 @@ namespace UIBindings.Tests.Runtime
             binding.ManuallyCheckChanges();
             _testable.ClearState();
 
-            TestCollectionRemove( list, binding );
+            TestCollectionRemove( list, binding, () => new Object() );
         }
 
         [Test]
@@ -56,7 +56,7 @@ namespace UIBindings.Tests.Runtime
             binding.ManuallyCheckChanges();
             _testable.ClearState();
 
-            TestCollectionRemove( list, binding );
+            TestCollectionRemove( list, binding, () => UnityEngine.Random.onUnitSphere );
         }
 
         [Test]
@@ -168,13 +168,13 @@ namespace UIBindings.Tests.Runtime
             Assert.That( source1._removedCount, Is.EqualTo( 0 ) );
             Assert.That( source1._changedCount, Is.EqualTo( 0 ) );
             Assert.That( source1._movedCount, Is.EqualTo( 0 ) );
-            Assert.That( source1._resetCount, Is.EqualTo( 0 ) );
+            Assert.That( source1._itemsChangedCount, Is.EqualTo( 0 ) );
 
             //Test binding update
             source1.StructsList.Add( Vector3.one );
             binding.ManuallyCheckChanges();
             // Any change from empty to non-empty collection should be collection reset (reconsider?) 0 -> 1 item it's just an add
-            Assert.That( source1._resetCount, Is.EqualTo( 1 ) );
+            Assert.That( source1._addedCount, Is.EqualTo( 1 ) );
 
             //Swap to source2
             source1.UnsubscribeChanges( binding );
@@ -190,7 +190,7 @@ namespace UIBindings.Tests.Runtime
             Assert.That( source2._removedCount, Is.EqualTo( 0 ) );
             Assert.That( source2._changedCount, Is.EqualTo( 0 ) );
             Assert.That( source2._movedCount, Is.EqualTo( 0 ) );
-            Assert.That( source2._resetCount, Is.EqualTo( 1 ) ); 
+            Assert.That( source2._itemsChangedCount, Is.EqualTo( 1 ) ); 
 
             //Swap to null
             binding.SourceObject = null;
@@ -198,10 +198,10 @@ namespace UIBindings.Tests.Runtime
 
             // Should be -2 old items, another reset
             Assert.That( source2._addedCount, Is.EqualTo( 0 ) );
-            Assert.That( source2._removedCount, Is.EqualTo( 0 ) );
+            Assert.That( source2._removedCount, Is.EqualTo( 2 ) );
             Assert.That( source2._changedCount, Is.EqualTo( 0 ) );
             Assert.That( source2._movedCount, Is.EqualTo( 0 ) );
-            Assert.That( source2._resetCount, Is.EqualTo( 2 ) ); 
+            Assert.That( source2._itemsChangedCount, Is.EqualTo( 1 ) ); 
         }
 
         [Test]
@@ -221,7 +221,7 @@ namespace UIBindings.Tests.Runtime
             Assert.That( source._removedCount, Is.EqualTo( 0 ) );
             Assert.That( source._changedCount, Is.EqualTo( 0 ) );
             Assert.That( source._movedCount, Is.EqualTo( 0 ) );
-            Assert.That( source._resetCount, Is.EqualTo( 0 ) );
+            Assert.That( source._itemsChangedCount, Is.EqualTo( 0 ) );
 
             binding.ManuallyCheckChanges();
 
@@ -230,8 +230,65 @@ namespace UIBindings.Tests.Runtime
             Assert.That( source._removedCount, Is.EqualTo( 0 ) );
             Assert.That( source._changedCount, Is.EqualTo( 0 ) );
             Assert.That( source._movedCount, Is.EqualTo( 0 ) );
-            Assert.That( source._resetCount, Is.EqualTo( 0 ) );
+            Assert.That( source._itemsChangedCount, Is.EqualTo( 0 ) );
         }
+
+        [Test]
+        public void TestOneTimeBinding( )
+        {
+            var result = new List<Vector3>();
+            var testObject = new TestSource( ) { StructsList = new List<Vector3> {Vector3.one, Vector3.right}};
+            var binding    = new CollectionBinding( );
+            binding.Settings.Mode =  DataBinding.EMode.OneTime;
+            binding.SourceChanged += ( sender, value ) =>
+            {
+                result.Clear();
+                result.AddRange( value.Cast<Vector3>() );
+            };
+            binding.Path          =  nameof(TestSource.StructsList);
+            binding.Init( testObject );
+            binding.Subscribe(  );
+
+            //First time it works
+            binding.ManuallyCheckChanges();
+            Assert.That( result, Is.EqualTo( new []{Vector3.one, Vector3.right} ) );
+
+            testObject.StructsList[0] = Vector3.up;
+            binding.ManuallyCheckChanges();
+            //No change after that
+            Assert.That( result, Is.EqualTo( new []{Vector3.one, Vector3.right} ) );
+
+            // After re-subscribing it works again
+            binding.Unsubscribe();
+            binding.Subscribe(  );
+            binding.ManuallyCheckChanges();
+            Assert.That( result, Is.EqualTo( new []{Vector3.up, Vector3.right} ) );
+        }
+
+        //Test SourceChanges catch collection reference changes
+        [Test]
+        public void TestSourceCollectionReferenceChange( )
+        {
+            var testObject = new TestSource( ) { StructsList = new List<Vector3> { Vector3.one, Vector3.right } };
+            var binding    = new CollectionBinding( );
+            binding.Path          =  nameof(TestSource.StructsList);
+            binding.Init( testObject );
+            binding.Subscribe(  );
+            testObject.SubscribeChanges( binding );
+            binding.ManuallyCheckChanges();
+            testObject.ClearState();
+
+            // Same items, but different collection instance
+            testObject.StructsList = new List<Vector3>( testObject.StructsList );
+            binding.ManuallyCheckChanges();
+            Assert.That( testObject._sourceChangesCount, Is.EqualTo( 1 ) );
+            Assert.That( testObject._addedCount, Is.EqualTo( 0 ) );
+            Assert.That( testObject._removedCount, Is.EqualTo( 0 ) );
+            Assert.That( testObject._movedCount, Is.EqualTo( 0 ) );
+            Assert.That( testObject._changedCount, Is.EqualTo( 0 ) );
+            Assert.That( testObject._itemsChangedCount, Is.EqualTo( 0 ) );
+        }
+
 
         private void TestCollectionChange<T>(List<T> list, CollectionBinding binding, Func<T> getNewValue)
         {
@@ -283,10 +340,10 @@ namespace UIBindings.Tests.Runtime
             list.Add( default );
             binding.ManuallyCheckChanges();
             // Assert
-            Assert.That( _testable._resetCount, Is.EqualTo( 1 ) );        //No add events, just reset, null objects prevents diff calculation. Avoid nulls
+            Assert.That( _testable._itemsChangedCount, Is.EqualTo( 1 ) );        //No add events, just reset, null objects prevents diff calculation. Avoid nulls
         }
 
-        private void TestCollectionRemove<T>(List<T> list, CollectionBinding binding )
+        private void TestCollectionRemove<T>(List<T> list, CollectionBinding binding, Func<T> getNewValue ) where T : new()
         {
             // Act remove first object
             list.RemoveAt( 0 );
@@ -302,12 +359,17 @@ namespace UIBindings.Tests.Runtime
             // Assert
             Assert.That(_testable._removedCount, Is.EqualTo(2));
 
-            //Act remove all objects
+            
+            for ( int i = 0; i < 50; i++ )                
+                list.Add( getNewValue() );
+            binding.ManuallyCheckChanges();
+
+            //Act remove MANY objects
             _testable.ClearState();
             list.Clear();
             binding.ManuallyCheckChanges();
             // Assert
-            Assert.That(_testable._resetCount, Is.EqualTo(1));           //No remove events, clear fires reset event
+            Assert.That(_testable._itemsChangedCount, Is.EqualTo(1));           //No remove events, clear fires reset event
         }
 
         private void TestCollectionMove<T>(List<T> list, CollectionBinding binding)
@@ -319,7 +381,7 @@ namespace UIBindings.Tests.Runtime
             list.RemoveAt(fromIndex);
             list.Insert(toIndex, item);
             binding.ManuallyCheckChanges();
-            Assert.That( _testable._resetCount, Is.EqualTo( 1 ) ); // No detection for permutations now, just reset
+            Assert.That( _testable._itemsChangedCount, Is.EqualTo( 1 ) ); // No detection for permutations now, just reset
             // Assert.That(_movedCount, Is.EqualTo(1));
             // Assert.That(_movedFromIndex, Is.EqualTo(fromIndex));
             // Assert.That(_movedToIndex, Is.EqualTo(toIndex));
@@ -334,33 +396,35 @@ namespace UIBindings.Tests.Runtime
             list.RemoveAt(2); // after previous insert, index shifts
             list.Insert(0, item2);
             binding.ManuallyCheckChanges();
-            Assert.That( _testable._resetCount, Is.EqualTo( 1 ) ); // No detection for permutations now, just reset
+            Assert.That( _testable._itemsChangedCount, Is.EqualTo( 1 ) ); // No detection for permutations now, just reset
             //Assert.That(_movedCount, Is.EqualTo(2));
 
             _testable.ClearState();
             list.Reverse();
             binding.ManuallyCheckChanges();
             //Assert.That( _movedCount, Is.EqualTo( 2) ); // 2 moves: 0->4, 1->3
-            Assert.That( _testable._resetCount, Is.EqualTo( 1 ) ); // No detection for permutations now, just reset
+            Assert.That( _testable._itemsChangedCount, Is.EqualTo( 1 ) ); // No detection for permutations now, just reset
         }
 
         private void TestCollectionMassiveChange<T>(List<T> list, CollectionBinding binding, Func<T> getNewValue)
         {
-            // Add item + change another item
-            list.Add(getNewValue());
+            // Add many items item + change another item, mixed changes = massive changes - reset
+            for ( int i = 0; i < 10; i++ )                
+                list.Add(getNewValue());
             list[1] = getNewValue();
+
             binding.ManuallyCheckChanges();
-            Assert.That(_testable._resetCount, Is.EqualTo(1));
+            Assert.That(_testable._itemsChangedCount, Is.EqualTo(1));
             Assert.That(_testable._addedCount, Is.EqualTo(0));
             Assert.That(_testable._changedCount, Is.EqualTo(0));
             Assert.That(_testable._removedCount, Is.EqualTo(0));
             Assert.That(_testable._movedCount, Is.EqualTo(0));
 
-            // Clear list
+            // Clear big list - another reset
             _testable.ClearState();
             list.Clear();
             binding.ManuallyCheckChanges();
-            Assert.That(_testable._resetCount, Is.EqualTo(1));
+            Assert.That(_testable._itemsChangedCount, Is.EqualTo(1));
             Assert.That(_testable._removedCount, Is.EqualTo(0));
             Assert.That(_testable._addedCount, Is.EqualTo(0));
             Assert.That(_testable._changedCount, Is.EqualTo(0));
@@ -436,7 +500,9 @@ namespace UIBindings.Tests.Runtime
         public int    _changedCount = 0;
         public int    _changedIndex = 0;
         public object _changedItem;
-        public int    _resetCount = 0;
+        public int    _itemsChangedCount = 0;
+
+        public int _sourceChangesCount = 0;
 
         public void SubscribeChanges(CollectionBinding binding )
         {
@@ -444,8 +510,10 @@ namespace UIBindings.Tests.Runtime
             binding.ItemRemoved       += OnBindingOnItemRemoved;
             binding.ItemMoved         += OnBindingOnItemMoved;
             binding.ItemChanged       += OnBindingOnItemChanged;
-            binding.CollectionChanged += OnBindingOnCollectionChanged;
+            binding.ItemsChanged += OnBindingOnItemsChanged;
+            binding.SourceChanged += OnSourceChanged;
         }
+
 
         public void UnsubscribeChanges(CollectionBinding binding)
         {
@@ -453,7 +521,8 @@ namespace UIBindings.Tests.Runtime
             binding.ItemRemoved       -= OnBindingOnItemRemoved;
             binding.ItemMoved         -= OnBindingOnItemMoved;
             binding.ItemChanged       -= OnBindingOnItemChanged;
-            binding.CollectionChanged -= OnBindingOnCollectionChanged;
+            binding.ItemsChanged -= OnBindingOnItemsChanged;
+            binding.SourceChanged -= OnSourceChanged;
         }
 
         private void OnBindingOnItemAdded(CollectionBinding sender, int index, object item )
@@ -483,9 +552,14 @@ namespace UIBindings.Tests.Runtime
             _changedItem  = item;
         }
 
-        private void OnBindingOnCollectionChanged(CollectionBinding sender, IReadOnlyList<object> list )
+        private void OnBindingOnItemsChanged(CollectionBinding sender, IReadOnlyList<object> list )
         {
-            _resetCount++;
+            _itemsChangedCount++;
+        }
+
+        private void OnSourceChanged(CollectionBinding arg1, IReadOnlyList<object> arg2 )
+        {
+            _sourceChangesCount++;
         }
 
         public void ClearState( )
@@ -501,7 +575,8 @@ namespace UIBindings.Tests.Runtime
             _changedCount   = 0;
             _changedIndex   = 0;
             _changedItem    = null;
-            _resetCount     = 0;
+            _itemsChangedCount     = 0;
+            _sourceChangesCount = 0;
         }
     }
 

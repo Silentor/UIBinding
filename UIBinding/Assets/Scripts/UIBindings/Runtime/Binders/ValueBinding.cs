@@ -16,13 +16,13 @@ namespace UIBindings
     [Serializable]
     public class ValueBinding<T> : DataBinding
     {
-        public override Boolean IsTwoWay => Settings.Mode == EMode.TwoWay;
+        public override Boolean IsTwoWay => _isTwoWay;
 
         public override Boolean IsInited => _isInited;
 
         public override Boolean IsCompatibleWith(Type type ) => type == typeof(T);
 
-        public void Init( object sourceObject = null, bool forceOneWay = false )
+        public void Init( object sourceObject = null )
         {
             if ( !Enabled )   
                 return;
@@ -55,7 +55,7 @@ namespace UIBindings
                 return;
             }
 
-            InitInfrastructure( sourceType, sourceObject, forceOneWay );
+            InitInfrastructure( sourceType, sourceObject );
             SetSourceObjectWithoutNotify( sourceObject );
         }
 
@@ -92,7 +92,7 @@ namespace UIBindings
 
         public event Action<Object, T> SourceChanged;
 
-        private void InitInfrastructure( Type sourceType, object sourceObject, bool forceOneWay = false )
+        private void InitInfrastructure( Type sourceType, object sourceObject )
         {
             if ( !Enabled )   
                 return;
@@ -100,9 +100,11 @@ namespace UIBindings
             AssertWithContext.IsNotEmpty( Path, $"[{nameof(ValueBinding<T>)}] Path is not assigned at {GetBindingTargetInfo()}", _debugHost );
 
             var timer = ProfileUtils.GetTraceTimer( );
+            var declaredTwoWay = Settings.Mode == EMode.TwoWay;
+            _isTwoWay = declaredTwoWay;
 
             //Here we process deep binding
-            var pathProcessor = new PathProcessor( sourceType, Path, IsTwoWay, OnSourcePropertyChangedFromPathAdapter );
+            var pathProcessor = new PathProcessor( sourceType, Path, declaredTwoWay, OnSourcePropertyChangedFromPathAdapter );
             timer.AddMarker( "GetProperty" );
 
             DataProvider lastDataSource = null;
@@ -116,9 +118,16 @@ namespace UIBindings
                 _directPropertyInfo = firstProperty;
                 timer.AddMarker( "DirectGetter" );
 
-                if ( IsTwoWay )
+                if ( declaredTwoWay )
                 {
-                    _directSetter = CreateDirectSetter( sourceObject, firstProperty );
+                    var setter = CreateDirectSetter( sourceObject, firstProperty );
+                    if ( setter != null )
+                        _directSetter = setter;
+                    else
+                    {
+                        Debug.LogError( $"[{nameof(BindingBase)}] Trying to create two-way binding {this} but property {firstProperty.Name} of {sourceType} has no setter. Binding will be one-way.", _debugHost );
+                        _isTwoWay = false;
+                    }
                     timer.AddMarker( "DirectSetter" );
                 }
             }
@@ -134,8 +143,11 @@ namespace UIBindings
                 if( sourceObject != null )
                     _pathAdapter.SetSourceObject( sourceObject );
 
-                if ( IsTwoWay && !_pathAdapter.IsTwoWay )
-                    throw new InvalidOperationException($"Trying to create two-way binding {this} with one-way path adapter {_pathAdapter}.");
+                if ( declaredTwoWay && !_pathAdapter.IsTwoWay )
+                {
+                    Debug.LogError($"Trying to create two-way binding {this} with one-way path adapter {_pathAdapter}. Binding will be one-way.", _debugHost );
+                    _isTwoWay = false;
+                }
 
                 //Prepare conversion chain
                 var converters = _converters.Converters;
@@ -146,11 +158,16 @@ namespace UIBindings
                     {
                         var currentConverter = converters[i];
 
-                        var result = currentConverter.InitAttachToSource( lastDataSource, IsTwoWay, !Settings.ScaledTime );
+                        var result = currentConverter.InitAttachToSource( lastDataSource, declaredTwoWay, !Settings.ScaledTime );
                         if ( !result )
                         {
-                            Debug.LogError( $"[{nameof(BindingBase)}] Converter {currentConverter} cannot be attached to previous data source {lastDataSource} at binding {GetBindingTargetInfo()}", _debugHost );
+                            Debug.LogError( $"[{nameof(BindingBase)}] Converter {currentConverter} cannot be attached to previous data source {lastDataSource} at binding {GetBindingTargetInfo()}. Binding is unusable.", _debugHost );
                             return;
+                        }
+                        if ( declaredTwoWay && !currentConverter.IsTwoWay )
+                        {
+                            Debug.LogError( $"[{nameof(BindingBase)}] Trying to create two-way binding {this} with one-way converter {currentConverter}. Binding will be one-way.", _debugHost );
+                            _isTwoWay = false;
                         }
                         lastDataSource = currentConverter;
                         timer.AddMarker( "InitConv" );
@@ -170,7 +187,12 @@ namespace UIBindings
                     {
                         Debug.LogError( $"[{nameof(BindingBase)}] Cannot find implicit conversion from last converter {lastDataSource} to {typeof(T)} at binding {GetBindingTargetInfo()}", _debugHost );
                         return;
-                    } 
+                    }
+                    if( declaredTwoWay && !lastImplicitConverter.IsTwoWay )
+                    {
+                        Debug.LogError( $"[{nameof(BindingBase)}] Trying to create two-way binding {this} with one-way implicit converter {lastImplicitConverter}. Binding will be one-way.", _debugHost );
+                        _isTwoWay = false;
+                    }
                     _lastReader    = ( IDataReader<T> )lastImplicitConverter;
                     _lastWriter   = lastImplicitConverter as IDataReadWriter<T>;
                     lastDataSource = lastImplicitConverter;
@@ -220,7 +242,7 @@ namespace UIBindings
         /// </summary>
         protected override void  CheckChangesInternal( )
         {
-            if( !_isValueInitialized || !_isSupportNotify || _sourceValueChanged || _isTweened )
+            if( !_isValueInitialized || ((!_isSupportNotify || _sourceValueChanged || _isTweened) && Settings.Mode != EMode.OneTime) )
             {
                 T   value;
                 var isChangedOnSource = true;
@@ -276,6 +298,7 @@ namespace UIBindings
         private   Boolean        _isTweened;
         private   Boolean        _isSupportNotify;
         private   Type           _sourceObjectType;
+        private bool _isTwoWay;
 
         protected override void OnSubscribe( )
         {
@@ -305,6 +328,9 @@ namespace UIBindings
 
         private void OnSourcePropertyChangedDirect(Object sender, String propertyName )
         {
+            if(Settings.Mode == EMode.OneTime)
+                return;
+
             if ( String.IsNullOrEmpty( propertyName ) || String.Equals( propertyName, Path, StringComparison.Ordinal ) )
             {
                 _sourceValueChanged = true;
@@ -313,6 +339,9 @@ namespace UIBindings
 
         private void OnSourcePropertyChangedFromPathAdapter(Object sender, String propertyName )
         {
+            if(Settings.Mode == EMode.OneTime)
+                return;
+
             //No property name checking needed, property adapter will check it
             _sourceValueChanged = true;
         }
@@ -329,7 +358,12 @@ namespace UIBindings
         private Action<T> CreateDirectSetter( object sourceObject, PropertyInfo propertyInfo )
         {
             if ( sourceObject != null )
-                return (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), sourceObject, propertyInfo.GetSetMethod( true ) );
+            {
+                var setMethod = propertyInfo.GetSetMethod( true );
+                if ( setMethod == null )
+                    return null;
+                return (Action<T>)Delegate.CreateDelegate( typeof(Action<T>), sourceObject, setMethod );
+            }
             else
                 return DefaultSetter;
         }

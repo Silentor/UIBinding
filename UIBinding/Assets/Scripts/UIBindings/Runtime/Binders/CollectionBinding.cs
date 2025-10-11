@@ -28,7 +28,7 @@ namespace UIBindings
 
         public override    Boolean IsInited => _isInited;
 
-        public void Init( object sourceObject = null, bool forceOneWay = false )
+        public void Init( object sourceObject = null )
         {
             if ( !Enabled )   
                 return;
@@ -57,22 +57,34 @@ namespace UIBindings
             }
 
             InitInfrastructure( sourceType, sourceObject );
-
             SetSourceObjectWithoutNotify( sourceObject );
         }
 
+        /// <summary>
+        /// Fired on every change of source collection. Also fires on collection reference change, even if all items the same.
+        /// For granular items changes use latter events
+        /// </summary>
+        public event Action<CollectionBinding, IReadOnlyList<object>>                  SourceChanged;
+        /// <summary>
+        /// Add one item
+        /// </summary>
         public event Action<CollectionBinding, int, object>                            ItemAdded;
+        /// <summary>
+        /// Remove one item
+        /// </summary>
         public event Action<CollectionBinding, int, object>                            ItemRemoved;
+        /// <summary>
+        /// One item changed
+        /// </summary>
         public event Action<CollectionBinding, int, object>                            ItemChanged;
         /// <summary>
         /// Item moved from oldIndex to newIndex, object is the item itself
         /// </summary>
         public event Action<CollectionBinding, int, int, object>                       ItemMoved;
         /// <summary>
-        /// Dramatic changes, its better just rebuild entire collection
+        /// Some other changes 
         /// </summary>
-        public event Action<CollectionBinding, IReadOnlyList<object>>                  CollectionChanged;   
-        
+        public event Action<CollectionBinding, IReadOnlyList<object>>                  ItemsChanged;   
 
 
         private readonly List<object>               _sourceCopy = new ();
@@ -264,7 +276,7 @@ namespace UIBindings
 
         protected override void    CheckChangesInternal( )
         {
-            if( !_isValueInitialized || !_isSupportNotify || _sourceValueChanged  )
+            if( !_isValueInitialized || ((!_isSupportNotify || _sourceValueChanged) && Settings.Mode != EMode.OneTime) )
             {
                 Action<List<object> > processListAction = null;
                 Action<Object, GameObject> bindViewItemAction = null;
@@ -349,7 +361,9 @@ namespace UIBindings
                     BindViewItemMethod = bindViewItemAction;
 
                     UpdateTargetMarker.Begin( ProfilerMarkerName );
-                    CompareAndFireEvents( _processedCopy, _processedList );
+                    var isAnyItemChanges = CompareAndFireEvents( _processedCopy, _processedList );
+                    if(isAnyItemChanges || isChangedOnSource)
+                        SourceChanged?.Invoke( this, _processedList );
                     _processedCopy.Clear();
                     _processedCopy.AddRange( _processedList );
                     UpdateTargetMarker.End( );
@@ -359,18 +373,36 @@ namespace UIBindings
             }
         }
 
-        private void CompareAndFireEvents( List<object> oldList, List<object> newList ) 
+        private bool CompareAndFireEvents( List<object> oldList, List<object> newList ) 
         {
             //Fast passes
             if( oldList.Count == 0 && newList.Count == 0 )
-                return; //Nothing to compare
-            if( (oldList.Count == 0 && newList.Count > 0) || (newList.Count == 0 && oldList.Count > 0) )
+                return false; //Nothing to compare
+
+            if( oldList.Count == 0 && newList.Count > 0 )
             {
-                CollectionChanged?.Invoke( this, newList );//Dramatic changes
-                return;
+                if ( newList.Count < 10 )
+                    for ( int i = 0; i < newList.Count; i++ )
+                        ItemAdded?.Invoke( this, i, newList[ i ] );
+                else
+                    ItemsChanged?.Invoke( this, newList );  //Dramatic changes
+
+                return true;
             }
+
+            if( newList.Count == 0 && oldList.Count > 0 )
+            {
+                if ( oldList.Count < 10 )
+                    for ( var i = oldList.Count - 1; i >= 0; i-- )
+                        ItemRemoved?.Invoke( this, i, oldList[ i ] );
+                else
+                    ItemsChanged?.Invoke( this, newList );  //Dramatic changes
+
+                return true;
+            }
+
             if( oldList.Count == newList.Count && oldList.SequenceEqual( newList ) )
-                return; //Nothing changed
+                return false; //Nothing changed
 
             //Check simple modifications
             //Find added items
@@ -383,8 +415,8 @@ namespace UIBindings
 
             if ( added.Count == 0 && newList.Count > oldList.Count ) //Probably was added some null items, cant find granular diff
             {
-                CollectionChanged?.Invoke( this, newList ); //Dramatic changes
-                return;
+                ItemsChanged?.Invoke( this, newList ); //Dramatic changes
+                return true;
             }
 
             //Simple modification - added some items without other changes
@@ -392,7 +424,7 @@ namespace UIBindings
             {
                 foreach ( var addedItem in added )                    
                     ItemAdded?.Invoke( this, addedItem.Item2, addedItem.Item1 );
-                return;
+                return true;
             }
 
             //Find removed items
@@ -405,8 +437,8 @@ namespace UIBindings
 
             if ( removed.Count == 0 && oldList.Count > newList.Count ) //Probably was removed some null items, cant find granular diff
             {
-                CollectionChanged?.Invoke( this, newList ); //Dramatic changes
-                return;
+                ItemsChanged?.Invoke( this, newList ); //Dramatic changes
+                return true;
             }
 
             //Simple modification - removed some items without other changes
@@ -418,7 +450,7 @@ namespace UIBindings
                     ItemRemoved?.Invoke( this, removedItem.Item2, removedItem.Item1 );
                 }
 
-                return;
+                return true;
             }
 
             //Check for moved items and changed items
@@ -427,8 +459,8 @@ namespace UIBindings
                 if ( added.Count == 0 )         //Check for permutations without any additions or removals
                 {
                     //TODO its not trivial, just skip check and fire CollectionChanged for now
-                    CollectionChanged?.Invoke( this, newList );
-                    return;
+                    ItemsChanged?.Invoke( this, newList );
+                    return true;
                     // for ( int i = 0; i < newList.Count; i++ )
                     // {
                     //     if( !Equals(newList[i], oldList[i]) )
@@ -445,16 +477,15 @@ namespace UIBindings
                     {
                         var addedItem = added[i];
                         if( removed.TryFirst( r => addedItem.Item2 == r.Item2, out var sameIndexDifferentObject ) )
-                        {
                             ItemChanged?.Invoke( this, addedItem.Item2, addedItem.Item1 );
-                        }
                     }
-                    return;
+                    return true;
                 }
             }
 
             //All other modifications consider as dramatic changes, no granular events
-            CollectionChanged?.Invoke( this, newList );
+            ItemsChanged?.Invoke( this, newList );
+            return true;
         }
 
 

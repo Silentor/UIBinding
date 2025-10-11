@@ -20,7 +20,7 @@ namespace UIBindings
             Assert.IsTrue( InputField );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( GetSource(ValueBinding), forceOneWay: !InputField.interactable );
+            ValueBinding.Init( GetSource(ValueBinding) );
             ValueBinding.SourceChanged += ProcessValue;
 
             InteractableBinding.SetDebugInfo( this, nameof(InteractableBinding) );

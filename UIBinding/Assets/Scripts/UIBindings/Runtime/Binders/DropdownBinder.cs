@@ -20,12 +20,12 @@ namespace UIBindings
             Assert.IsTrue( Dropdown );
 
             ValueBinding.SetDebugInfo( this, nameof(ValueBinding) );
-            ValueBinding.Init( GetSource(ValueBinding), forceOneWay: !Dropdown.interactable );
+            ValueBinding.Init( GetSource(ValueBinding) );
             ValueBinding.SourceChanged += ProcessValue;
 
             OptionsBinding.SetDebugInfo( this, nameof(OptionsBinding) );
             OptionsBinding.Init( GetSource(OptionsBinding) );
-            OptionsBinding.CollectionChanged += ProcessOptionsChanged;
+            OptionsBinding.ItemsChanged += ProcessOptionsChanged;
         }
 
         private void ProcessOptionsChanged(CollectionBinding sender, IReadOnlyList<Object> options )
