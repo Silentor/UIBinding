@@ -287,7 +287,7 @@ namespace UIBindings.Tests.Runtime
         }
 
         [Test]
-        public void TestTwoWayBindingOnReadOnlyProperty( )
+        public void TestTwoWayBindingOnReadOnlyProperty_Simple( )
         {
             var testObject = new TestClass( ) { };
             var binding    = new ValueBinding<int>( );
@@ -310,6 +310,75 @@ namespace UIBindings.Tests.Runtime
             binding.SetValue( 100 );
         }
 
+        [Test]
+        public void TestTwoWayBindingOnReadOnlyProperty_Complex( )
+        {
+            var testObject = new TestClass( ) { Inner = new TestClass()  };
+            var binding    = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.TwoWay;
+            binding.Path          = $"{nameof(TestClass.Inner)}.{nameof(TestClass.ReadOnlyIntValue)}";
+
+            //Will be error messages in log, but no exception
+            LogAssert.Expect( LogType.Error, new Regex(".*Trying to create two-way binding.*") );
+            binding.Init( testObject );
+            Assert.That( binding.IsInited, Is.True );
+            Assert.That( binding.IsTwoWay, Is.False );
+            binding.Subscribe(  );
+
+            //Read its ok
+            binding.ManuallyCheckChanges();
+            Assert.That( testObject.Inner.ReadOnlyIntValue, Is.EqualTo( 123 ) );
+
+            //Write no ok, but no exception
+            LogAssert.Expect( LogType.Error, new Regex(".*Trying to set value to one-way binding.*") );
+            binding.SetValue( 100 );
+        }
+
+        [Test]
+        public void TestOneWayBindingWriteAttempt_Simple( )
+        {
+            var testObject = new TestClass( ) { };
+            var binding    = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.OneWay;
+            binding.Path          = nameof(TestClass.IntValue);
+
+            //Will be error messages in log, but no exception
+            binding.Init( testObject );
+            Assert.That( binding.IsInited, Is.True );
+            Assert.That( binding.IsTwoWay, Is.False );
+            binding.Subscribe(  );
+
+            //Read its ok
+            binding.ManuallyCheckChanges();
+            Assert.That( testObject.ReadOnlyIntValue, Is.EqualTo( 123 ) );
+
+            //Write no ok, but no exception
+            LogAssert.Expect( LogType.Error, new Regex(".*Trying to set value to one-way binding.*") );
+            binding.SetValue( 100 );
+        }
+
+        [Test]
+        public void TestOneWayBindingWriteAttempt_Complex( )
+        {
+            var testObject = new TestClass( ) { Inner = new TestClass()  };
+            var binding    = new ValueBinding<int>( );
+            binding.Settings.Mode = DataBinding.EMode.OneWay;
+            binding.Path          = $"{nameof(TestClass.Inner)}.{nameof(TestClass.IntValue)}";
+
+            //Will be error messages in log, but no exception
+            binding.Init( testObject );
+            Assert.That( binding.IsInited, Is.True );
+            Assert.That( binding.IsTwoWay, Is.False );
+            binding.Subscribe(  );
+
+            //Read its ok
+            binding.ManuallyCheckChanges();
+            Assert.That( testObject.ReadOnlyIntValue, Is.EqualTo( 123 ) );
+
+            //Write no ok, but no exception
+            LogAssert.Expect( LogType.Error, new Regex(".*Trying to set value to one-way binding.*") );
+            binding.SetValue( 100 );
+        }
 
         public class TestClass
         {
