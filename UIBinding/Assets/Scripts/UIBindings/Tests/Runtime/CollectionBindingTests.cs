@@ -289,6 +289,83 @@ namespace UIBindings.Tests.Runtime
             Assert.That( testObject._itemsChangedCount, Is.EqualTo( 0 ) );
         }
 
+        [Test]
+        public void BindingByTypeTest_SimplePath( )
+        {
+            var testBindingByType = new CollectionBinding()
+                                 {
+                                         BindToType = true,
+                                         SourceType = typeof(VolatileSourceObject).AssemblyQualifiedName,
+                                         Path       = "ValuesString"
+                                 };
+
+            //Init without actual source object
+            testBindingByType.Init(  );
+            testBindingByType.SourceChanged += (o, s) => _testStringsValue = s.Cast<string>().ToList();
+            Assert.That( testBindingByType.IsInited, Is.True );
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testStringsValue, Is.Null ); //Because we not subscribed yet
+
+            testBindingByType.SourceObject = new VolatileSourceObject(){ValuesString = new List<string>(){"test1", "test2"}};
+            Assert.That( _testStringsValue, Is.Null ); //Because we need to manually check changes
+
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testStringsValue, Is.Null ); //Because we didn't subscribed yet
+
+            testBindingByType.Subscribe(  );
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testStringsValue, Is.EquivalentTo( new []{"test1", "test2"} ) );
+
+            testBindingByType.SourceObject = new VolatileSourceObject(){ValuesString = new List<string>(){"test3", "test4"}};
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testStringsValue, Is.EquivalentTo( new []{"test3", "test4"} ) );
+
+            testBindingByType.SourceObject = new VolatileSourceObject(){ValuesString = new List<string>(){"test5", "test6"}};
+            testBindingByType.Unsubscribe();
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testStringsValue, Is.EquivalentTo(  new []{"test3", "test4"} ) ); //No changes because we unsubscribed
+
+            testBindingByType.Subscribe(  );
+            testBindingByType.SourceObject = null;
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testStringsValue, Is.Empty ); //Because source object is null, so collection is empty
+        }
+
+        [Test]
+        public void BindingByTypeTest_ComplexPath( )
+        {
+            var testBindingByType = new CollectionBinding()
+                                 {
+                                         BindToType = true,
+                                         SourceType = typeof(VolatileSourceObject).AssemblyQualifiedName,
+                                         Path       = "Inner.ValuesInt"
+                                 };
+
+            //Init without actual source object
+            testBindingByType.Init(  );
+            testBindingByType.SourceChanged += (o, i) => _testIntsValue = i.Cast<int>().ToList();
+            Assert.That( testBindingByType.IsInited, Is.True );
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testIntsValue, Is.Null ); //Field is not inited because we not subscribed yet
+
+            testBindingByType.SourceObject = new VolatileSourceObject(){Inner = new VolatileSourceObject(){ValuesInt = new List<int> {1, 2}}};
+            Assert.That( _testIntsValue, Is.Null ); //Because we need to manually check changes
+
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testIntsValue, Is.Null ); //Because we didn't subscribed yet
+            testBindingByType.Subscribe(  );
+
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testIntsValue, Is.EquivalentTo( new[]{1, 2} ) );
+             
+            testBindingByType.SourceObject = new VolatileSourceObject(){Inner = new VolatileSourceObject(){ValuesInt = new List<int> {3, 4}}};
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testIntsValue, Is.EquivalentTo( new[]{3, 4} ) );
+
+            ((VolatileSourceObject)testBindingByType.SourceObject).Inner.ValuesInt = new List<int>(){5, 6};
+            testBindingByType.ManuallyCheckChanges();
+            Assert.That( _testIntsValue, Is.EquivalentTo( new []{5, 6} ) );
+        }
 
         private void TestCollectionChange<T>(List<T> list, CollectionBinding binding, Func<T> getNewValue)
         {
@@ -432,6 +509,8 @@ namespace UIBindings.Tests.Runtime
         }
 
         private TestSource _testable;
+        private List<string> _testStringsValue;
+        private List<int>    _testIntsValue;
 
         private (List<object>, CollectionBinding) GetObjectListBinding( )
         {
@@ -485,6 +564,14 @@ namespace UIBindings.Tests.Runtime
 
             return (_testable.StructsList, binding);
         }
+
+        public class VolatileSourceObject
+        {
+            public List<string> ValuesString { get; set; }
+            public List<int>    ValuesInt    { get; set; }
+
+            public VolatileSourceObject Inner { get; set; }
+        }
     }
 
     public class Testable
@@ -513,7 +600,6 @@ namespace UIBindings.Tests.Runtime
             binding.ItemsChanged += OnBindingOnItemsChanged;
             binding.SourceChanged += OnSourceChanged;
         }
-
 
         public void UnsubscribeChanges(CollectionBinding binding)
         {

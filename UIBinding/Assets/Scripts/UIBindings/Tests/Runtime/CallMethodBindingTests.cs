@@ -168,6 +168,19 @@ namespace UIBindings.Tests.Runtime
             Assert.That( sObject2.Inner.ValueInt, Is.EqualTo( 11 ) );
             Assert.That( sourceObject.Inner.ValueInt, Is.EqualTo( 2 ) ); // No changes to first object
         }
+
+        public class VolatileSourceObject
+        {
+            public string ValueString { get; set; }
+            public int    ValueInt    { get; set; }
+
+            public VolatileSourceObject Inner { get; set; }
+
+            public void Call( )
+            {
+                ValueInt += 1;
+            }
+        }
     }
 
     public class CallMethodSource
@@ -253,18 +266,4 @@ namespace UIBindings.Tests.Runtime
             }
         }
     }
-
-    public class VolatileSourceObject
-    {
-        public string ValueString { get; set; }
-        public int    ValueInt    { get; set; }
-
-        public VolatileSourceObject Inner { get; set; }
-
-        public void Call( )
-        {
-            ValueInt += 1;
-        }
-    }
-
 }

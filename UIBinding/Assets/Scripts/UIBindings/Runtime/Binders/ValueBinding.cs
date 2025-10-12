@@ -215,14 +215,16 @@ namespace UIBindings
 
             if(_directGetter != null)
             {
-                if( _isSupportNotify )
-                {
-                    if ( oldValue is INotifyPropertyChanged oldNotify )
-                        oldNotify.PropertyChanged -= OnSourcePropertyChangedDirect;
+                if ( oldValue is INotifyPropertyChanged oldNotify )
+                    oldNotify.PropertyChanged -= OnSourcePropertyChangedDirect;
 
-                    if ( value is INotifyPropertyChanged newNotify )
-                        newNotify.PropertyChanged += OnSourcePropertyChangedDirect;
+                if ( value is INotifyPropertyChanged newNotify )
+                {
+                    newNotify.PropertyChanged += OnSourcePropertyChangedDirect;
+                    _isSupportNotify = true;
                 }
+                else
+                    _isSupportNotify = false;
 
                 _directGetter = CreateDirectGetter( value, _directPropertyInfo );
                 if(IsTwoWay)
